@@ -7,6 +7,9 @@ conf = Config()
 def init_database():
     db_path = conf.DATABASE_URL
 
+    if os.path.exists(db_path):
+        return
+    
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -109,5 +112,4 @@ def reset_database():
     
     init_database()
 
-#if __name__ == "__main__":
-#    reset_database()
+init_database()

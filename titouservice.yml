@@ -10,6 +10,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./flask:/app
+      # volume persistant pour la DB
+      - db-data:/app/Data
     networks:
       - titouservice-network
     secrets:
@@ -41,3 +43,6 @@ secrets:
     file: ./secrets/secret_key.txt
   omdb_api_key:
     file: ./secrets/omdb_api_key.txt
+
+volumes:
+  db-data:
