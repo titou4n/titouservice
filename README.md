@@ -64,8 +64,8 @@ git clone https://github.com/titou4n/titouservice.git
 ```
 
 2. Configurer les variables et secrets
-    -  clé Flask
-    - clé API
+    - clé Flask -> secrets\secret_key.txt
+    - clé API   -> secrets\omdb_api_key.txt
 
 3. Lancer les conteneurs :
 
