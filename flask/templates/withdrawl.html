@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a href="{{ url_for('titoubank') }}">Titou Bank</a></li>
+        <li><a class="active" href="{{ url_for('withdrawl') }}">Withdraw</a></li>
+        <li><a href="{{ url_for('transfer') }}">Transfer</a></li>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+
+<h1>Withdraw Funds</h1>
+
+<div class="withdrawal-container">
+    <div class="post">
+        <h3>Withdraw TitouCoin</h3>
+        <form method="post">
+            <label for="withdrawl">Amount to Withdraw</label>
+            <input class="input" type="number" name="withdrawl" placeholder="Enter amount (e.g., 20)" value="{{ request.form['withdrawl'] }}" min="0.01" step="0.01" required>
+            
+            <p class="withdrawal-info">Withdrawals are processed instantly to your account.</p>
+            
+            <button class="button" type="submit">Withdraw</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

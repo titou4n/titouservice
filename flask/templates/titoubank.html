@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a class="active" href="{{ url_for('titoubank') }}">Titou Bank</a></li>
+        <li><a href="{{ url_for('withdrawl') }}">Withdraw</a></li>
+        <li><a href="{{ url_for('transfer') }}">Transfer</a></li>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+
+<h1>Welcome to Titou Bank</h1>
+
+<div class="bank-container">
+    <div class="post">
+        <div class="balance-box">
+            <h3 class="balance-label">Your Balance</h3>
+            <p class="balance-value">{{ pay }} TitouCoin</p>
+            <p class="balance-subtitle">Manage your funds securely</p>
+        </div>
+    </div>
+</div>
+
+<!-----------------History_transfer---------------->
+<h3 class="balance-label">History of your transfers</h3>
+{% if all_transfer_history %}
+    {% for all_transfer_history in all_transfer_history|reverse %}
+    <div class="post">
+        <div class="transfer-history-item">
+            <p>{{ all_transfer_history['transfer_date'] }}</p>
+            <h4>{{ all_transfer_history['id_sender'] }} to {{ all_transfer_history['id_receiver'] }}</h4>
+
+            {% if all_transfer_history['id_sender']==id %}
+                <h4>- {{ all_transfer_history['transfer_amount'] }} TC</h4>
+            {% else %}
+                <h4>+ {{ all_transfer_history['transfer_amount'] }} TC</h4>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="post">
+    <p class="transfer-history-empty">No bank transfer transfers to this date</p>
+</div>
+{% endif %}
+<!------------------------------------------------->
+
+{% endblock %}

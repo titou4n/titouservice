@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>TitouService API</h1>
+
+<nav>
+    <ul>
+        <li><a class="active" href="{{ url_for('api') }}">API</a></li>
+        <li><a href="{{ url_for('search_movie') }}">Movie Database</a></li>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+
+<section id="intro" class="mid">
+    <div id="not-media">
+        <h3>What is an API?</h3>
+        <p>An API (Application Programming Interface) is a software interface that allows different applications to communicate and exchange data. It enables seamless integration between services, making it easier to build complex applications.</p>
+    </div>
+</section>
+
+<section id="first-row" class="mid">
+    <div class="finz">
+        <h4>Movie Database</h4>
+        <p>Our Movie API provides access to comprehensive information about movies, including summaries, ratings, directors, release dates, and more. Perfect for building movie-related applications.</p>
+        <form action="{{ url_for('search_movie') }}" method="get">
+            <button class="button" type="submit">Browse Movies</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

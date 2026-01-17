@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titou Service</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  </head>
+  <body>
+    <div class="header-profile">
+        {% if 'id' in session %}
+        <a href="/personal_information" class="profile-link">
+            <!--<img src="{{ url_for('static', filename='uploads/profiles/' + session['id']|string + '.jpg') }}" alt="Profile" class="profile-pic" onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/profile-default.png') }}'">-->
+            <img src="{{ url_for('static', filename='img/profile-default.png') }}" alt="Profile" class="profile-pic">
+          </a>
+        {% endif %}
+    </div>
+    <div class="content">
+        {% for message in get_flashed_messages() %}
+        <div class="alert">{{ message }}</div>
+        {% endfor %}
+        {% block content %}{% endblock %}
+    </div>
+  </body>
+</html>

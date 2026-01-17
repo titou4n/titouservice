@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a class="active" href="{{ url_for('conditions_uses') }}">Terms & Conditions</a></li>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+
+<h1>Terms & Conditions</h1>
+
+<div class="post">
+    <h3>Your Data & Privacy</h3>
+    <p>TitouService may:</p>
+    <ul class="terms-list">
+        <li>Use your information to improve our services</li>
+        <li>Collect data to enhance your experience on the platform</li>
+        <li>Process your requests securely with encryption</li>
+        <li>Collect any type of data for commercial use</li>
+    </ul>
+    
+    <hr>
+    
+    <h3 class="terms-title">Your Rights</h3>
+    <p>You have the right to:</p>
+    <ul class="terms-list">
+        <li>Access your personal data at any time</li>
+        <li>Request modifications to your account information</li>
+        <li>Delete your account whenever you wish</li>
+        <li>Honestly, not much, because I was the one who decided.</li>
+    </ul>
+    
+    <hr>
+    
+    <p class="terms-footer">Last updated: January 2026</p>
+</div>
+{% endblock %}
+

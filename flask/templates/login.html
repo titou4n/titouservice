@@ -1,0 +1,25 @@
+{% extends 'base_login_register.html' %}
+{% block content %}
+<div class="little_post">
+    <h2>{% block title %} Login {% endblock %}</h2>
+    <form method="post">
+        <label for="username">Username</label>
+        <br>
+        <input class="input" type="text" name="username"
+            placeholder="Username"
+            value="{{ request.form['username'] }}" required></input>
+        <br>
+        <br>
+        <label for="password">Password</label>
+        <br>
+        <input class="input" type="password" name="password"
+            placeholder="Password"
+            value="{{ request.form['password'] }}" required></input>
+        <br>
+        <br>
+        <p>I don't have an account ? <a href="{{ url_for('register') }}">Register</a></p>
+        <br>
+        <button class="button" type="submit">Submit</button>
+    </form>
+</div>
+{% endblock %}

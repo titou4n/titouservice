@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block content %}
+<header>
+    <ul>
+        <li><a href="{{ url_for('login') }}" class="button">Sign In</a></li>
+        <li><a href="{{ url_for('register') }}" class="button">Sign Up</a></li>
+    </ul>
+</header>
+
+<div class="content">
+    <section id="hero">
+        <h1>Welcome to TitouService</h1>
+        <p>Ehhh oui enfin dispo</p>
+        <a href="#services" class="button">Explore Services</a>
+        <a href="{{ url_for('register') }}" class="button">Get Started</a>
+    </section>
+
+    <section id="services">
+        <h2>Our Services</h2>
+        <div id="first-row">
+            <div class="finz">
+                <h3>Titou Bank</h3>
+                <p>Manage your digital currency securely. Withdraw, track, and manage your TitouCoins with ease through our modern banking interface.</p>
+            </div>
+            <div class="finz">
+                <h3>Community Chatroom</h3>
+                <p>Connect with other users, share your thoughts, create posts, and engage in meaningful discussions with our community.</p>
+            </div>
+            <div class="finz">
+                <h3>API Integration</h3>
+                <p>Developer-friendly APIs to integrate TitouService into your applications. Access powerful tools with comprehensive documentation.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="mid">
+        <div>
+            <h2>About TitouService</h2>
+            <p>
+                Hello, I'm Titouan, the creator of TitouService, a service platform designed to help me practice web development and the use of Flask.
+                From web development to software programming, database implementation, and application security, each service is designed to be reliable, clear, and tailored to the real needs of users.
+                TitouService makes it a point of honor to offer effective, understandable, and evolutive solutions, while focusing on transparency, rigour, and customer satisfaction. Each project is a collaboration with a simple goal: to transform an idea into a functional and high-performance tool.
+                TitouService is a comprehensive platform designed by TitouEntreprise to provide quality services 100% free. 
+                We believe in offering modern tools and services while maintaining the highest standards of security and user experience. 
+                Every password is encrypted and stored securely in our protected database.
+            </p>
+            <p>
+                Our mission is to create an intuitive, user-friendly platform that brings together various services in one place, 
+                making it easier for users to manage their digital life.
+            </p>
+        </div>
+    </section>
+
+    <section id="features">
+        <h2>Why Choose TitouService?</h2>
+        <ul>
+            <li>Modern, sleek design with interactions</li>
+            <li>Bank-level security for your data</li>
+            <li>Many services</li>
+            <li>Because if you're reading this, it means you're at least a little bit interested.</li>
+            <li>I don't know what to put here anymore, but five ideas is more stylish.</li>
+        </ul>
+    </section>
+</div>
+
+<footer>
+    <p>&copy; 2026 TitouService. All rights reserved. | <a href="{{ url_for('conditions_uses') }}">Terms & Conditions</a></p>
+</footer>
+{% endblock %}

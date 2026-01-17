@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+        <li><a href="{{ url_for('api') }}">API</a></li>
+        <li><a href="{{ url_for('search_movie') }}">Search Movies</a></li>
+    </ul>
+</nav>
+
+<h1>{{movie_title}}</h1>
+
+<section id="intro" class="mid">
+    <div id="not-media">
+        <img src="{{movie_poster}}" alt="{{movie_title}} poster" class="movie-poster">
+    </div>
+    <div id="media">
+        <h3>{{movie_title}}</h3>
+        <p class="movie-plot">{{movie_plot}}</p>
+        <div class="movie-rating">
+            <h4>Rating</h4>
+            <p class="movie-rating-value">{{movie_rating}} / 10</p>
+        </div>
+    </div>
+</section>
+
+<section class="movie-details">
+    <div class="movie-detail-item">
+        <h4>Genre</h4>
+        <p>{{movie_genre}}</p>
+    </div>
+    <div class="movie-detail-item">
+        <h4>Release Year</h4>
+        <p>{{movie_year}}</p>
+    </div>
+    <div class="movie-detail-item">
+        <h4>Director</h4>
+        <p>{{movie_director}}</p>
+    </div>
+    <div class="movie-detail-item">
+        <h4>Runtime</h4>
+        <p>{{movie_runtime}}</p>
+    </div>
+    <div class="movie-detail-item">
+        <h4>Released</h4>
+        <p>{{movie_released}}</p>
+    </div>
+</section>
+{% endblock %}

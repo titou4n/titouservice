@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a href="{{ url_for('titoubank') }}">Titou Bank</a></li>
+        <li><a href="{{ url_for('withdrawl') }}">Withdraw</a></li>
+        <li><a class="active" href="{{ url_for('transfer') }}">Transfer</a></li>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+
+<h1>Transfer</h1>
+
+<div class="withdrawal-container">
+    <div class="post">
+        <h3>Transfer TitouCoin</h3>
+        <form method="post">
+            <label for="transfer">Amount to transfer</label>
+            <input class="input" type="number" name="transfer_value" placeholder="Enter amount (e.g., 20)" value="{{ request.form['transfer_value'] }}" min="0" step="1" required>
+            
+            <label for="transfer">ID of the recipient</label>
+            <input class="input" type="number" name="id_receiver" placeholder="Enter ID (e.g., 20)" value="{{ request.form['id_receiver'] }}" min="0" step="1" required>
+
+            <p class="withdrawal-info">Transfer are processed instantly to your account.</p>
+            
+            <button class="button" type="submit">Transfer</button>
+        </form>
+    </div>
+</div>
+
+<!-----------------History_transfer---------------->
+<h3 class="balance-label">History of your transfers</h3>
+{% if all_transfer_history %}
+    {% for all_transfer_history in all_transfer_history|reverse %}
+    <div class="post">
+        <div class="transfer-history-item">
+            <p>{{ all_transfer_history['transfer_date'] }}</p>
+            <h4>{{ all_transfer_history['id_sender'] }} to {{ all_transfer_history['id_receiver'] }}</h4>
+
+            {% if all_transfer_history['id_sender']==id %}
+                <h4>- {{ all_transfer_history['transfer_amount'] }} TC</h4>
+            {% else %}
+                <h4>+ {{ all_transfer_history['transfer_amount'] }} TC</h4>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="post">
+    <p class="transfer-history-empty">No bank transfer transfers to this date</p>
+</div>
+{% endif %}
+<!------------------------------------------------->
+
+{% endblock %}

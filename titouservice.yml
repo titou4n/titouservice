@@ -1,0 +1,42 @@
+services:
+  flask:
+    container_name: titouservice-flask
+    build:
+      context: ./flask
+      dockerfile: Dockerfile
+    image: titouservice-flask:latest
+    expose:
+      - "5000"
+    restart: unless-stopped
+    volumes:
+      - ./flask:/app
+    networks:
+      - titouservice-network
+    secrets:
+      - secret_key
+      - omdb_api_key
+
+  web:
+    container_name: titouservice-web
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+    image: titouservice-web:latest
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "8443:443"
+    networks:
+      - titouservice-network
+    depends_on:
+      - flask
+
+networks:
+  titouservice-network:
+    driver: bridge
+
+secrets:
+  secret_key:
+    file: ./secrets/secret_key.txt
+  omdb_api_key:
+    file: ./secrets/omdb_api_key.txt

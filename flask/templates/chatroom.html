@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a class="active" href="{{ url_for('chatroom') }}">Chatroom</a></li>
+        <li><a href="{{ url_for('create_post') }}">Create New Post</a></li>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+
+<h2>Posts</h2>
+
+{% if posts %}
+
+    {% for post in posts|reverse %}
+
+        
+        
+        {% if post['id']==id %}
+        <div class="post_color_2">
+        {% else %}
+        <div class="post">
+        {% endif %}
+            <div class="post-header">
+                <div>
+                    <h3>{{ post['title'] }}</h3>
+                    <p class="post-meta">By <strong>{{ post['name'] }}</strong></p>
+                </div>
+                <span class="post-timestamp">{{ post['created'] }}</span>
+            </div>
+            <p>{{ post['content'] }}</p>
+
+            <!------------------For Edit---------------->
+            {% if post['id']==id %}
+                <div class="post-actions">
+                    <a href="{{ url_for('edit_post', id_post=post['id_post']) }}">Edit</a>
+                </div>
+            {% endif %}
+            <!------------------------------------------>
+
+            
+        </div>
+    {% endfor %}
+
+{% else %}
+    <div class="post">
+        <p class="no-posts">No posts yet. <a href="{{ url_for('create_post') }}">Create the first one!</a></p>
+    </div>
+{% endif %}
+{% endblock %}

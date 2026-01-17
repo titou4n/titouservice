@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a class="active" href="{{ url_for('thank_you') }}">Credits</a></li>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+
+<h1>Thank You</h1>
+
+<div class="little_post">
+    <h3>Special Thanks To:</h3>
+    <div class="credits-section">
+        <p class="credits-label">
+            My Sister<br>
+            My Mother<br>
+            My Father<br>
+            Antonin<br>
+            Ruggero
+        </p>
+    </div>
+    <hr>
+    <p class="credits-subtitle">
+        Without their support and encouragement, this project would not have been possible.
+    </p>
+</div>
+{% endblock %}

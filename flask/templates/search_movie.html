@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a class="active" href="{{ url_for('search_movie') }}">Search Movies</a></li>
+        <li><a href="{{ url_for('api') }}">API</a></li>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+
+<h2>Search Movie Database</h2>
+<div class="post">
+    <form method="post">
+        <label for="movie">Movie Title</label>
+        <input class="input" type="text" name="movie" placeholder="Enter a movie title to search..." value="{{ request.form['movie'] }}" required>
+        
+        <button class="button" type="submit">Search</button>
+    </form>
+</div>
+
+{% if movie_info %}
+<h1>{{ movie_info['movie_title'] }}</h1>
+
+<section id="intro" class="mid">
+    <div id="not-media">
+        <img src="{{ movie_info['movie_poster'] }}" alt="{{ movie_info['movie_title'] }} poster" class="movie-poster">
+    </div>
+    <div id="media">
+        <h3>{{ movie_info['movie_title'] }}</h3>
+        <p class="movie-plot">{{ movie_info['movie_plot'] }}</p>
+        <div class="movie-rating">
+            <h4>Rating</h4>
+            <p class="movie-rating-value">{{ movie_info['movie_rating'] }} / 10</p>
+        </div>
+    </div>
+</section>
+
+<section class="movie-details">
+    <div class="movie-detail-item">
+        <h4>Genre</h4>
+        <p>{{ movie_info['movie_genre'] }}</p>
+    </div>
+    <div class="movie-detail-item">
+        <h4>Release Year</h4>
+        <p>{{ movie_info['movie_year'] }}</p>
+    </div>
+    <div class="movie-detail-item">
+        <h4>Director</h4>
+        <p>{{ movie_info['movie_director'] }}</p>
+    </div>
+    <div class="movie-detail-item">
+        <h4>Runtime</h4>
+        <p>{{ movie_info['movie_runtime'] }}</p>
+    </div>
+    <div class="movie-detail-item">
+        <h4>Released</h4>
+        <p>{{ movie_info['movie_released'] }}</p>
+    </div>
+</section>
+{% endif %}
+
+<h3 class="search-history">Search History</h3>
+{% if all_movie_search %}
+    {% for all_movie_search in all_movie_search %}
+    <div class="post">
+        <div class="search-history-item">
+            <h4>{{ all_movie_search['movie_title'] }}</h4>
+            <a href="{{ url_for('search_movie', movie_title=all_movie_search['movie_title']) }}">View Details →</a>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="post">
+    <p class="search-history-empty">No search history yet. Start searching!</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base_login_register.html' %}
+{% block content %}
+<div class="little_post">
+       <h2>{% block title %} Sign up {% endblock %}</h2>
+       <form method="post">
+              <label for="username">Username</label>
+              <br>
+              <input class="input" type="text" name="username"
+                     placeholder="Username"
+                     value="{{ request.form['username'] }}" required></input>
+              <br>
+              <br>
+              <label for="password">Password</label>
+              <br>
+              <input class="input" type="password" name="password"
+                     placeholder="Password"
+                     value="{{ request.form['password'] }}" required></input>
+              <br>
+              <br>
+              <label for="verif_password">Verif password</label>
+              <br>
+              <input class="input" type="password" name="verif_password"
+                     placeholder="Verif password"
+                     value="{{ request.form['verif_password'] }}" required></input>
+              <br>
+              <br>
+              <label for="name">Your Name</label>
+              <br>
+              <input class="input" type="text" name="name"
+                     placeholder="Name"
+                     value="{{ request.form['name'] }}" required></input>
+              <br>
+              <br>
+              <label for="terms">
+                     <input type="checkbox" name="terms" id="terms" required>
+                     J'accepte les <a href="{{ url_for('conditions_uses') }}" target="_blank">conditions d'utilisation</a>
+              </label>
+              <br>
+              <br>
+              <p>Already an account ? <a href="{{ url_for('login') }}">Login</a></p>
+              <br>
+              <button class="button" type="submit">Submit</button>
+       </form>
+</div>
+{% endblock %}
