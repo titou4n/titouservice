@@ -1,13 +1,11 @@
 import sqlite3
 import os
+from config import Config
 
-def get_db_url():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(base_dir, "database.db")
-    return db_path
+conf = Config()
 
 def init_database():
-    db_path = get_db_url()
+    db_path = conf.DATABASE_URL
 
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -90,7 +88,7 @@ def init_database():
 
 def get_plan_database():
     print("Get plan database....")
-    db_path = get_db_url()
+    db_path = conf.DATABASE_URL
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -104,9 +102,7 @@ def reset_database():
     """
     Supprime l'ancienne base de données et la recrée avec toutes les tables.
     """
-    db_path = get_db_url()
-
-    # Supprimer l'ancien fichier de base de données
+    db_path = conf.DATABASE_URL
     if os.path.exists(db_path):
         os.remove(db_path)
         print("-> Ancienne base de données supprimée.")
@@ -115,4 +111,3 @@ def reset_database():
 
 if __name__ == "__main__":
     reset_database()
-    

@@ -15,6 +15,7 @@ services:
     secrets:
       - secret_key
       - omdb_api_key
+    command: bash -c "python Data/init_db.py && python app.py"
 
   web:
     container_name: titouservice-web

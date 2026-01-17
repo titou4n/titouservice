@@ -36,12 +36,7 @@ class Config:
     # ===== Database =====
     DATA_DIR = BASE_DIR / "Data"
     DATA_DIR.mkdir(exist_ok=True)
-
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
-        f"sqlite:///{DATA_DIR}/database.db"
-    )
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    DATABASE_URL = os.path.join(DATA_DIR, "database.db")
 
     # ===== Uploads =====
     UPLOAD_FOLDER = BASE_DIR / "static" / "uploads"

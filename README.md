@@ -81,5 +81,4 @@ http://localhost:8080
 
 ## Auteur
 
-Développé par Titouan SIMON
-Projet personnel
+Développé par Titouan SIMON - Projet personnel
