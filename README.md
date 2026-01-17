@@ -9,7 +9,7 @@
 TitouService est une **application web** développée avec **Flask**, déployée via **Docker**, et servie par **Nginx** en tant que reverse proxy.
 Ce projet est conçu pour offrir une plateforme web simple, et facilement déployable sur serveur ou NAS.
 
-La version de TitouService en ligne (https://titouservice.ltjs.net) est auto-hébergé.
+La version en ligne (https://titouservice.ltjs.net) est **auto-hébergé**.
 
 ## Présentation
 
