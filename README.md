@@ -6,8 +6,10 @@
 ![Nginx](https://img.shields.io/badge/Nginx-Reverse%20Proxy-green)
 ![SQLite](https://img.shields.io/badge/SQLite-Database-lightgrey)
 
-TitouService est une **application web** développée avec **Flask**, déployée via **Docker**, et servie par **Nginx** en tant que reverse proxy.  
+TitouService est une **application web** développée avec **Flask**, déployée via **Docker**, et servie par **Nginx** en tant que reverse proxy.
 Ce projet est conçu pour offrir une plateforme web simple, et facilement déployable sur serveur ou NAS.
+
+La version en ligne (https://titouservice.ltjs.net) est **auto-hébergé**.
 
 ## Présentation
 
