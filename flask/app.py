@@ -381,8 +381,8 @@ def search_movie(movie_title=""):
         flash('Movie is required.')
         return render_template("search_movie.html", all_movie_search=database_handler.get_movie_search(id))
 
-    omdbapi_key = app.config['OMDBAPI_YEY']
-    requestURL = "http://www.omdbapi.com/?apikey=" + omdbapi_key + "&t=" + movie
+    omdb_api_key = app.config['OMDB_API_KEY']
+    requestURL = "http://www.omdbapi.com/?apikey=" + omdb_api_key + "&t=" + movie
     r = requests.get(requestURL)
     infosMovie = r.json()
     if infosMovie["Response"] == "False":

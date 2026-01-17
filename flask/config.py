@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 def read_secret(name):
     try:
@@ -9,21 +10,31 @@ def read_secret(name):
         return None
 
 class Config:
-    # ===== Sécurité =====
-    SECRET_KEY = (
-        read_secret("secret_key")
-        or os.getenv("SECRET_KEY")
-        or "dev-secret-key"
-    )
+
+    # ====> ENV production
+    ENV_PROD = False
+    #ENV_PROD = False
+
+    if not ENV_PROD:
+        load_dotenv()
+
+    #_______________________KEY_________________________#
+
+    SECRET_KEY = read_secret("secret_key") if ENV_PROD else os.getenv("SECRET_KEY")
     if not SECRET_KEY:
         raise RuntimeError("SECRET_KEY manquante")
+
+    OMDB_API_KEY = read_secret("omdb_api_key") if ENV_PROD else os.getenv("OMDB_API_KEY")
+    if not OMDB_API_KEY:
+        raise RuntimeError("OMDB_API_KEY manquante")
+    
+    #___________________________________________________#
 
     # ===== Base directory =====
     BASE_DIR = Path(__file__).parent.resolve()
 
     # ===== Flask =====
-    FLASK_ENV = "development"
-    DEBUG = FLASK_ENV == "development"
+    DEBUG = not ENV_PROD
 
     # ===== Flask-Session configuration =====
     SESSION_TYPE = "filesystem"             # backend session
@@ -42,12 +53,3 @@ class Config:
     UPLOAD_FOLDER = BASE_DIR / "static" / "uploads"
     UPLOAD_FOLDER.mkdir(exist_ok=True)
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
-
-    # ===== External APIs =====
-    OMDB_API_KEY = (
-        read_secret("omdb_api_key")
-        or os.getenv("OMDB_API_KEY")
-        or "dev-omdb_api_key"
-    )
-    if not SECRET_KEY:
-        raise RuntimeError("OMDB_API_KEY manquante")
