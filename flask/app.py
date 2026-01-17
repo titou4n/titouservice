@@ -164,7 +164,11 @@ def change_name():
     new_name = request.form['new_name']
     if not new_name:
         flash('Name is required !')
-        return render_template('change_name.html', id=id, name=database_handler.get_name(id))
+        return redirect("/personal_information/change_name/")
+    
+    if database_handler.verif_name_exists(new_name):
+        flash('This name is already taken !')
+        return redirect("/personal_information/change_name/")
     
     database_handler.update_name(id, new_name.capitalize())
     database_handler.update_name_in_post(id, new_name.capitalize())
