@@ -2,10 +2,16 @@ import sqlite3
 import datetime
 import os
 
+from Data.init_db import init_database
+from config import Config
+
+conf = Config()
+
 class DatabaseHandler():
   def __init__(self):
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    self.db_path = os.path.join(base_dir, "database.db")
+    if not os.path.exists(conf.DATABASE_URL):
+        init_database()
+    self.db_path = conf.DATABASE_URL
 
   def get_db_connection(self):
     conn = sqlite3.connect(self.db_path, check_same_thread=False)
