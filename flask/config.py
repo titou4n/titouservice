@@ -8,12 +8,26 @@ def read_secret(name):
             return f.read().strip()
     except FileNotFoundError:
         return None
+    
+###############################################
+#_____DO_NOT_FORGET_TO_SWITCH_PROD_TO_DEV_____#
+###############################################
 
 class Config:
 
-    # ====> ENV production
-    ENV_PROD = False
-    #ENV_PROD = False
+    #       ||
+    #       ||
+    #       ||
+    #      \  /
+    #       \/
+    
+    ENV_PROD = True
+
+    #       /\
+    #      /  \
+    #       ||
+    #       ||
+    #       ||
 
     if not ENV_PROD:
         load_dotenv()
@@ -37,12 +51,12 @@ class Config:
     DEBUG = not ENV_PROD
 
     # ===== Flask-Session configuration =====
-    SESSION_TYPE = "filesystem"             # backend session
-    SESSION_FILE_DIR = BASE_DIR / "flask_session"  # dossier temporaire pour stocker les sessions
-    SESSION_PERMANENT = False               # sessions non permanentes
-    SESSION_USE_SIGNER = True               # sécurise le cookie de session
-    SESSION_COOKIE_NAME = "my_session"      # nom du cookie
-    SESSION_COOKIE_HTTPONLY = True          # cookie inaccessible en JS
+    SESSION_TYPE = "filesystem"                     # backend session
+    SESSION_FILE_DIR = BASE_DIR / "flask_session"   # dossier temporaire pour stocker les sessions
+    SESSION_PERMANENT = False                       # sessions non permanentes
+    SESSION_USE_SIGNER = True                       # sécurise le cookie de session
+    SESSION_COOKIE_NAME = "cookie_Titouservice"     # nom du cookie
+    SESSION_COOKIE_HTTPONLY = True                  # cookie inaccessible en JS
 
     # ===== Database =====
     DATA_DIR = BASE_DIR / "Data"
