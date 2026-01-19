@@ -23,6 +23,7 @@ def init_database():
         username STRING NOT NULL UNIQUE,
         password STRING NOT NULL,
         name STRING NOT NULL UNIQUE,
+        profile_picture_path STRING,
         pay DECIMAL DEFAULT 1000,
         nbpasswordchange INTEGER DEFAULT 0,
         nbnamechange INTEGER DEFAULT 0
@@ -54,6 +55,20 @@ def init_database():
         transfer_date DATETIME NOT NULL,
         FOREIGN KEY (id_sender) REFERENCES account(id) ON DELETE CASCADE,
         FOREIGN KEY (id_receiver) REFERENCES account(id) ON DELETE CASCADE
+    );
+    """)
+
+    # =========================
+    # TABLE account
+    # =========================
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS friends (
+        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        id_follower INTEGER NOT NULL,
+        id_followed INTEGER NOT NULL,
+        date DATETIME NOT NULL,
+        FOREIGN KEY (id_follower) REFERENCES account(id) ON DELETE CASCADE,
+        FOREIGN KEY (id_followed) REFERENCES account(id) ON DELETE CASCADE
     );
     """)
 

@@ -11,7 +11,7 @@ services:
     volumes:
       - ./flask:/app
       # volume persistant pour la DB
-      - db-data:/app/Data
+      #- db-data:/app/Data
     networks:
       - titouservice-network
     secrets:
