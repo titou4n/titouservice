@@ -64,6 +64,14 @@ class Config:
     DATABASE_URL = os.path.join(DATA_DIR, "database.db")
 
     # ===== Uploads =====
+    
     UPLOAD_FOLDER = BASE_DIR / "static" / "uploads"
     UPLOAD_FOLDER.mkdir(exist_ok=True)
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
+
+    UPLOAD_PROFILE_PICTURE_FOLDER = UPLOAD_FOLDER / "profile_pictures"
+    UPLOAD_PROFILE_PICTURE_FOLDER.mkdir(exist_ok=True)
+    ALLOWED_EXTENSIONS_PROFILE_PICTURE = {'png', 'jpg', 'jpeg'}
+
+    # ===== DEFAULT =====
+    PATH_DEFAULT_PROFILE_PICTURE = BASE_DIR / "static" / "img" / "profile-default.png"

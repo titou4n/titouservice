@@ -24,6 +24,7 @@
             <div class="post-header">
                 <div>
                     <h3>{{ post['title'] }}</h3>
+                    <img class="profile-pic" src="{{ url_for('profile_picture', user_id=post['id']) }}" alt="Profile Picture">
                     <p class="post-meta">By <strong>{{ post['name'] }}</strong></p>
                 </div>
                 <span class="post-timestamp">{{ post['created'] }}</span>

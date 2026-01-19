@@ -46,12 +46,48 @@ class DatabaseHandler():
     conn.commit()
     conn.close()
 
-  def get_id(self, username:str):
+  def update_profile_picture_path_from_id(self, id:int, profile_picture_path:str):
+    conn = self.get_db_connection()
+    query = f"UPDATE account SET profile_picture_path=? WHERE id=?;"
+    conn.execute(query, (profile_picture_path,id))
+    conn.commit()
+    conn.close()
+
+  def get_id_from_username(self, username:str):
     conn = self.get_db_connection()
     query = f"SELECT id FROM account WHERE username=?;"
     result = conn.execute(query, (username,)).fetchall()
     conn.close()
     return dict(result[0])["id"]
+  
+  def get_id_from_name(self, name:str):
+    conn = self.get_db_connection()
+    query = f"SELECT id FROM account WHERE name=?;"
+    result = conn.execute(query, (name,)).fetchall()
+    conn.close()
+    return dict(result[0])["id"]
+  
+  def get_password(self, id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT password FROM account WHERE id=?;"
+    result = conn.execute(query, (id,)).fetchall()
+    conn.close()
+    return dict(result[0])["password"]
+
+  def get_name_from_id(self, id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT name FROM account WHERE id=?;"
+    result = conn.execute(query, (id,)).fetchall()
+    conn.close()
+    return dict(result[0])["name"]
+  
+  def get_profile_picture_path_from_id(self, id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT profile_picture_path FROM account WHERE id=?;"
+    result = conn.execute(query, (id,)).fetchone()
+    if result is None:
+        return None
+    return result[0]
 
   def delete_account(self, id:int):
     conn = self.get_db_connection()
@@ -80,20 +116,6 @@ class DatabaseHandler():
     conn.execute(query, (new_name, id))
     conn.commit()
     conn.close()
-
-  def get_password(self, id:int):
-    conn = self.get_db_connection()
-    query = f"SELECT password FROM account WHERE id=?;"
-    result = conn.execute(query, (id,)).fetchall()
-    conn.close()
-    return dict(result[0])["password"]
-
-  def get_name(self, id:int):
-    conn = self.get_db_connection()
-    query = f"SELECT name FROM account WHERE id=?;"
-    result = conn.execute(query, (id,)).fetchall()
-    conn.close()
-    return dict(result[0])["name"]
   
   def verif_id_exists(self, id:int) -> bool:
     conn = self.get_db_connection()
@@ -220,3 +242,28 @@ class DatabaseHandler():
     movie_search = conn.execute(query, (id,)).fetchall()
     conn.close()
     return movie_search
+  
+  ##################################################
+  #________________Social_Network__________________#
+  ##################################################
+
+  def create_link_social_network(self, id_follower:int, id_followed:int, date:datetime):
+    conn = self.get_db_connection()
+    query = f"INSERT INTO friends (id_follower, id_followed, date) VALUES (?, ?, ?);"
+    conn.execute(query, (id_follower, id_followed, date,))
+    conn.commit()
+    conn.close()
+
+  def get_all_followers_from_id(self, id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT id_follower FROM friends WHERE id_followed=?;"
+    list_id_follower = conn.execute(query, (id,)).fetchall()
+    conn.close()
+    return list_id_follower
+  
+  def get_all_followeds_from_id(self, id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT id_followed FROM friends WHERE id_follower=?;"
+    list_id_followed = conn.execute(query, (id,)).fetchall()
+    conn.close()
+    return list_id_followed

@@ -31,9 +31,9 @@
             <h4>{{ all_transfer_history['id_sender'] }} to {{ all_transfer_history['id_receiver'] }}</h4>
 
             {% if all_transfer_history['id_sender']==id %}
-                <h4>- {{ all_transfer_history['transfer_amount'] }} TC</h4>
-            {% else %}
                 <h4>+ {{ all_transfer_history['transfer_amount'] }} TC</h4>
+            {% else %}
+                <h4>- {{ all_transfer_history['transfer_amount'] }} TC</h4>
             {% endif %}
         </div>
     </div>

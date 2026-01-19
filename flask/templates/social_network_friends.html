@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a href="{{ url_for('social_network_home') }}">Social-Network</a></li>
+        <li><a class="active" href="{{ url_for('social_network_friends') }}">Friends</a></li>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+<h2>Titou Social Network - TSN</h2>
+<div class="post">
+    <form method="post">
+        <label for="friend">Add friends :</label>
+        <input class="input" type="text" name="friend" placeholder="Add friends..." value="{{ request.form['friend'] }}" required>
+        <button class="button" type="submit">Add</button>
+    </form>
+</div>
+
+<!--FOLLOWERS-->
+<h3>Your followers :</h3>
+{% if all_followers %}
+
+    {% for follower in all_followers|reverse %}
+        <div class="post">
+            <img class="profile-pic" src="{{ url_for('profile_picture', user_id=follower[0]) }}" alt="Profile Picture">
+            <h4>{{ follower[1] }}</h4>
+        </div>
+    {% endfor %}
+
+{% else %}
+    <div class="post">
+        <p class="no-posts">No followers yet.</p>
+    </div>
+{% endif %}
+
+<!--FOLLOWED-->
+<h3>Your followed :</h3>
+{% if all_followeds %}
+
+    {% for followed in all_followeds|reverse %}
+        <div class="post">
+            <img class="profile-pic" src="{{ url_for('profile_picture', user_id=followed[0]) }}" alt="Profile Picture">
+            <h4>{{ followed[1] }}</h4>
+        </div>
+    {% endfor %}
+
+{% else %}
+    <div class="post">
+        <p class="no-posts">You are not following anyone yet. <a href="{{ url_for('social_network_friends') }}">Follow someone</a></p>
+    </div>
+{% endif %}
+
+{% endblock %}
