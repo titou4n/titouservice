@@ -368,6 +368,12 @@ def titoubank_stock_market():
         requestURL = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={interval}&outputsize={output_size}&apikey={twelvedata_api_key}"
         r = requests.get(requestURL)
         result = r.json()
+
+        if "status" in result and result["status"] == "error":  # run out api credits : result["code"] == 429
+            #flash(result["message"])
+            flash(f"You have run out of API credits for the current minute.")
+            return redirect("/titoubank/")
+
         #result = {'meta': {'symbol': 'BTC/USD', 'interval': '1day', 'currency_base': 'Bitcoin', 'currency_quote': 'US Dollar', 'exchange': 'Coinbase Pro', 'type': 'Digital Currency'}, 'values': [{'datetime': '2026-01-20', 'open': '92559.65', 'high': '92807.99', 'low': '90558.99', 'close': '91255.19'}, {'datetime': '2026-01-19', 'open': '93630', 'high': '93630', 'low': '91935.3', 'close': '92559.66'}, {'datetime': '2026-01-18', 'open': '95109.99', 'high': '95485', 'low': '93559.78', 'close': '93633.53'}, {'datetime': '2026-01-17', 'open': '95503.99', 'high': '95600', 'low': '94980.12', 'close': '95109.99'}, {'datetime': '2026-01-16', 'open': '95578.2', 'high': '95830.49', 'low': '94229.04', 'close': '95504'}, {'datetime': '2026-01-15', 'open': '96954.02', 'high': '97176.42', 'low': '95066.19', 'close': '95587.65'}, {'datetime': '2026-01-14', 'open': '95385.59', 'high': '97963.62', 'low': '94518.63', 'close': '96955.16'}, {'datetime': '2026-01-13', 'open': '91188.08', 'high': '96250', 'low': '90925.17', 'close': '95384.23'}, {'datetime': '2026-01-12', 'open': '90878.51', 'high': '92406.3', 'low': '90003.46', 'close': '91188.09'}, {'datetime': '2026-01-11', 'open': '90387.36', 'high': '91173.12', 'low': '90109', 'close': '90872.01'}], 'status': 'ok'}
         
         pay_of_account = database_handler.get_pay(id=id)
@@ -419,6 +425,12 @@ def titoubank_stock_market_sell():
     requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
     r = requests.get(requestURL)
     result = r.json()
+
+    if "status" in result and result["status"] == "error":  # run out api credits : result["code"] == 429
+        #flash(result["message"])
+        flash(f"You have run out of API credits for the current minute.")
+        return redirect("/titoubank/")
+
     current_price = float(result["price"])
     
     pay = database_handler.get_pay(id)
@@ -453,6 +465,12 @@ def titoubank_stock_market_sell_all():
     requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
     r = requests.get(requestURL)
     result = r.json()
+
+    if "status" in result and result["status"] == "error":  # run out api credits : result["code"] == 429
+        #flash(result["message"])
+        flash(f"You have run out of API credits for the current minute.")
+        return redirect("/titoubank/")
+
     current_price = float(result["price"])
     
     pay = database_handler.get_pay(id)
@@ -490,6 +508,12 @@ def titoubank_stock_market_buy():
     requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
     r = requests.get(requestURL)
     result = r.json()
+
+    if "status" in result and result["status"] == "error":  # run out api credits : result["code"] == 429
+        #flash(result["message"])
+        flash(f"You have run out of API credits for the current minute.")
+        return redirect("/titoubank/")
+
     current_price = float(result["price"])
     
     pay = database_handler.get_pay(id)

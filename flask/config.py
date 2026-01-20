@@ -21,7 +21,7 @@ class Config:
     #      \  /
     #       \/
     
-    ENV_PROD = True
+    ENV_PROD = False
 
     #       /\
     #      /  \
