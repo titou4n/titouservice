@@ -16,7 +16,7 @@ def init_database():
     # =========================
     # TABLE account
     # =========================
-    cursor.execute("""
+    querry = f"""
     CREATE TABLE IF NOT EXISTS account (
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         is_admin INTEGER DEFAULT 0,
@@ -24,11 +24,12 @@ def init_database():
         password STRING NOT NULL,
         name STRING NOT NULL UNIQUE,
         profile_picture_path STRING,
-        pay DECIMAL DEFAULT 1000,
+        pay DECIMAL DEFAULT {conf.BANK_DEFAULT_PAY},
         nbpasswordchange INTEGER DEFAULT 0,
         nbnamechange INTEGER DEFAULT 0
     );
-    """)
+    """
+    cursor.execute(querry)
 
     # =========================
     # TABLE metadata
@@ -51,7 +52,7 @@ def init_database():
         id_bank_transfer INTEGER PRIMARY KEY AUTOINCREMENT,
         id_sender INTEGER NOT NULL,
         id_receiver INTEGER NOT NULL,
-        transfer_amount INTEGER NOT NULL,
+        transfer_amount DECIMAL NOT NULL,
         transfer_date DATETIME NOT NULL,
         FOREIGN KEY (id_sender) REFERENCES account(id) ON DELETE CASCADE,
         FOREIGN KEY (id_receiver) REFERENCES account(id) ON DELETE CASCADE
@@ -59,7 +60,23 @@ def init_database():
     """)
 
     # =========================
-    # TABLE account
+    # TABLE stock_market_transfers
+    # =========================
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS stock_market_transfers (
+        id_stock_market_transfer INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_account INTEGER NOT NULL,
+        type STRING NOT NULL,
+        symbol STRING NOT NULL,
+        stock_number DECIMAL NOT NULL,
+        stock_price DECIMAL NOT NULL,
+        transfer_datetime DATETIME NOT NULL,
+        FOREIGN KEY (id_account) REFERENCES account(id)
+    );
+    """)
+
+    # =========================
+    # TABLE friends
     # =========================
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS friends (
@@ -69,6 +86,21 @@ def init_database():
         date DATETIME NOT NULL,
         FOREIGN KEY (id_follower) REFERENCES account(id) ON DELETE CASCADE,
         FOREIGN KEY (id_followed) REFERENCES account(id) ON DELETE CASCADE
+    );
+    """)
+
+    # =========================
+    # TABLE messages
+    # =========================
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS messages (
+        id_message INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_sender INTEGER NOT NULL,
+        id_receiver INTEGER NOT NULL,
+        message STRING NOT NULL,
+        datetime DATETIME NOT NULL,
+        FOREIGN KEY (id_sender) REFERENCES account(id) ON DELETE CASCADE,
+        FOREIGN KEY (id_receiver) REFERENCES account(id) ON DELETE CASCADE
     );
     """)
 

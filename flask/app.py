@@ -13,6 +13,7 @@ from Data.database_handler import DatabaseHandler
 from config import Config
 from utils.hashlib_blake2b import hashlib_blake2b
 from utils.ipv4_address import ipv4_address
+from utils.bank import get_sum_transfers_from_id_symbol
 
 ###########################################
 #_____DO_NOT_FORGET_TO_REMOVE_APP_RUN_____#
@@ -113,80 +114,80 @@ def logout():
     return redirect("/")
 
 ##################################################
-#____________Personal_Information________________#
+#____________________ACCOUNT_____________________#
 ##################################################
 
-@app.route('/personal_information', methods=('GET', 'POST'))
-@app.route('/personal_information/', methods=('GET', 'POST'))
-def personal_information():
+@app.route('/account', methods=('GET', 'POST'))
+@app.route('/account/', methods=('GET', 'POST'))
+def account():
     if "id" not in session:
         return redirect("/")
         
     id=session["id"]
-    return render_template('personal_information.html',
+    return render_template('account_home.html',
                            id=id,
                            name=database_handler.get_name_from_id(id),
                            pay=database_handler.get_pay(id))   
 
-@app.route('/personal_information/change_password', methods=('GET', 'POST'))
-@app.route('/personal_information/change_password/', methods=('GET', 'POST'))
-def change_password():
+@app.route('/account/change_password', methods=('GET', 'POST'))
+@app.route('/account/change_password/', methods=('GET', 'POST'))
+def account_change_password():
     if "id" not in session:
         return redirect("/")
     
     id = session["id"]
     if request.method != 'POST':
-        return render_template('change_password.html', id=id)
+        return render_template('account_change_password.html', id=id)
     
-    actual_password    = hashlib_blake2b(request.form['actual_password'])
-    new_password       = hashlib_blake2b(request.form['new_password'])
-    verif_new_password = hashlib_blake2b(request.form['verif_new_password'])
+    actual_password    = str(hashlib_blake2b(request.form['actual_password']))
+    new_password       = str(hashlib_blake2b(request.form['new_password']))
+    verif_new_password = str(hashlib_blake2b(request.form['verif_new_password']))
 
     if actual_password  != database_handler.get_password(id):
         flash('Password is not correct.')
-        return render_template('change_password.html', id=id)
+        return redirect("/account/change_password/")
     
     if new_password != verif_new_password:
         flash("Passwords must be identical.")
-        return render_template('change_password.html', id=id)
+        return redirect("/account/change_password/")
     
     database_handler.update_password(id, new_password)
     flash('Your password has been updated')
-    return redirect("/personal_information/")
+    return redirect("/account/")
 
-@app.route('/personal_information/change_name', methods=('GET', 'POST'))
-@app.route('/personal_information/change_name/', methods=('GET', 'POST'))
-def change_name():
+@app.route('/account/change_name', methods=('GET', 'POST'))
+@app.route('/account/change_name/', methods=('GET', 'POST'))
+def account_change_name():
     if "id" not in session:
         return redirect("/")
     
     id=session["id"]
     if request.method != 'POST':
-        return render_template('change_name.html', id=id, name=database_handler.get_name_from_id(id))
+        return render_template('account_change_name.html', id=id, name=database_handler.get_name_from_id(id))
     
     new_name = str(request.form['new_name'])
     if not new_name:
         flash('Name is required !')
-        return redirect("/personal_information/change_name/")
+        return redirect("/account/change_name/")
     
     if database_handler.verif_name_exists(new_name):
         flash('This name is already taken !')
-        return redirect("/personal_information/change_name/")
+        return redirect("/account/change_name/")
     
     database_handler.update_name(id, new_name)
     database_handler.update_name_in_post(id, new_name)
     flash('Your name has been updated')
-    return redirect("/personal_information/")
+    return redirect("/account/")
 
-@app.route('/personal_information/upload_profile_picture', methods=('GET', 'POST'))
-@app.route('/personal_information/upload_profile_picture/', methods=('GET', 'POST'))
+@app.route('/account/upload_profile_picture', methods=('GET', 'POST'))
+@app.route('/account/upload_profile_picture/', methods=('GET', 'POST'))
 def upload_profile_picture():
     if "id" not in session:
         return redirect("/")
     
     id=session["id"]
     if request.method != 'POST':
-        return redirect("/personal_information/")
+        return redirect("/account/")
     
     #################################################
 
@@ -200,15 +201,15 @@ def upload_profile_picture():
     #################################################
 
     if 'profile_picture' not in request.files:
-        return redirect("/personal_information/")
+        return redirect("/account/")
 
     file = request.files['profile_picture']
 
     if file.filename == '':
-        return redirect("/personal_information/")
+        return redirect("/account/")
 
     if not (file and allowed_file(file.filename)):
-        return redirect("/personal_information/")
+        return redirect("/account/")
     
     filename = secure_filename(file.filename)
     extension = get_file_extension(filename)
@@ -222,7 +223,7 @@ def upload_profile_picture():
     
     file.save(filepath)
     database_handler.update_profile_picture_path_from_id(id, filepath)
-    return redirect("/personal_information/")
+    return redirect("/account/")
 
 @app.route("/profile_picture/<int:user_id>")
 def profile_picture(user_id):
@@ -233,19 +234,18 @@ def profile_picture(user_id):
 
     if not path or not os.path.isfile(path):
         path = config.PATH_DEFAULT_PROFILE_PICTURE
-    
-    print(path)
+
     return send_file(path)
 
-@app.route('/personal_information/delete_account', methods=('GET', 'POST'))
-@app.route('/personal_information/delete_account/', methods=('GET', 'POST'))
+@app.route('/account/delete_account', methods=('GET', 'POST'))
+@app.route('/account/delete_account/', methods=('GET', 'POST'))
 def delete_account():
     if "id" not in session:
         return redirect("/")
     
     id = session["id"]
     if request.method != 'POST':
-        return redirect("/personal_information/")
+        return redirect("/account/")
     
     database_handler.delete_all_post_from_id(id)
     database_handler.delete_account(id)
@@ -253,8 +253,8 @@ def delete_account():
     flash('Your account was successfully deleted!')
     return redirect("/")
 
-@app.route('/personal_information/export_data', methods=('GET', 'POST'))
-@app.route('/personal_information/export_data/', methods=('GET', 'POST'))
+@app.route('/account/export_data', methods=('GET', 'POST'))
+@app.route('/account/export_data/', methods=('GET', 'POST'))
 def export_data():
     if "id" not in session:
         return redirect("/")
@@ -286,7 +286,10 @@ def titoubank():
         return redirect("/")
     
     id = session["id"]
-    return render_template('titoubank.html', id=id, pay=database_handler.get_pay(id), all_transfer_history=database_handler.get_all_bank_transfer(id))
+    return render_template('titoubank_home.html',
+                           id=id,
+                           pay=round(database_handler.get_pay(id),2),
+                           all_transfer_history=database_handler.get_all_bank_transfer(id))
         
 @app.route("/titoubank/withdrawl", methods=('GET', 'POST'))
 @app.route("/titoubank/withdrawl/", methods=('GET', 'POST'))
@@ -296,7 +299,7 @@ def withdrawl():
 
     id = session["id"]
     if request.method != 'POST':
-        return render_template('withdrawl.html', id=id)
+        return render_template('titoubank_withdrawl.html', id=id)
     
     withdrawl = int(request.form['withdrawl'])
     if withdrawl <= 0:
@@ -321,7 +324,7 @@ def transfer():
     
     id = session["id"]
     if request.method != 'POST':
-        return render_template('transfer.html', id=id, all_transfer_history=database_handler.get_all_bank_transfer(id))
+        return render_template('titoubank_transfer.html', id=id, all_transfer_history=database_handler.get_all_bank_transfer(id))
     
     transfer_value = int(request.form['transfer_value'])
     id_receiver = int(request.form['id_receiver'])
@@ -349,6 +352,163 @@ def transfer():
     flash('"{}" TC have been sent to {}'.format(transfer_value, receiver_name))
     return redirect("/titoubank/")
 
+@app.route('/titoubank/stock_market', methods=('GET', 'POST'))
+@app.route('/titoubank/stock_market/', methods=('GET', 'POST'))
+def titoubank_stock_market():
+    if "id" not in session:
+        return redirect("/")
+    
+    id = session["id"]
+    if request.method != 'POST':
+        twelvedata_api_key = config.TWELVEDATA_API_KEY
+        symbol = "BTC/USD"
+        interval = "1day"
+        output_size = 10
+        #requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
+        requestURL = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={interval}&outputsize={output_size}&apikey={twelvedata_api_key}"
+        r = requests.get(requestURL)
+        result = r.json()
+        #result = {'meta': {'symbol': 'BTC/USD', 'interval': '1day', 'currency_base': 'Bitcoin', 'currency_quote': 'US Dollar', 'exchange': 'Coinbase Pro', 'type': 'Digital Currency'}, 'values': [{'datetime': '2026-01-20', 'open': '92559.65', 'high': '92807.99', 'low': '90558.99', 'close': '91255.19'}, {'datetime': '2026-01-19', 'open': '93630', 'high': '93630', 'low': '91935.3', 'close': '92559.66'}, {'datetime': '2026-01-18', 'open': '95109.99', 'high': '95485', 'low': '93559.78', 'close': '93633.53'}, {'datetime': '2026-01-17', 'open': '95503.99', 'high': '95600', 'low': '94980.12', 'close': '95109.99'}, {'datetime': '2026-01-16', 'open': '95578.2', 'high': '95830.49', 'low': '94229.04', 'close': '95504'}, {'datetime': '2026-01-15', 'open': '96954.02', 'high': '97176.42', 'low': '95066.19', 'close': '95587.65'}, {'datetime': '2026-01-14', 'open': '95385.59', 'high': '97963.62', 'low': '94518.63', 'close': '96955.16'}, {'datetime': '2026-01-13', 'open': '91188.08', 'high': '96250', 'low': '90925.17', 'close': '95384.23'}, {'datetime': '2026-01-12', 'open': '90878.51', 'high': '92406.3', 'low': '90003.46', 'close': '91188.09'}, {'datetime': '2026-01-11', 'open': '90387.36', 'high': '91173.12', 'low': '90109', 'close': '90872.01'}], 'status': 'ok'}
+        
+        pay_of_account = database_handler.get_pay(id=id)
+        sum_stock_number = get_sum_transfers_from_id_symbol(id=id, symbol=symbol)
+
+        ### GET PRICE ###
+        twelvedata_api_key = config.TWELVEDATA_API_KEY
+        requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
+        r = requests.get(requestURL)
+        current_price = r.json()
+
+        coefficient = config.STOCK_MARKET_COEFFICIENT
+        all_stock_market_transfers = database_handler.get_all_stock_market_transfers_from_id_symbol(id=id, symbol=symbol)
+
+        return render_template("titoubank_stock_market.html",
+                               id=id,
+                               prices=result["values"],
+                               pay_of_account=round(pay_of_account, 2),
+                               sum_stock_number=sum_stock_number,
+                               current_price=round(float(current_price["price"]), 2),
+                               coefficient=coefficient,
+                               all_stock_market_transfers=all_stock_market_transfers)
+    return redirect("/titoubank/stock_market/")
+
+@app.route('/titoubank/stock_market/sell', methods=('GET', 'POST'))
+@app.route('/titoubank/stock_market/sell/', methods=('GET', 'POST'))
+def titoubank_stock_market_sell():
+    if "id" not in session:
+        return redirect("/")
+    
+    id = session["id"]
+    if request.method != 'POST':
+        return redirect("/titoubank/stock_market/")
+    
+    stock_number = float(request.form['stock_number'])
+    if stock_number <= 0:
+        flash("Zero or negative stock is impossible.")
+        return redirect("/titoubank/stock_market/")
+    
+    symbol = "BTC/USD"
+
+    sum_stock_number = get_sum_transfers_from_id_symbol(id=id, symbol=symbol)
+    if stock_number >= sum_stock_number:
+        flash("You don't have enough stock.")
+        return redirect("/titoubank/stock_market/")
+    
+    ### GET PRICE ###
+    twelvedata_api_key = config.TWELVEDATA_API_KEY
+    requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
+    r = requests.get(requestURL)
+    result = r.json()
+    current_price = float(result["price"])
+    
+    pay = database_handler.get_pay(id)
+    #new_pay = pay + (stock_number*current_price)/int(config.STOCK_MARKET_COEFFICIENT)
+    new_pay = pay + (stock_number*current_price)
+    
+    database_handler.update_pay(id, new_pay)
+    database_handler.insert_stock_market_transfers(id=id,
+                                                   type="sell",
+                                                   symbol=symbol,
+                                                   stock_number=stock_number,
+                                                   stock_price=current_price,
+                                                   transfer_datetime=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    flash('You have sell {} {} which is equivalent to {} TC'.format(stock_number, symbol, stock_number*current_price))
+    return redirect("/titoubank/stock_market/")
+    
+@app.route('/titoubank/stock_market/sell_all', methods=('GET', 'POST'))
+@app.route('/titoubank/stock_market/sell_all/', methods=('GET', 'POST'))
+def titoubank_stock_market_sell_all():
+    if "id" not in session:
+        return redirect("/")
+    
+    id = session["id"]
+    if request.method != 'POST':
+        return redirect("/titoubank/stock_market/")
+    
+    symbol = "BTC/USD"
+    stock_number = get_sum_transfers_from_id_symbol(id=id, symbol=symbol)
+    
+    ### GET PRICE ###
+    twelvedata_api_key = config.TWELVEDATA_API_KEY
+    requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
+    r = requests.get(requestURL)
+    result = r.json()
+    current_price = float(result["price"])
+    
+    pay = database_handler.get_pay(id)
+    #new_pay = pay + (stock_number*current_price)/int(config.STOCK_MARKET_COEFFICIENT)
+    new_pay = pay + (stock_number*current_price)
+    
+    database_handler.update_pay(id, new_pay)
+    database_handler.insert_stock_market_transfers(id=id,
+                                                   type="sell",
+                                                   symbol=symbol,
+                                                   stock_number=stock_number,
+                                                   stock_price=current_price,
+                                                   transfer_datetime=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    flash('You have sell {} {} which is equivalent to {} TC'.format(stock_number, symbol, stock_number*current_price))
+    return redirect("/titoubank/stock_market/")
+
+@app.route('/titoubank/stock_market/buy', methods=('GET', 'POST'))
+@app.route('/titoubank/stock_market/buy/', methods=('GET', 'POST'))
+def titoubank_stock_market_buy():
+    if "id" not in session:
+        return redirect("/")
+
+    id = session["id"]
+    if request.method != 'POST':
+        return redirect("/titoubank/stock_market/")
+    
+    stock_number = float(request.form['stock_number'])
+    if stock_number <= 0:
+        flash("Zero or negative stock is impossible.")
+        return redirect("/titoubank/stock_market/")
+    
+    ### GET PRICE ###
+    twelvedata_api_key = config.TWELVEDATA_API_KEY
+    symbol = "BTC/USD"
+    requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
+    r = requests.get(requestURL)
+    result = r.json()
+    current_price = float(result["price"])
+    
+    pay = database_handler.get_pay(id)
+    #new_pay = pay - (stock_number*current_price)/int(config.STOCK_MARKET_COEFFICIENT)
+    new_pay = pay - (stock_number*current_price)
+    if new_pay < 0:
+        flash("Your Balance is not high enough.")
+        return redirect("/titoubank/stock_market/")
+
+    database_handler.update_pay(id, new_pay)
+    database_handler.insert_stock_market_transfers(id=id,
+                                                   type="buy",
+                                                   symbol=symbol,
+                                                   stock_number=stock_number,
+                                                   stock_price=current_price,
+                                                   transfer_datetime=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    flash('You have buy {} {} which is equivalent to {} TC'.format(stock_number, symbol, stock_number*current_price))
+    return redirect("/titoubank/stock_market/")
+
 ##################################################
 #__________________Chatroom______________________#
 ##################################################
@@ -360,7 +520,7 @@ def chatroom():
         return redirect("/")
     
     id = session["id"]
-    return render_template('chatroom.html',id=id, posts=database_handler.get_posts())      
+    return render_template('chatroom_home.html',id=id, posts=database_handler.get_posts())      
 
 @app.route('/chatroom/create_post', methods=('GET', 'POST'))
 @app.route('/chatroom/create_post/', methods=('GET', 'POST'))
@@ -370,17 +530,17 @@ def create_post():
     
     id = session["id"]
     if request.method != 'POST':
-        return render_template('create_post.html', id=id)
+        return render_template('chatroom_create_post.html', id=id)
     
     title = str(request.form['title'])
     content = str(request.form['content'])
     if not title or not content:
         flash('Error: Title and Content is required')
-        return render_template('create_post.html', id=id)
+        return redirect("/chatroom/create_post/")
     
     name=database_handler.get_name_from_id(id)
     database_handler.create_post(id, name, title, content)
-    return redirect("/chatroom/")      
+    return redirect("/chatroom/")
 
 @app.route('/chatroom/edit_post/<int:id_post>', methods=('GET', 'POST'))
 @app.route('/chatroom/edit_post/<int:id_post>/', methods=('GET', 'POST'))
@@ -394,7 +554,7 @@ def edit_post(id_post):
         return redirect("/chatroom/")
     
     if request.method != 'POST':
-        return render_template('edit_post.html',id=id, post=database_handler.get_post_from_id(id_post))
+        return render_template('chatroom_edit_post.html',id=id, post=database_handler.get_post_from_id(id_post))
     
     title = str(request.form['title'])
     content = str(request.form['content'])
@@ -474,26 +634,80 @@ def social_network_friends():
     database_handler.create_link_social_network(id, id_followed, datetime.date.today())
     return redirect("/social_network/friends/")
 
+@app.route('/social_network/chat', methods=('GET', 'POST'))
+@app.route('/social_network/chat/', methods=('GET', 'POST'))
+def social_network_chat():
+    if "id" not in session:
+        return redirect("/")
+    
+    id = session["id"]
+
+    id_all_followeds = database_handler.get_all_followeds_from_id(id)
+    all_followeds = []
+    for id_followed in id_all_followeds:
+        all_followeds.append((id_followed["id_followed"], database_handler.get_name_from_id(id_followed["id_followed"])))
+    return render_template("social_network_chat.html", id=id, all_followeds=all_followeds)
+
+@app.route('/social_network/chat/<int:id_receiver>', methods=('GET', 'POST'))
+@app.route('/social_network/chat/<int:id_receiver>/', methods=('GET', 'POST'))
+def social_network_chat_selected(id_receiver:int):
+    if "id" not in session:
+        return redirect("/")
+    
+    id = session["id"]
+
+    id_all_followeds = database_handler.get_all_followeds_from_id(id)
+    all_followeds = []
+    for id_followed in id_all_followeds:
+        all_followeds.append((id_followed["id_followed"], database_handler.get_name_from_id(id_followed["id_followed"])))
+
+    messages = database_handler.get_all_messages_between_id_sender_and_receiver(id, id_receiver)
+    return render_template('social_network_chat.html', id=id, all_followeds=all_followeds, id_receiver=id_receiver, messages=messages)
+
+@app.route('/social_network/chat/send_message/<int:id_receiver>', methods=('GET', 'POST'))
+@app.route('/social_network/chat/send_message/<int:id_receiver>/', methods=('GET', 'POST'))
+def social_network_send_message(id_receiver:int):
+    if "id" not in session:
+        return redirect("/")
+    
+    id = session["id"]
+    if request.method != 'POST':
+        id_all_followeds = database_handler.get_all_followeds_from_id(id)
+        all_followeds = []
+        for id_followed in id_all_followeds:
+            all_followeds.append((id_followed["id_followed"], database_handler.get_name_from_id(id_followed["id_followed"])))
+
+        messages = database_handler.get_all_messages_between_id_sender_and_receiver(id, id_receiver)
+        return render_template('social_network_chat.html', id=id, all_followeds=all_followeds, id_receiver=id_receiver, messages=messages)
+    
+    message = str(request.form['message'])
+    if not message:
+        flash('Message is required.')
+        return redirect("/social_network/chat/")
+    
+    database_handler.insert_message(id, id_receiver, message, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    return redirect("/social_network/chat/")
+
 ##################################################
 #______________________API_______________________#
 ##################################################
 
 @app.route('/api')
 @app.route('/api/')
-def api():
+def api_home():
     if "id" not in session:
         return render_template('/')
-    return render_template('api.html', id=session["id"])
+    return render_template('api_home.html', id=session["id"])
 
 @app.route('/api/search_movie', methods=('GET', 'POST'))
 @app.route('/api/search_movie/', methods=('GET', 'POST'))
-def search_movie(movie_title=""):
+def api_search_movie(movie_title=""):
     if "id" not in session:
         return redirect("/")
     
     id = session["id"]
     if request.method != 'POST':
-        return render_template("search_movie.html", id=id, all_movie_search=database_handler.get_movie_search(id))
+        return render_template("api_search_movie.html", id=id, all_movie_search=database_handler.get_movie_search(id))
     
     movie = str(request.form['movie'])
     if not movie or movie == None:
@@ -511,7 +725,7 @@ def search_movie(movie_title=""):
     
     movie_title = infosMovie["Title"]
     database_handler.insert_movie_search(id, movie_title, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    return render_template('infosmovie.html',   id=id,
+    return render_template('api_infosmovie.html',   id=id,
                                                 movie_title     = movie_title,
                                                 movie_year      = infosMovie["Year"],
                                                 movie_released  = infosMovie["Released"],
@@ -535,7 +749,9 @@ def conditions_uses():
 @app.route('/thank_you', methods=('GET', 'POST'))
 @app.route('/thank_you/', methods=('GET', 'POST'))
 def thank_you():
-    return render_template('thank_you.html')
+    if "id" not in session:
+        return redirect("/")
+    return render_template('thank_you.html', id=session["id"])
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a href="{{ url_for('titoubank') }}">Titou Bank</a></li>
+        <li><a href="{{ url_for('withdrawl') }}">Withdraw</a></li>
+        <li><a href="{{ url_for('transfer') }}">Transfer</a></li>
+        <li><a class="active" href="{{ url_for('titoubank_stock_market') }}">Stock Market</a></li>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+
+<h1>Évolution du BTC/USB</h1>
+
+<table>
+  <tr>
+    <td>
+        <table>
+            <caption>
+                Évolution du BTC/USB
+            </caption>
+            <thead>
+                <tr>
+                    <th scope="col">Date/Time</th>
+                    <th scope="col">Open</th>
+                    <th scope="col">Close</th>
+                    <th scope="col">High</th>
+                    <th scope="col">Low</th>
+                </tr>
+            </thead>
+            <tbody> 
+                {% for price in prices %}
+                <tr>
+                    <th scope="row">{{ price["datetime"] }}</th>
+                    <td>{{ price["open"] }}</td>
+                    <td>{{ price["close"] }}</td>
+                    <td>{{ price["high"] }}</td>
+                    <td>{{ price["low"] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </td>
+    <td>
+        <div class="posts">
+             <table>
+                <tr>
+                    <td>Your Pay</td>
+                    <td>Your stock's number</td>
+                    <td>Current Price</td>
+                    <td>Coefficient</td>
+                </tr>
+                <tr>
+                    <td><h3>{{ pay_of_account}}</h3></td>
+                    <td><h3>{{ sum_stock_number }}</h3></td>
+                    <td><h3>{{ current_price }}</h3></td>
+                    <td><h3>{{ coefficient }}</h3></td>
+    
+                </tr>
+            </table> 
+        </div>
+        <form method="post">
+            <label for="stock_number">Number of stock to Buy or Sell</label>
+
+            <input
+                class="input"
+                type="number"
+                name="stock_number"
+                placeholder="Enter number of stock"
+                value="{{ request.form.get('stock_number') }}"
+                min="0"
+                step="0.001"
+                required
+            >
+
+            <button
+                type="submit"
+                class="button_red"
+                formaction="{{ url_for('titoubank_stock_market_sell') }}"
+            >
+                Sell
+            </button>
+
+            <button
+                type="submit"
+                class="button_green"
+                formaction="{{ url_for('titoubank_stock_market_buy') }}"
+            >
+                Buy
+            </button>
+        </form>
+        <form method="post">
+            <button
+                type="submit"
+                class="button_red"
+                formaction="{{ url_for('titoubank_stock_market_sell_all') }}"
+                onclick="return confirm('Are you sure? This action cannot be undone.')">
+                Sell All
+            </button>
+        </form>
+    </td>
+  </tr>
+</table>
+<table>
+    <caption>
+        <h2>Your transfers</h2>
+    </caption>
+    <thead>
+        <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Date/Time</th>
+            <th scope="col">Type</th>
+            <th scope="col">Symbol</th>
+            <th scope="col">Stock Number</th>
+            <th scope="col">Stock Price</th>
+        </tr>
+    </thead>
+    <tbody> 
+        {% for transfer in all_stock_market_transfers %}
+        <tr>
+            <td>{{ transfer["id_stock_market_transfer"] }}</td>
+            <th scope="row">{{ transfer["transfer_datetime"] }}</th>
+            <td>{{ transfer["type"] }}</td>
+            <td>{{ transfer["symbol"] }}</td>
+            <td>{{ transfer["stock_number"] }}</td>
+            <td>{{ transfer["stock_price"] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

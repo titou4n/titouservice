@@ -2,8 +2,8 @@
 {% block content %}
 <nav>
     <ul>
-        <li><a class="active" href="{{ url_for('search_movie') }}">Search Movies</a></li>
-        <li><a href="{{ url_for('api') }}">API</a></li>
+        <li><a href="{{ url_for('api_home') }}">API</a></li>
+        <li><a class="active" href="{{ url_for('api_search_movie') }}">Movie Database</a></li>
         <li><a href="{{ url_for('home') }}">Back to Home</a></li>
     </ul>
 </nav>
@@ -61,11 +61,13 @@
 
 <h3 class="search-history">Search History</h3>
 {% if all_movie_search %}
-    {% for all_movie_search in all_movie_search %}
+    {% for movie_search in all_movie_search|reverse %}
     <div class="post">
         <div class="search-history-item">
-            <h4>{{ all_movie_search['movie_title'] }}</h4>
-            <a href="{{ url_for('search_movie', movie_title=all_movie_search['movie_title']) }}">View Details →</a>
+            <h4>{{ movie_search['movie_title'] }}</h4>
+            <form method="post">
+                <a href="{{ url_for('api_search_movie', movie_title=movie_search['movie_title']) }}" type="submit">View Details →</a>
+            </form>
         </div>
     </div>
     {% endfor %}

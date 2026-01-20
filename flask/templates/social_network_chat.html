@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a href="{{ url_for('social_network_home') }}">Social-Network</a></li>
+        <li><a href="{{ url_for('social_network_friends') }}">Friends</a></li>
+        <li><a class="active" href="{{ url_for('social_network_chat') }}">Chat</a></li>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+
+<table>
+  <tr>
+    <td>
+        <!--FOLLOWERS-->
+        <h3>Your followers :</h3>
+        {% if all_followeds %}
+
+            {% for followed in all_followeds|reverse %}
+            <form action="{{ url_for('social_network_chat_selected', id_receiver=followed[0]) }}" method="get">
+                <button class="post" type="submit">
+                    <img class="profile-pic" src="{{ url_for('profile_picture', user_id=followed[0]) }}" alt="Profile Picture">
+                    <h4>{{ followed[1] }}</h4>
+                </button>
+            </form>
+            {% endfor %}          
+
+        {% else %}
+            <div class="post">
+                <p class="no-posts">You are not following anyone yet. <a href="{{ url_for('social_network_friends') }}">Follow someone</a></p>
+            </div>
+        {% endif %}
+    </td>
+    {% if all_followeds %}
+    <td>
+        {% if id_receiver %}
+            {% if messages %}
+
+                {% for message in messages %}
+
+                    {% if message['id_sender']==id %}
+                    <div class="post_color_2">
+                    {% else %}
+                    <div class="post">
+                    {% endif %}
+                    <p>{{ message["message"] }}</p>
+                    </div>
+                {% endfor %}
+
+            {% else %}
+            <p class="no-posts">No message yet.</p>
+            {% endif %}
+
+            <form action="{{ url_for('social_network_send_message', id_receiver=id_receiver) }}" method="post">
+                <input class="input" type="text" name="message" placeholder="Message" value="{{ request.form['message'] }}" required>
+                <button class="button" type="submit">Send</button>
+            </form>
+        {% else %}
+        <p class="no-posts">Please selected a followers.</p>
+        {% endif %}
+    </td>
+    {% endif %}
+  </tr>
+</table> 
+
+{% endblock %}

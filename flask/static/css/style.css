@@ -255,6 +255,26 @@ form p {
     background-color: #D43A3A;
 }
 
+.button_green {
+    background-color: #5DE85D;
+    color: #FFFFFF;
+    padding: 12px 30px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+
+.button_green:hover {
+    background-color: #3AD43A;
+}
+
 /* =====================================
    CONTENEURS
    ===================================== */

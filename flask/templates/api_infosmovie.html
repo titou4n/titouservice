@@ -2,9 +2,9 @@
 {% block content %}
 <nav>
     <ul>
+        <li><a href="{{ url_for('api_home') }}">API</a></li>
+        <li><a href="{{ url_for('api_search_movie') }}">Movie Database</a></li>
         <li><a href="{{ url_for('home') }}">Back to Home</a></li>
-        <li><a href="{{ url_for('api') }}">API</a></li>
-        <li><a href="{{ url_for('search_movie') }}">Search Movies</a></li>
     </ul>
 </nav>
 
