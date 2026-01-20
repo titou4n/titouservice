@@ -3,11 +3,10 @@
 <header>
   <ul>
     <li><a class="active" href="{{ url_for('home') }}">Home</a></li>
-    <li><a href="{{ url_for('personal_information') }}">Personal Information</a></li>
     <li><a href="{{ url_for('titoubank') }}">Titou Bank</a></li>
     <li><a href="{{ url_for('chatroom') }}">Chatroom</a></li>
     <li><a href="{{ url_for('social_network_home') }}">Social-Network</a></li>
-    <li><a href="{{ url_for('api') }}">API</a></li>
+    <li><a href="{{ url_for('api_home') }}">API</a></li>
     <li><a href="{{ url_for('logout') }}">Log Out</a></li>
   </ul>
 </header>
@@ -22,23 +21,40 @@
 <section id="first-row" class="mid">
   <div class="finz">
     <h4>Thank You</h4>
-    <p>TitouService gathers several services in one place. Many people requested the development of this site. We're grateful for their support and contribution.</p>
+    <p>Many people requested the development of this site. We're grateful for their support and contribution.</p>
     <form action="{{ url_for('thank_you') }}" method="get">
       <button class="button" type="submit">Learn More</button>
     </form>
   </div>
   <div class="finz">
     <h4>Your Profile</h4>
-    <p>View and manage your personal information. You can update your profile details, change your name, password, and more in one convenient place.</p>
-    <form action="{{ url_for('personal_information') }}" method="get">
+    <p>View and manage your account. You can update your profile details, change your name, password.</p>
+    <form action="{{ url_for('account') }}" method="get">
       <button class="button" type="submit">View Profile</button>
     </form>
   </div>
   <div class="finz">
-    <h4>Contact Us</h4>
-    <p>Found a bug? Have a feature request? We'd love to hear from you. Contact us to report issues, suggest improvements, or ask questions.</p>
-    <form action="{{ url_for('chatroom') }}" method="get">
-      <button class="button" type="submit">Contact</button>
+    <h4>Social-Network</h4>
+    <p>Titou Social-Network or TSN is a social networking service for making friends, chatting, and meeting people.</p>
+    <form action="{{ url_for('social_network_home') }}" method="get">
+      <button class="button" type="submit">See</button>
+    </form>
+  </div>
+</section>
+
+<section id="first-row" class="mid">
+  <div class="finz">
+    <h4>Friends</h4>
+    <p>If you don't have any friends, come to titouservice and meet new people. Or just add your friends</p>
+    <form action="{{ url_for('social_network_friends') }}" method="get">
+      <button class="button" type="submit">Add friend</button>
+    </form>
+  </div>
+  <div class="finz">
+    <h4>Chat with your friends</h4>
+    <p>Since there is no existing platform for discussion, I have decided to recreate Instagram.</p>
+    <form action="{{ url_for('social_network_chat') }}" method="get">
+      <button class="button" type="submit">Start to discuss</button>
     </form>
   </div>
 </section>
@@ -47,9 +63,19 @@
   <div class="finz">
     <h4>API Documentation</h4>
     <p>An API (Application Programming Interface) allows your applications to connect with our services and exchange data securely. Explore our API documentation and start integrating today.</p>
-    <form action="{{ url_for('api') }}" method="get">
+    <form action="{{ url_for('api_home') }}" method="get">
       <button class="button" type="submit">API Docs</button>
     </form>
   </div>
+</section>
+
+<section id="first-row" class="mid">
+  <div class="finz">
+      <h4>Contact Us</h4>
+      <p>Found a bug? Have a feature request? We'd love to hear from you. Contact us to report issues, suggest improvements, or ask questions.</p>
+      <form action="{{ url_for('chatroom') }}" method="get">
+        <button class="button" type="submit">Contact</button>
+      </form>
+    </div>
 </section>
 {% endblock %}

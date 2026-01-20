@@ -37,6 +37,10 @@ class Config:
     SECRET_KEY = read_secret("secret_key") if ENV_PROD else os.getenv("SECRET_KEY")
     if not SECRET_KEY:
         raise RuntimeError("SECRET_KEY manquante")
+    
+    TWELVEDATA_API_KEY = read_secret("twelvedata_api_key") if ENV_PROD else os.getenv("TWELVEDATA_API_KEY")
+    if not TWELVEDATA_API_KEY:
+        raise RuntimeError("TWELVEDATA_API_KEY manquante")
 
     OMDB_API_KEY = read_secret("omdb_api_key") if ENV_PROD else os.getenv("OMDB_API_KEY")
     if not OMDB_API_KEY:
@@ -75,3 +79,7 @@ class Config:
 
     # ===== DEFAULT =====
     PATH_DEFAULT_PROFILE_PICTURE = BASE_DIR / "static" / "img" / "profile-default.png"
+
+    # ===== BANK =====
+    BANK_DEFAULT_PAY = 1000000
+    STOCK_MARKET_COEFFICIENT = 1

@@ -9,7 +9,7 @@
   <body>
     <div class="header-profile">
         {% if 'id' in session %}
-        <a href="/personal_information" class="profile-link">
+        <a href="{{ url_for('account') }}" class="profile-link">
           <img class="profile-pic" src="{{ url_for('profile_picture', user_id=id) }}" alt="Profile Picture">
         </a>
         {% endif %}

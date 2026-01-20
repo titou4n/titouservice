@@ -4,8 +4,8 @@
 
 <nav>
     <ul>
-        <li><a class="active" href="{{ url_for('api') }}">API</a></li>
-        <li><a href="{{ url_for('search_movie') }}">Movie Database</a></li>
+        <li><a class="active" href="{{ url_for('api_home') }}">API</a></li>
+        <li><a href="{{ url_for('api_search_movie') }}">Movie Database</a></li>
         <li><a href="{{ url_for('home') }}">Back to Home</a></li>
     </ul>
 </nav>
@@ -21,7 +21,7 @@
     <div class="finz">
         <h4>Movie Database</h4>
         <p>Our Movie API provides access to comprehensive information about movies, including summaries, ratings, directors, release dates, and more. Perfect for building movie-related applications.</p>
-        <form action="{{ url_for('search_movie') }}" method="get">
+        <form action="{{ url_for('api_search_movie') }}" method="get">
             <button class="button" type="submit">Browse Movies</button>
         </form>
     </div>

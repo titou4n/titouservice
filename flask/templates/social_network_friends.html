@@ -3,7 +3,8 @@
 <nav>
     <ul>
         <li><a href="{{ url_for('social_network_home') }}">Social-Network</a></li>
-        <li><a class="active" href="{{ url_for('social_network_friends') }}">Friends</a></li>
+        <li><a class="active"href="{{ url_for('social_network_friends') }}">Friends</a></li>
+        <li><a href="{{ url_for('social_network_chat') }}">Chat</a></li>
         <li><a href="{{ url_for('home') }}">Back to Home</a></li>
     </ul>
 </nav>
@@ -20,12 +21,14 @@
 <h3>Your followers :</h3>
 {% if all_followers %}
 
+    <table>
     {% for follower in all_followers|reverse %}
-        <div class="post">
-            <img class="profile-pic" src="{{ url_for('profile_picture', user_id=follower[0]) }}" alt="Profile Picture">
-            <h4>{{ follower[1] }}</h4>
-        </div>
+        <tr>
+            <td><img class="profile-pic" src="{{ url_for('profile_picture', user_id=follower[0]) }}" alt="Profile Picture"></td>
+            <td><h4>{{ follower[1] }}</h4></td>
+        </tr>
     {% endfor %}
+    </table>
 
 {% else %}
     <div class="post">
@@ -37,12 +40,14 @@
 <h3>Your followed :</h3>
 {% if all_followeds %}
 
+    <table>
     {% for followed in all_followeds|reverse %}
-        <div class="post">
-            <img class="profile-pic" src="{{ url_for('profile_picture', user_id=followed[0]) }}" alt="Profile Picture">
-            <h4>{{ followed[1] }}</h4>
-        </div>
+        <tr>
+            <td><img class="profile-pic" src="{{ url_for('profile_picture', user_id=followed[0]) }}" alt="Profile Picture"></td>
+            <td><h4>{{ followed[1] }}</h4></td>
+        </tr>
     {% endfor %}
+    </table>
 
 {% else %}
     <div class="post">
