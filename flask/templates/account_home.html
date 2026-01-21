@@ -45,5 +45,8 @@ Balance : {{ pay }} $</pre>
             <button class="button_red" type="submit" onclick="return confirm('Are you sure? This action cannot be undone.')">Delete Account</button>
         </form>
     </div>
+
+    <p class="terms-footer">Je souhaites accéder au <a href="{{ url_for('conditions_uses') }}" target="_blank">CGU</a></p>
+    
 </div>
 {% endblock %}

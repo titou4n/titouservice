@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from utils.ipv4_address import ipv4_address
 
 def read_secret(name):
     try:
@@ -15,13 +16,17 @@ def read_secret(name):
 
 class Config:
 
+    #ipv4_address = ipv4_address()
+    #print(f"IPV4 : {ipv4_address}")
+
     #       ||
     #       ||
     #       ||
     #      \  /
     #       \/
-    
-    ENV_PROD = False
+
+    #ENV_PROD = True if ipv4_address != "127.0.0.1" else False
+    ENV_PROD = True
 
     #       /\
     #      /  \

@@ -768,7 +768,9 @@ def api_search_movie(movie_title=""):
 @app.route('/conditions_uses')
 @app.route('/conditions_uses/')
 def conditions_uses():
-    return render_template('conditions_uses.html')
+    if "id" not in session:
+        return render_template('conditions_uses.html')
+    return render_template('conditions_uses.html', id=session["id"])
 
 @app.route('/thank_you', methods=('GET', 'POST'))
 @app.route('/thank_you/', methods=('GET', 'POST'))

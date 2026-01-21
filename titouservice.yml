@@ -8,8 +8,8 @@ services:
     expose:
       - "5000"
     restart: unless-stopped
-    #volumes:
-      #- ./flask:/app
+    volumes:
+      - ./flask:/app
       # volume persistant pour la DB
       #- db-data:/app/Data
     networks:
