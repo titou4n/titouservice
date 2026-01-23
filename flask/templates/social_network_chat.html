@@ -19,7 +19,9 @@
             {% for followed in all_followeds|reverse %}
             <form action="{{ url_for('social_network_chat_selected', id_receiver=followed[0]) }}" method="get">
                 <button class="post" type="submit">
-                    <img class="profile-pic" src="{{ url_for('profile_picture', user_id=followed[0]) }}" alt="Profile Picture">
+                    <a href="{{ url_for('social_network_user_profile', id_account=followed[0]) }}" class="profile-link">
+                        <img class="profile-pic" src="{{ url_for('profile_picture', user_id=followed[0]) }}" alt="Profile Picture">
+                    </a>
                     <h4>{{ followed[1] }}</h4>
                 </button>
             </form>

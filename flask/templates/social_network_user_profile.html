@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a href="{{ url_for('social_network_home') }}">Social-Network</a></li>
+        <li><a class="active"href="{{ url_for('social_network_friends') }}">Friends</a></li>
+        <li><a href="{{ url_for('social_network_chat') }}">Chat</a></li>
+        <li><a href="{{ url_for('home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+
+<h2>{{ name }}'s Account</h2>
+<div class="post">
+
+    <div class="profile-pic-container">
+        <img class="profile-pic-big" src="{{ url_for('profile_picture', user_id=user_profile_id) }}" alt="Profile Picture">
+    </div>
+    {% if id1_follow_id2 %}
+        <a href="{{ url_for('social_network_unfollow_action', id_unfollowed=user_profile_id) }}" class="button_red">Unfollow</a>
+        <a href="{{ url_for('social_network_chat_selected', id_receiver=user_profile_id) }}" class="button">Chat with him/her</a>
+    {% else %}
+        <a href="{{ url_for('social_network_follow_action', id_followed=user_profile_id) }}" class="button">Follow</a>
+    {% endif %}
+    <hr>
+    <h3>Account Details</h3>
+    <pre>ID      : {{ id }}
+Name    : {{ name }}
+Balance : {{ pay }} $</pre>
+    
+    
+
+    
+</div>
+{% endblock %}

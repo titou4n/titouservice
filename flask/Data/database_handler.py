@@ -293,6 +293,20 @@ class DatabaseHandler():
     conn.close()
     return list_id_followed
   
+  def verif_id1_follow_id2(self, id1:int, id2:int) -> bool:
+    conn = self.get_db_connection()
+    query = f"SELECT * FROM friends WHERE id_follower=? AND id_followed=?;"
+    result = conn.execute(query, (id1, id2,)).fetchall()
+    conn.close()
+    return len(result)>=1
+  
+  def delete_link_social_network_id1_id2(self, id_follower:int, id_followed:int):
+    conn = self.get_db_connection()
+    query = f"DELETE FROM friends WHERE id_follower=? AND id_followed=?"
+    conn.execute(query, (id_follower, id_followed,))
+    conn.commit()
+    conn.close()
+  
   def insert_message(self, id_sender:int, id_receiver:int, message:str, datetime:datetime):
     conn = self.get_db_connection()
     query = f"INSERT INTO messages (id_sender, id_receiver, message, datetime) VALUES (?, ?, ?, ?);"
