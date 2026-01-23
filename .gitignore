@@ -12,7 +12,7 @@ flask_session/
 *.sqlite3
 
 # ===== Uploads =====
-static/uploads/
+flask/static/uploads/
 
 # ===== Python =====
 __pycache__/
