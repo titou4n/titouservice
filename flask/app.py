@@ -646,16 +646,54 @@ def social_network_friends():
         return redirect("/social_network/friends/")
 
     id_followed = database_handler.get_id_from_name(friend_name)
+    return redirect(f"/social_network/user_profile/{id_followed}")
 
+@app.route('/social_network/user_profile/<int:id_account>', methods=('GET', 'POST'))
+@app.route('/social_network/user_profile/<int:id_account>/', methods=('GET', 'POST'))
+def social_network_user_profile(id_account:int):
+    if "id" not in session:
+        return redirect("/")
+    
+    id=session["id"]
+    id1_follow_id2 = database_handler.verif_id1_follow_id2(id, id_account)
+    return render_template('social_network_user_profile.html',
+                           id=id,
+                           id1_follow_id2=id1_follow_id2,
+                           user_profile_id=id_account,
+                           name=database_handler.get_name_from_id(id_account),
+                           pay=database_handler.get_pay(id_account))
+
+@app.route('/social_network/follow_action/<int:id_followed>', methods=('GET', 'POST'))
+@app.route('/social_network/follow_action/<int:id_followed>', methods=('GET', 'POST'))
+def social_network_follow_action(id_followed:int):
+    if "id" not in session:
+        return redirect("/")
+    
+    id = session["id"]
     if id_followed == id:
         flash("You cannot follow yourself")
         return redirect("/social_network/friends/")
 
-    if id_followed in database_handler.get_all_followeds_from_id(id):
+    if database_handler.verif_id1_follow_id2(id, id_followed):
         flash("You are already following this person")
         return redirect("/social_network/friends/")
 
     database_handler.create_link_social_network(id, id_followed, datetime.date.today())
+    return redirect("/social_network/friends/")
+
+@app.route('/social_network/unfollow_action/<int:id_unfollowed>', methods=('GET', 'POST'))
+@app.route('/social_network/unfollow_action/<int:id_unfollowed>', methods=('GET', 'POST'))
+def social_network_unfollow_action(id_unfollowed:int):
+    if "id" not in session:
+        return redirect("/")
+    
+    id = session["id"]
+    if id_unfollowed == id:
+        flash("You cannot unfollow yourself")
+        return redirect("/social_network/friends/")
+
+    database_handler.delete_link_social_network_id1_id2(id, id_unfollowed)
+    flash("You are no longer following this person")
     return redirect("/social_network/friends/")
 
 @app.route('/social_network/chat', methods=('GET', 'POST'))
@@ -710,7 +748,7 @@ def social_network_send_message(id_receiver:int):
         return redirect("/social_network/chat/")
     
     database_handler.insert_message(id, id_receiver, message, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    return redirect("/social_network/chat/")
+    return redirect(f"/social_network/chat/{id_receiver}")
 
 ##################################################
 #______________________API_______________________#

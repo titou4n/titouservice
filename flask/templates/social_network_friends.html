@@ -24,7 +24,11 @@
     <table>
     {% for follower in all_followers|reverse %}
         <tr>
-            <td><img class="profile-pic" src="{{ url_for('profile_picture', user_id=follower[0]) }}" alt="Profile Picture"></td>
+            <td>
+                <a href="{{ url_for('social_network_user_profile', id_account=follower[0]) }}" class="profile-link">
+                    <img class="profile-pic" src="{{ url_for('profile_picture', user_id=follower[0]) }}" alt="Profile Picture">
+                </a>
+            </td>
             <td><h4>{{ follower[1] }}</h4></td>
         </tr>
     {% endfor %}
@@ -43,7 +47,11 @@
     <table>
     {% for followed in all_followeds|reverse %}
         <tr>
-            <td><img class="profile-pic" src="{{ url_for('profile_picture', user_id=followed[0]) }}" alt="Profile Picture"></td>
+            <td>
+                <a href="{{ url_for('social_network_user_profile', id_account=followed[0]) }}" class="profile-link">
+                    <img class="profile-pic" src="{{ url_for('profile_picture', user_id=followed[0]) }}" alt="Profile Picture">
+                </a>
+            </td>
             <td><h4>{{ followed[1] }}</h4></td>
         </tr>
     {% endfor %}
