@@ -2,16 +2,21 @@ import sqlite3
 import datetime
 import os
 
-from Data.init_db import init_database
+from Data.init_db import DatabaseManager
 from config import Config
+from utils.hashlib_blake2b import hashlib_blake2b
 
-conf = Config()
+config = Config()
+database_manager = DatabaseManager()
 
 class DatabaseHandler():
   def __init__(self):
-    if not os.path.exists(conf.DATABASE_URL):
-        init_database()
-    self.db_path = conf.DATABASE_URL
+    if not os.path.exists(config.DATABASE_URL):
+        database_manager.init_database()
+    self.db_path = config.DATABASE_URL
+
+    if not self.verif_user_exists(str(config.USERNAME_VISITOR)):
+      self.create_account(str(config.USERNAME_VISITOR), str(hashlib_blake2b(config.PASSWORD_VISITOR)), str(config.NAME_VISITOR))
 
   def get_db_connection(self):
     conn = sqlite3.connect(self.db_path, check_same_thread=False)

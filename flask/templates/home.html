@@ -2,6 +2,10 @@
 {% block content %}
 <header>
   <ul>
+    <!--<a class="active" href="{{ url_for('home') }}">
+        <img class="icon" src="{{ url_for('static', filename='icon/home.svg') }}" alt="home">
+    </a>-->
+   
     <li><a class="active" href="{{ url_for('home') }}">Home</a></li>
     <li><a href="{{ url_for('titoubank') }}">Titou Bank</a></li>
     <li><a href="{{ url_for('chatroom') }}">Chatroom</a></li>

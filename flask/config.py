@@ -26,7 +26,7 @@ class Config:
     #       \/
 
     #ENV_PROD = True if ipv4_address != "127.0.0.1" else False
-    ENV_PROD = True
+    ENV_PROD = False
 
     #       /\
     #      /  \
@@ -84,6 +84,11 @@ class Config:
 
     # ===== DEFAULT =====
     PATH_DEFAULT_PROFILE_PICTURE = BASE_DIR / "static" / "img" / "profile-default.png"
+
+    # ===== Visitor =====
+    USERNAME_VISITOR = "UsernameVisitor"
+    PASSWORD_VISITOR = "PasswordVisitor"
+    NAME_VISITOR = "Visitor"
 
     # ===== BANK =====
     BANK_DEFAULT_PAY = 1000000
