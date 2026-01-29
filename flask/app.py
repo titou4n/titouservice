@@ -9,6 +9,7 @@ from io import BytesIO
 from werkzeug.utils import secure_filename
 
 # Import Local
+from Data.init_db import DatabaseManager
 from Data.database_handler import DatabaseHandler
 from config import Config
 from utils.hashlib_blake2b import hashlib_blake2b
@@ -19,7 +20,8 @@ from utils.bank import get_sum_transfers_from_id_symbol
 #_____DO_NOT_FORGET_TO_REMOVE_APP_RUN_____#
 ###########################################
 
-database_handler=DatabaseHandler()
+database_manager = DatabaseManager()
+database_handler = DatabaseHandler()
 config = Config()
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -95,6 +97,36 @@ def register():
     
     database_handler.create_account(username, password, name)
     session["id"] = database_handler.get_id_from_username(username)
+    database_handler.insert_metadata(session["id"], datetime.datetime.now(), ipv4_address())
+    return redirect("/home/")
+
+@app.route('/visitor', methods=('GET', 'POST'))
+@app.route('/visitor/', methods=('GET', 'POST'))
+def continue_as_a_visitor():
+    if "id" in session:
+            id = session["id"]
+            return redirect("/home/")
+    
+    username_visitor = config.USERNAME_VISITOR
+    password_visitor = hashlib_blake2b(config.PASSWORD_VISITOR)
+
+    if not username_visitor or username_visitor == None:
+        flash('Username is required.')
+        return render_template('login.html')
+    
+    if not password_visitor or password_visitor == None:
+        flash('Password is required.')
+        return render_template('login.html')
+    
+    if not database_handler.verif_user_exists(username_visitor) :
+        flash('Username is not correct.')
+        return render_template('login.html')
+
+    if password_visitor != database_handler.get_password(database_handler.get_id_from_username(username_visitor)) :
+        flash('Password is not correct.')
+        return render_template('login.html')
+     
+    session["id"]=database_handler.get_id_from_username(username_visitor)
     database_handler.insert_metadata(session["id"], datetime.datetime.now(), ipv4_address())
     return redirect("/home/")
 

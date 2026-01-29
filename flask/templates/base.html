@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   </head>
   <body>
+    <div class="header-home-icon">
+        {% if 'id' in session %}
+        <a href="{{ url_for('home') }}" class="home-icon">
+          <img class="home-icon-pic" src="{{ url_for('static', filename='icon/home.svg') }}" alt="home">
+        </a>
+        {% endif %}
+    </div>
     <div class="header-profile">
         {% if 'id' in session %}
         <a href="{{ url_for('account') }}" class="profile-link">

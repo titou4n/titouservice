@@ -45,6 +45,43 @@ body {
     color: var(--text-dark);
 }
 
+/*
+Menu
+*/
+.icon {
+    width: 25px;
+    height: 25px;
+    width: 100%;
+}
+
+/* =====================================
+   HOME ICON
+   ===================================== */
+.header-home-icon {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+}
+
+.home-icon {
+    display: inline-block;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.home-icon:hover {
+    transform: scale(1.1);
+}
+
+.home-icon-pic {
+    width: 50px;
+    height: 50px;
+    border-radius: 10%;
+    border: 2px solid transparent;
+}
+
 /* =====================================
    HEADER & PROFIL
    ===================================== */

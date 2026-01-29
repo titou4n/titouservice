@@ -2,161 +2,304 @@ import sqlite3
 import os
 from config import Config
 
-conf = Config()
+config = Config()
 
-def init_database():
-    db_path = conf.DATABASE_URL
+class DatabaseManager():
+    def __init__(self):
+        self.db_path = config.DATABASE_URL
+        if not os.path.exists(config.DATABASE_URL):
+            self.init_database()
+            self.get_plan_database()
+            return
 
-    if os.path.exists(db_path):
-        return
-    
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+        #self.reset_all_table_except_account()
 
-    # =========================
-    # TABLE account
-    # =========================
-    querry = f"""
-    CREATE TABLE IF NOT EXISTS account (
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-        is_admin INTEGER DEFAULT 0,
-        username STRING NOT NULL UNIQUE,
-        password STRING NOT NULL,
-        name STRING NOT NULL UNIQUE,
-        profile_picture_path STRING,
-        pay DECIMAL DEFAULT {conf.BANK_DEFAULT_PAY},
-        nbpasswordchange INTEGER DEFAULT 0,
-        nbnamechange INTEGER DEFAULT 0
-    );
-    """
-    cursor.execute(querry)
+    def init_database(self):
+        self.create_table_account()
+        self.create_table_metadata()
+        self.create_table_bank_transfers()
+        self.create_table_stock_market_transfers()
+        self.create_table_friends()
+        self.create_table_messages()
+        self.create_table_posts()
+        self.create_table_movie_search()
+        print("-> Base de données initialisée avec succès.")
 
-    # =========================
-    # TABLE metadata
-    # =========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS metadata (
-        id_metadata INTEGER PRIMARY KEY AUTOINCREMENT,
-        id INTEGER NOT NULL,
-        date_connected DATETIME NOT NULL,
-        ipv4 INTEGER NOT NULL,
-        FOREIGN KEY (id) REFERENCES account(id) ON DELETE CASCADE
-    );
-    """)
+    def verif_table_exist(self, table_name):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
 
-    # =========================
-    # TABLE bank_transfers
-    # =========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS bank_transfers (
-        id_bank_transfer INTEGER PRIMARY KEY AUTOINCREMENT,
-        id_sender INTEGER NOT NULL,
-        id_receiver INTEGER NOT NULL,
-        transfer_amount DECIMAL NOT NULL,
-        transfer_date DATETIME NOT NULL,
-        FOREIGN KEY (id_sender) REFERENCES account(id) ON DELETE CASCADE,
-        FOREIGN KEY (id_receiver) REFERENCES account(id) ON DELETE CASCADE
-    );
-    """)
+        query = """
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name=?
+        """
+        cursor.execute(query, (table_name,))
+        result = cursor.fetchone()
 
-    # =========================
-    # TABLE stock_market_transfers
-    # =========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS stock_market_transfers (
-        id_stock_market_transfer INTEGER PRIMARY KEY AUTOINCREMENT,
-        id_account INTEGER NOT NULL,
-        type STRING NOT NULL,
-        symbol STRING NOT NULL,
-        stock_number DECIMAL NOT NULL,
-        stock_price DECIMAL NOT NULL,
-        transfer_datetime DATETIME NOT NULL,
-        FOREIGN KEY (id_account) REFERENCES account(id)
-    );
-    """)
+        conn.close()
+        return result is not None
 
-    # =========================
-    # TABLE friends
-    # =========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS friends (
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-        id_follower INTEGER NOT NULL,
-        id_followed INTEGER NOT NULL,
-        date DATETIME NOT NULL,
-        FOREIGN KEY (id_follower) REFERENCES account(id) ON DELETE CASCADE,
-        FOREIGN KEY (id_followed) REFERENCES account(id) ON DELETE CASCADE
-    );
-    """)
+    def create_table_account(self):
 
-    # =========================
-    # TABLE messages
-    # =========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS messages (
-        id_message INTEGER PRIMARY KEY AUTOINCREMENT,
-        id_sender INTEGER NOT NULL,
-        id_receiver INTEGER NOT NULL,
-        message STRING NOT NULL,
-        datetime DATETIME NOT NULL,
-        FOREIGN KEY (id_sender) REFERENCES account(id) ON DELETE CASCADE,
-        FOREIGN KEY (id_receiver) REFERENCES account(id) ON DELETE CASCADE
-    );
-    """)
+        if self.verif_table_exist("account"):
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
 
-    # =========================
-    # TABLE posts
-    # =========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS posts (
-        id_post INTEGER PRIMARY KEY AUTOINCREMENT,
-        id INTEGER NOT NULL,
-        name STRING NOT NULL,
-        title STRING NOT NULL,
-        content STRING NOT NULL,
-        created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (id) REFERENCES account(id) ON DELETE CASCADE
-    );
-    """)
+        # =========================
+        # TABLE account
+        # =========================
+        query = f"""
+        CREATE TABLE IF NOT EXISTS account (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            is_admin INTEGER DEFAULT 0,
+            username STRING NOT NULL UNIQUE,
+            password STRING NOT NULL,
+            name STRING NOT NULL UNIQUE,
+            profile_picture_path STRING,
+            pay DECIMAL DEFAULT {config.BANK_DEFAULT_PAY},
+            nbpasswordchange INTEGER DEFAULT 0,
+            nbnamechange INTEGER DEFAULT 0
+        );
+        """
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'account' created with success.")
 
-    # =========================
-    # TABLE movie_search
-    # =========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS movie_search (
-        id_movie_search INTEGER PRIMARY KEY AUTOINCREMENT,
-        id INTEGER NOT NULL,
-        movie_title STRING NOT NULL,
-        date_movie_search DATETIME NOT NULL,
-        FOREIGN KEY (id) REFERENCES account(id) ON DELETE CASCADE
-    );
-    """)
+    def create_table_metadata(self):
 
-    conn.commit()
-    conn.close()
-    print("-> Base de données initialisée avec succès.")
+        if self.verif_table_exist("metadata"):
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
 
-def get_plan_database():
-    print("Get plan database....")
-    db_path = conf.DATABASE_URL
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+        # =========================
+        # TABLE metadata
+        # =========================
+        query = f"""
+        CREATE TABLE IF NOT EXISTS metadata (
+            id_metadata INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER NOT NULL,
+            date_connected DATETIME NOT NULL,
+            ipv4 INTEGER NOT NULL,
+            FOREIGN KEY (id) REFERENCES account(id) ON DELETE CASCADE
+        );
+        """
 
-    cursor.execute("SELECT sql FROM sqlite_master WHERE type='table';")
-    for row in cursor.fetchall():
-        print(row[0])
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'metadata' created with success.")
 
-    conn.close()
+    def create_table_bank_transfers(self):
 
-def reset_database():
-    """
-    Supprime l'ancienne base de données et la recrée avec toutes les tables.
-    """
-    db_path = conf.DATABASE_URL
-    if os.path.exists(db_path):
-        os.remove(db_path)
-        print("-> Ancienne base de données supprimée.")
-    
-    init_database()
+        if self.verif_table_exist("bank_transfers"):
+            return
 
-init_database()
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # =========================
+        # TABLE bank_transfers
+        # =========================
+        query = f"""
+        CREATE TABLE IF NOT EXISTS bank_transfers (
+            id_bank_transfer INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_sender INTEGER NOT NULL,
+            id_receiver INTEGER NOT NULL,
+            transfer_amount DECIMAL NOT NULL,
+            transfer_date DATETIME NOT NULL,
+            FOREIGN KEY (id_sender) REFERENCES account(id) ON DELETE CASCADE,
+            FOREIGN KEY (id_receiver) REFERENCES account(id) ON DELETE CASCADE
+        );
+        """
+
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'bank_transfers' created with success.")
+
+    def create_table_stock_market_transfers(self):
+
+        if self.verif_table_exist("stock_market_transfers"):
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # =========================
+        # TABLE stock_market_transfers
+        # =========================
+        query = f"""
+        CREATE TABLE IF NOT EXISTS stock_market_transfers (
+            id_stock_market_transfer INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_account INTEGER NOT NULL,
+            type STRING NOT NULL,
+            symbol STRING NOT NULL,
+            stock_number DECIMAL NOT NULL,
+            stock_price DECIMAL NOT NULL,
+            transfer_datetime DATETIME NOT NULL,
+            FOREIGN KEY (id_account) REFERENCES account(id)
+        );
+        """
+
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'stock_market_transfers' created with success.")
+
+    def create_table_friends(self):
+
+        if self.verif_table_exist("friends"):
+            return
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # =========================
+        # TABLE friends
+        # =========================
+        query = f"""
+        CREATE TABLE IF NOT EXISTS friends (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            id_follower INTEGER NOT NULL,
+            id_followed INTEGER NOT NULL,
+            date DATETIME NOT NULL,
+            FOREIGN KEY (id_follower) REFERENCES account(id) ON DELETE CASCADE,
+            FOREIGN KEY (id_followed) REFERENCES account(id) ON DELETE CASCADE
+        );
+        """
+
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'friends' created with success.")
+
+    def create_table_messages(self):
+
+        if self.verif_table_exist("messages"):
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # =========================
+        # TABLE messages
+        # =========================
+        query = f"""
+        CREATE TABLE IF NOT EXISTS messages (
+            id_message INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_sender INTEGER NOT NULL,
+            id_receiver INTEGER NOT NULL,
+            message STRING NOT NULL,
+            datetime DATETIME NOT NULL,
+            FOREIGN KEY (id_sender) REFERENCES account(id) ON DELETE CASCADE,
+            FOREIGN KEY (id_receiver) REFERENCES account(id) ON DELETE CASCADE
+        );
+        """
+
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'messages' created with success.")
+
+    def create_table_posts(self):
+
+        if self.verif_table_exist("posts"):
+            return
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # =========================
+        # TABLE posts
+        # =========================
+        query = f"""
+        CREATE TABLE IF NOT EXISTS posts (
+            id_post INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER NOT NULL,
+            name STRING NOT NULL,
+            title STRING NOT NULL,
+            content STRING NOT NULL,
+            created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (id) REFERENCES account(id) ON DELETE CASCADE
+        );
+        """
+
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'posts' created with success.")
+
+    def create_table_movie_search(self):
+
+        if self.verif_table_exist("movie_search"):
+            return
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # =========================
+        # TABLE movie_search
+        # =========================
+        query = f"""
+        CREATE TABLE IF NOT EXISTS movie_search (
+            id_movie_search INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER NOT NULL,
+            movie_title STRING NOT NULL,
+            date_movie_search DATETIME NOT NULL,
+            FOREIGN KEY (id) REFERENCES account(id) ON DELETE CASCADE
+        );
+        """
+
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'movie_search' created with success.")
+
+    def get_plan_database(self):
+        print("Get plan database....")
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT sql FROM sqlite_master WHERE type='table';")
+        for row in cursor.fetchall():
+            print(row[0])
+
+        conn.close()
+
+    def reset_all_table_except_account(self):
+        print("_________Reset all table except account__________")
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT name FROM sqlite_master
+            WHERE type='table'
+            AND name != 'account'
+            AND name NOT LIKE 'sqlite_%'
+        """)
+
+        tables = cursor.fetchall()
+
+        for (table_name,) in tables:
+            cursor.execute(f'DROP TABLE "{table_name}"')
+            print(f"The {table_name} table has been successfully deleted.")
+
+        conn.commit()
+        conn.close()
+
+        self.init_database()
+
+    def reset_database(self):
+        """
+        Supprime l'ancienne base de données et la recrée avec toutes les tables.
+        """
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+            print("-> Ancienne base de données supprimée.")
+        
+        self.init_database()
