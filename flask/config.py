@@ -26,7 +26,7 @@ class Config:
     #       \/
 
     #ENV_PROD = True if ipv4_address[:7] != "192.168" else False
-    ENV_PROD = False
+    ENV_PROD = True
 
     #       /\
     #      /  \

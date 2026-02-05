@@ -183,7 +183,7 @@ def continue_as_a_visitor():
         flash('Password is required.')
         return render_template('login.html')
     
-    if not database_handler.verif_user_exists(username_visitor) :
+    if not database_handler.verif_username_exists(username_visitor) :
         flash('Username is not correct.')
         return render_template('login.html')
 
