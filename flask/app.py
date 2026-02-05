@@ -1,27 +1,30 @@
 # Import Externe
-import datetime
 import requests
 import os
+import random
 
 from flask import Flask, render_template, session, request, flash, redirect, send_file, jsonify
 from flask_session import Session
 from io import BytesIO
 from werkzeug.utils import secure_filename
+from datetime import datetime
 
 # Import Local
 from Data.init_db import DatabaseManager
 from Data.database_handler import DatabaseHandler
 from config import Config
-from utils.hashlib_blake2b import hashlib_blake2b
+from utils.utils import Utils
+from utils.email_manager import EmailManager
+from utils.hash_manager import HashManager
 from utils.ipv4_address import ipv4_address
 from utils.bank import get_sum_transfers_from_id_symbol
 
-###########################################
-#_____DO_NOT_FORGET_TO_REMOVE_APP_RUN_____#
-###########################################
-
 database_manager = DatabaseManager()
 database_handler = DatabaseHandler()
+utils = Utils()
+email_manager = EmailManager()
+hash_manager = HashManager()
+
 config = Config()
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -33,7 +36,7 @@ def index():
     if "id" not in session:
         return render_template('index.html')
     
-    database_handler.insert_metadata(session["id"], datetime.datetime.now(), ipv4_address())
+    database_handler.insert_metadata(session["id"], utils.get_datetime_isoformat(), ipv4_address())
     return redirect("/home/") 
 
 @app.route('/login', methods=('GET', 'POST'))
@@ -47,7 +50,7 @@ def login():
         return render_template('login.html')
     
     username = str(request.form['username'])
-    password = hashlib_blake2b(str(request.form['password']))
+    password = hash_manager.generate_password_hash(str(request.form['password']))
 
     if not username or username == None:
         flash('Username is required.')
@@ -56,17 +59,13 @@ def login():
     if not password or password == None:
         flash('Password is required.')
         return render_template('login.html')
-    
-    if not database_handler.verif_user_exists(username) :
-        flash('Username is not correct.')
-        return render_template('login.html')
 
-    if password != database_handler.get_password(database_handler.get_id_from_username(username)) :
-        flash('Password is not correct.')
+    if not database_handler.verif_username_exists(username) or password != database_handler.get_password(database_handler.get_id_from_username(username)) :
+        flash('Username and/or Password is not correct.')
         return render_template('login.html')
      
     session["id"]=database_handler.get_id_from_username(username)
-    database_handler.insert_metadata(session["id"], datetime.datetime.now(), ipv4_address())
+    database_handler.insert_metadata(session["id"], utils.get_datetime_isoformat(), ipv4_address())
     return redirect("/home/")         
 
 @app.route('/register', methods=('GET', 'POST'))
@@ -79,11 +78,11 @@ def register():
         return render_template('register.html')
     
     username        = str(request.form['username'])
-    password        = hashlib_blake2b(str(request.form['password']))
-    verif_password  = hashlib_blake2b(str(request.form['verif_password']))
+    password        = hash_manager.generate_password_hash(str(request.form['password']))
+    verif_password  = hash_manager.generate_password_hash(str(request.form['verif_password']))
     name            = str(request.form['name'])
 
-    if database_handler.verif_user_exists(username):
+    if database_handler.verif_username_exists(username):
         flash("Username is already used.")
         return render_template('register.html')
 
@@ -97,7 +96,73 @@ def register():
     
     database_handler.create_account(username, password, name)
     session["id"] = database_handler.get_id_from_username(username)
-    database_handler.insert_metadata(session["id"], datetime.datetime.now(), ipv4_address())
+    database_handler.insert_metadata(session["id"], utils.get_datetime_isoformat(), ipv4_address())
+    return redirect("/home/")
+
+@app.route('/two_factor_authentication', methods=('GET', 'POST'))
+@app.route('/two_factor_authentication/', methods=('GET', 'POST'))
+def two_factor_authentication():
+    if "id" not in session:
+        return redirect("/")
+    
+    id = session["id"]
+    database_handler.delete_old_code_hash()
+
+    if request.method != 'POST':
+
+        code_hash = database_handler.get_code_hash_from_user_id(user_id=id)
+        if code_hash is not None:
+            created_at = datetime.fromisoformat(code_hash["created_at"])
+            if utils.datetime_is_expired_minutes(created_at, 5):
+                flash("Your code has expired, we have sent you a new one.")
+                database_handler.delete_old_code_hash_from_user_id(user_id=id)
+                return redirect("/two_factor_authentication/")
+            if code_hash["attempts"] >= 3:
+                flash("Number of attempts reached, we have sent you a new code.")
+                database_handler.delete_old_code_hash_from_user_id(user_id=id)
+                return redirect("/two_factor_authentication/")
+            return render_template('two_factor_authentication.html')
+        
+        random_code = random.randint(100000,999999)
+        email_manager.send_two_factor_authentication_code_with_html(id, random_code)
+        database_handler.insert_two_factor_codes(user_id=id,
+                                                 code_hash=hash_manager.generate_password_hash(str(random_code)),
+                                                 created_at=utils.get_datetime_isoformat())
+        flash(f"An email containing a two-factor authentication code has been sent to the following address: {database_handler.get_email_from_id(id)} ")
+        return render_template('two_factor_authentication.html')
+    
+    code = str(request.form['code'])
+
+    code_hash = database_handler.get_code_hash_from_user_id(user_id=id)
+    if code_hash is None:
+        flash("Your two-factor authentication failed. Please try again.")
+        database_handler.delete_old_code_hash_from_user_id(user_id=id)
+        return redirect("/two_factor_authentication/")
+    
+    if code_hash["used"]:
+        flash("This code has already been used, we have sent you a new one.")
+        database_handler.delete_old_code_hash_from_user_id(user_id=id)
+        return redirect("/two_factor_authentication/")
+    
+    if code_hash["attempts"] >= 3:
+        flash("Number of attempts reached, we have sent you a new code.")
+        database_handler.delete_old_code_hash_from_user_id(user_id=id)
+        return redirect("/two_factor_authentication/")
+    
+    created_at = datetime.fromisoformat(code_hash["created_at"])
+    if utils.datetime_is_expired_minutes(created_at, 5):
+        flash("Your code has expired, we have sent you a new one.")
+        database_handler.delete_old_code_hash_from_user_id(user_id=id)
+        return redirect("/two_factor_authentication/")
+    
+    if hash_manager.generate_password_hash(code) != code_hash["code_hash"]:
+        flash("The code is incorrect")
+        database_handler.add_attempts_two_factor_codes(id_two_factor_codes=code_hash["id_two_factor_codes"])
+        return redirect("/two_factor_authentication/")
+    
+    database_handler.delete_old_code_hash_from_user_id(user_id=id)
+    database_handler.update_email_verified_from_id(id)
+    flash("Your two-factor authentication sucess.")
     return redirect("/home/")
 
 @app.route('/visitor', methods=('GET', 'POST'))
@@ -108,7 +173,7 @@ def continue_as_a_visitor():
             return redirect("/home/")
     
     username_visitor = config.USERNAME_VISITOR
-    password_visitor = hashlib_blake2b(config.PASSWORD_VISITOR)
+    password_visitor = hash_manager.generate_password_hash(config.PASSWORD_VISITOR)
 
     if not username_visitor or username_visitor == None:
         flash('Username is required.')
@@ -127,7 +192,7 @@ def continue_as_a_visitor():
         return render_template('login.html')
      
     session["id"]=database_handler.get_id_from_username(username_visitor)
-    database_handler.insert_metadata(session["id"], datetime.datetime.now(), ipv4_address())
+    database_handler.insert_metadata(session["id"], utils.get_datetime_isoformat(), ipv4_address())
     return redirect("/home/")
 
 @app.route('/home')
@@ -156,10 +221,71 @@ def account():
         return redirect("/")
         
     id=session["id"]
+    email=database_handler.get_email_from_id(id)
+    user_has_email = not(email is None)
+    email_verified = int(database_handler.get_email_verified_from_id(id))
+    if email_verified == 0:
+        email_verified = False
+    else:
+        email_verified = True
     return render_template('account_home.html',
                            id=id,
+                           username=database_handler.get_username_from_user_id(user_id=id),
                            name=database_handler.get_name_from_id(id),
-                           pay=database_handler.get_pay(id))   
+                           pay=database_handler.get_pay(id),
+                           user_has_email = user_has_email,
+                           email=email,
+                           email_verified=email_verified)
+
+@app.route('/account/change_email', methods=('GET', 'POST'))
+@app.route('/account/change_email/', methods=('GET', 'POST'))
+def account_change_email():
+    if "id" not in session:
+        return redirect("/")
+    
+    id=session["id"]
+    if request.method != 'POST':
+        email=database_handler.get_email_from_id(id)
+        user_has_email = not(email is None)
+        return render_template('account_change_email.html',
+                               id=id,
+                               user_has_email = user_has_email,
+                               email=email)
+    
+    email = str(request.form['email'])
+    if not email:
+        flash('Email is required !')
+        return redirect("/account/change_email/")
+    
+    database_handler.update_email_from_id(id, email)
+    if not ("two_factor_authentication_succes" in session and session["two_factor_authentication_succes"]):
+        return redirect("/two_factor_authentication/")
+
+    flash('Your email has been updated')
+    return redirect("/account/")
+
+@app.route('/account/change_username', methods=('GET', 'POST'))
+@app.route('/account/change_username/', methods=('GET', 'POST'))
+def account_change_username():
+    if "id" not in session:
+        return redirect("/")
+    
+    id=session["id"]
+    if request.method != 'POST':
+        return render_template('account_change_username.html', id=id, username=database_handler.get_username_from_user_id(id))
+    
+    new_username = str(request.form['new_username'])
+    if not new_username:
+        flash('Username is required !')
+        return redirect("/account/change_username/")
+    
+    if database_handler.verif_username_exists(new_username):
+        flash('This username is already taken !')
+        return redirect("/account/change_username/")
+    
+    database_handler.update_username(id, new_username)
+    flash('Your username has been updated')
+    return redirect("/account/")
 
 @app.route('/account/change_password', methods=('GET', 'POST'))
 @app.route('/account/change_password/', methods=('GET', 'POST'))
@@ -293,10 +419,11 @@ def export_data():
     
     id = session["id"]
     content = "=== PERSONALE DATA EXPORT ===\n"
-    content += f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-    content += f"ID  : {id}\n"
-    content += f"Nom : {database_handler.get_name_from_id(id)}\n"
-    content += f"Pay : {database_handler.get_pay(id)} TC\n\n"
+    content += f"Date       : {utils.get_datetime_isoformat().strftime('%Y-%m-%d %H:%M:%S')}\n"
+    content += f"ID         : {id}\n"
+    content += f"Username   : {database_handler.get_username_from_user_id(id)}\n"
+    content += f"Name       : {database_handler.get_name_from_id(id)}\n"
+    content += f"Pay        : {database_handler.get_pay(id)} TC\n\n"
 
     metadata = database_handler.get_metadata(id)
     content += "=== MÉTADONNÉES ===\n\n"
@@ -379,7 +506,7 @@ def transfer():
     new_pay_receiver = database_handler.get_pay(id_receiver)+transfer_value
     database_handler.update_pay(id, new_pay_senders)
     database_handler.update_pay(id_receiver, new_pay_receiver)
-    database_handler.insert_bank_transfer(id, id_receiver, transfer_value, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    database_handler.insert_bank_transfer(id, id_receiver, transfer_value, utils.get_datetime_isoformat().strftime('%Y-%m-%d %H:%M:%S'))
     receiver_name = database_handler.get_name_from_id(id_receiver)
     flash('"{}" TC have been sent to {}'.format(transfer_value, receiver_name))
     return redirect("/titoubank/")
@@ -475,7 +602,7 @@ def titoubank_stock_market_sell():
                                                    symbol=symbol,
                                                    stock_number=stock_number,
                                                    stock_price=current_price,
-                                                   transfer_datetime=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                                                   transfer_datetime=utils.get_datetime_isoformat().strftime('%Y-%m-%d %H:%M:%S'))
     flash('You have sell {} {} which is equivalent to {} TC'.format(stock_number, symbol, stock_number*current_price))
     return redirect("/titoubank/stock_market/")
     
@@ -515,7 +642,7 @@ def titoubank_stock_market_sell_all():
                                                    symbol=symbol,
                                                    stock_number=stock_number,
                                                    stock_price=current_price,
-                                                   transfer_datetime=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                                                   transfer_datetime=utils.get_datetime_isoformat().strftime('%Y-%m-%d %H:%M:%S'))
     flash('You have sell {} {} which is equivalent to {} TC'.format(stock_number, symbol, stock_number*current_price))
     return redirect("/titoubank/stock_market/")
 
@@ -561,7 +688,7 @@ def titoubank_stock_market_buy():
                                                    symbol=symbol,
                                                    stock_number=stock_number,
                                                    stock_price=current_price,
-                                                   transfer_datetime=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                                                   transfer_datetime=utils.get_datetime_isoformat().strftime('%Y-%m-%d %H:%M:%S'))
     flash('You have buy {} {} which is equivalent to {} TC'.format(stock_number, symbol, stock_number*current_price))
     return redirect("/titoubank/stock_market/")
 
@@ -710,7 +837,7 @@ def social_network_follow_action(id_followed:int):
         flash("You are already following this person")
         return redirect("/social_network/friends/")
 
-    database_handler.create_link_social_network(id, id_followed, datetime.date.today())
+    database_handler.create_link_social_network(id, id_followed, utils.get_datetime_isoformat())
     return redirect("/social_network/friends/")
 
 @app.route('/social_network/unfollow_action/<int:id_unfollowed>', methods=('GET', 'POST'))
@@ -779,7 +906,7 @@ def social_network_send_message(id_receiver:int):
         flash('Message is required.')
         return redirect("/social_network/chat/")
     
-    database_handler.insert_message(id, id_receiver, message, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    database_handler.insert_message(id, id_receiver, message, utils.get_datetime_isoformat().strftime('%Y-%m-%d %H:%M:%S'))
     return redirect(f"/social_network/chat/{id_receiver}")
 
 ##################################################
@@ -818,7 +945,7 @@ def api_search_movie(movie_title=""):
         return redirect("/api/search_movie/")
     
     movie_title = infosMovie["Title"]
-    database_handler.insert_movie_search(id, movie_title, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    database_handler.insert_movie_search(id, movie_title, utils.get_datetime_isoformat().strftime('%Y-%m-%d %H:%M:%S'))
     return render_template('api_infosmovie.html',   id=id,
                                                 movie_title     = movie_title,
                                                 movie_year      = infosMovie["Year"],
@@ -850,4 +977,4 @@ def thank_you():
     return render_template('thank_you.html', id=session["id"])
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()

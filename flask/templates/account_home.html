@@ -3,8 +3,10 @@
 <nav>
     <ul>
         <li><a class="active" href="{{ url_for('account') }}">Personal Information</a></li>
+        <li><a href="{{ url_for('account_change_username') }}">Change Username</a></li>
         <li><a href="{{ url_for('account_change_name') }}">Change Name</a></li>
         <li><a href="{{ url_for('account_change_password') }}">Change Password</a></li>
+        <li><a href="{{ url_for('account_change_email') }}">Change Email</a></li>
         <li><a href="{{ url_for('home') }}">Back to Home</a></li>
     </ul>
 </nav>
@@ -17,9 +19,24 @@
     </div>
     
     <h3>Account Details</h3>
-    <pre>ID      : {{ id }}
-Name    : {{ name }}
-Balance : {{ pay }} $</pre>
+    <pre>ID        : {{ id }}
+Username  : {{ username }}        
+Name      : {{ name }}
+Balance   : {{ pay }} $</pre>
+
+<br>
+{% if user_has_email %}
+<p>Your email: <strong>{{ email }}</strong></p>
+
+    {% if email_verified %}
+        <p>Your email is verified</p>
+    {% else %}
+        <p>Your email isn't verified - <a href="{{ url_for('two_factor_authentication') }}">Check-it</a></p>
+    {% endif %}
+{% else %}
+<p>No email has been added - <a href="{{ url_for('account_change_email') }}">Add an Email</a></li></p>
+{% endif %}
+
     <hr>
     
     <div class="form-actions">

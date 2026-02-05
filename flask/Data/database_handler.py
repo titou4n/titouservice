@@ -4,10 +4,12 @@ import os
 
 from Data.init_db import DatabaseManager
 from config import Config
-from utils.hashlib_blake2b import hashlib_blake2b
+from utils.hash_manager import HashManager
 
-config = Config()
+
 database_manager = DatabaseManager()
+hash_manager = HashManager()
+config = Config()
 
 class DatabaseHandler():
   def __init__(self):
@@ -15,8 +17,8 @@ class DatabaseHandler():
         database_manager.init_database()
     self.db_path = config.DATABASE_URL
 
-    if not self.verif_user_exists(str(config.USERNAME_VISITOR)):
-      self.create_account(str(config.USERNAME_VISITOR), str(hashlib_blake2b(config.PASSWORD_VISITOR)), str(config.NAME_VISITOR))
+    if not self.verif_username_exists(str(config.USERNAME_VISITOR)):
+      self.create_account(str(config.USERNAME_VISITOR), str(hash_manager.generate_password_hash(config.PASSWORD_VISITOR)), str(config.NAME_VISITOR))
 
   def get_db_connection(self):
     conn = sqlite3.connect(self.db_path, check_same_thread=False)
@@ -43,11 +45,56 @@ class DatabaseHandler():
     metadata = conn.execute(query, (id,)).fetchall()
     conn.close()
     return metadata
+  
+  ##########################################
+  #________________ACCOUNT_________________#
+  ##########################################
 
   def create_account(self, username:str, password:str, name:str):
     conn = self.get_db_connection()
     query = f"INSERT INTO account (username, password, name) VALUES (?, ?, ?);"
     conn.execute(query, (username, password, name))
+    conn.commit()
+    conn.close()
+
+  #_____two_factor_codes_____#
+
+  def insert_two_factor_codes(self, user_id:int, code_hash:str, created_at:datetime):
+    conn = self.get_db_connection()
+    query = f"INSERT INTO two_factor_codes (user_id, code_hash, created_at) VALUES (?, ?, ?);"
+    conn.execute(query, (user_id, code_hash, created_at))
+    conn.commit()
+    conn.close()
+
+  def get_code_hash_from_user_id(self, user_id:int):
+    used = 0
+    max_attempts = 3
+    conn = self.get_db_connection()
+    query = f"SELECT id_two_factor_codes,code_hash,created_at,attempts, used FROM two_factor_codes WHERE user_id=? AND used=? AND attempts<=? ORDER BY created_at DESC;"
+    result = conn.execute(query, (user_id, used, max_attempts)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result
+  
+  def add_attempts_two_factor_codes(self, id_two_factor_codes:int):
+    conn = self.get_db_connection()
+    query = f"UPDATE two_factor_codes SET attempts=attempts+1 WHERE id_two_factor_codes=?;"
+    conn.execute(query, (id_two_factor_codes,))
+    conn.commit()
+    conn.close()
+  
+  def delete_old_code_hash_from_user_id(self, user_id:int):
+    conn = self.get_db_connection()
+    query = f"DELETE FROM two_factor_codes WHERE user_id=?;"
+    conn.execute(query, (user_id,))
+    conn.commit()
+    conn.close()
+
+  def delete_old_code_hash(self):
+    conn = self.get_db_connection()
+    query = f"DELETE FROM two_factor_codes WHERE created_at < datetime('now', '-10 minutes');"
+    conn.execute(query)
     conn.commit()
     conn.close()
 
@@ -72,6 +119,15 @@ class DatabaseHandler():
     conn.close()
     return dict(result[0])["id"]
   
+  def get_username_from_user_id(self, user_id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT username FROM account WHERE id=?;"
+    result = conn.execute(query, (user_id,)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result[0]
+  
   def get_password(self, id:int):
     conn = self.get_db_connection()
     query = f"SELECT password FROM account WHERE id=?;"
@@ -86,6 +142,24 @@ class DatabaseHandler():
     conn.close()
     return dict(result[0])["name"]
   
+  def get_email_from_id(self, id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT email FROM account WHERE id=?;"
+    result = conn.execute(query, (id,)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result[0]
+  
+  def get_email_verified_from_id(self, id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT email_verified FROM account WHERE id=?;"
+    result = conn.execute(query, (id,)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result[0]
+  
   def get_profile_picture_path_from_id(self, id:int):
     conn = self.get_db_connection()
     query = f"SELECT profile_picture_path FROM account WHERE id=?;"
@@ -94,10 +168,10 @@ class DatabaseHandler():
         return None
     return result[0]
 
-  def delete_account(self, id:int):
+  def update_username(self, id:int, new_username:str):
     conn = self.get_db_connection()
-    query = f"DELETE FROM account WHERE id = ?;"
-    conn.execute(query, (id,))
+    query = f"UPDATE account SET username=? WHERE id=?;"
+    conn.execute(query, (new_username,id))
     conn.commit()
     conn.close()
   
@@ -110,7 +184,7 @@ class DatabaseHandler():
   
   def update_name(self, id:int, new_name:str):
     conn = self.get_db_connection()
-    query = f"UPDATE account SET name=?, nbnamechange=nbnamechange+1 WHERE id=?;"
+    query = f"UPDATE account SET name=? WHERE id=?;"
     conn.execute(query, (new_name,id))
     conn.commit()
     conn.close()
@@ -122,6 +196,21 @@ class DatabaseHandler():
     conn.commit()
     conn.close()
   
+  def update_email_from_id(self, id:int, email:str):
+    conn = self.get_db_connection()
+    query = f"UPDATE account SET email=? WHERE id=?;"
+    conn.execute(query, (email,id))
+    conn.commit()
+    conn.close()
+
+  def update_email_verified_from_id(self, id:int):
+    switch_to = 1
+    conn = self.get_db_connection()
+    query = f"UPDATE account SET email_verified=? WHERE id=?;"
+    conn.execute(query, (switch_to, id,))
+    conn.commit()
+    conn.close()
+  
   def verif_id_exists(self, id:int) -> bool:
     conn = self.get_db_connection()
     conn.row_factory = sqlite3.Row
@@ -130,7 +219,7 @@ class DatabaseHandler():
     conn.close()
     return len(result)==1
 
-  def verif_user_exists(self, username:str) -> bool:
+  def verif_username_exists(self, username:str) -> bool:
     conn = self.get_db_connection()
     query = f"SELECT * FROM account WHERE username=?;"
     result = conn.execute(query, (username,)).fetchall()
@@ -144,6 +233,13 @@ class DatabaseHandler():
     result = conn.execute(query, (name,)).fetchall()
     conn.close()
     return len(result)==1
+  
+  def delete_account(self, id:int):
+    conn = self.get_db_connection()
+    query = f"DELETE FROM account WHERE id = ?;"
+    conn.execute(query, (id,))
+    conn.commit()
+    conn.close()
 
   ##################################################
   #__________________Bank__________________________#

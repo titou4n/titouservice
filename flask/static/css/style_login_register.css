@@ -142,3 +142,45 @@ body {
         padding: 20px;
     }
 }
+
+
+/* =====================================
+   Two-authentificator
+   ===================================== */
+
+.code-inputs {
+    display: flex;
+    justify-content: center;
+    gap: 12px; /* espace entre les cases */
+    margin-bottom: 24px;
+}
+
+.code-inputs input {
+    width: 48px;
+    height: 56px;
+    text-align: center;
+    font-size: 1.6em;
+    font-weight: 600;
+
+    border-radius: 10px;
+    border: 2px solid var(--border-light);
+    outline: none;
+
+    background: var(--background-main);
+    color: var(--text-dark);
+
+    transition: 
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.1s ease;
+}
+
+.code-inputs input:focus {
+    border-color: var(--accent-purple);
+    box-shadow: 0 0 0 3px rgba(128, 90, 213, 0.25);
+    transform: scale(1.05);
+}
+
+.code-inputs input:not(:placeholder-shown) {
+    border-color: var(--accent-purple);
+}

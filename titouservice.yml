@@ -16,6 +16,7 @@ services:
       - titouservice-network
     secrets:
       - secret_key
+      - gmail_app_password
       - omdb_api_key
       - twelvedata_api_key
     command: bash -c "python Data/init_db.py && python app.py"
@@ -42,6 +43,8 @@ networks:
 secrets:
   secret_key:
     file: ./secrets/secret_key.txt
+  gmail_app_password:
+    file: ./secrets/gmail_app_password.txt
   omdb_api_key:
     file: ./secrets/omdb_api_key.txt
   twelvedata_api_key:
