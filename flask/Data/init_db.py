@@ -16,6 +16,7 @@ class DatabaseManager():
 
     def init_database(self):
         self.create_table_account()
+        self.create_table_two_factor_codes()
         self.create_table_metadata()
         self.create_table_bank_transfers()
         self.create_table_stock_market_transfers()
@@ -57,16 +58,45 @@ class DatabaseManager():
             username STRING NOT NULL UNIQUE,
             password STRING NOT NULL,
             name STRING NOT NULL UNIQUE,
+            email VARCHAR(255),
+            email_verified BOOLEAN DEFAULT 0,
             profile_picture_path STRING,
             pay DECIMAL DEFAULT {config.BANK_DEFAULT_PAY},
-            nbpasswordchange INTEGER DEFAULT 0,
-            nbnamechange INTEGER DEFAULT 0
+            nbpasswordchange INTEGER DEFAULT 0
         );
         """
         cursor.execute(query)
         conn.commit()
         conn.close()
         print("-> TABLE 'account' created with success.")
+
+    def create_table_two_factor_codes(self):
+
+        if self.verif_table_exist("two_factor_codes"):
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # =========================
+        # TABLE two_factor_codes
+        # =========================
+        query = f"""
+        CREATE TABLE IF NOT EXISTS two_factor_codes (
+            id_two_factor_codes INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            code_hash TEXT NOT NULL,
+            created_at DATETIME NOT NULL,
+            attempts INTEGER DEFAULT 0,
+            used INTEGER DEFAULT 0,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+        """
+
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'two_factor_codes' created with success.")
 
     def create_table_metadata(self):
 
