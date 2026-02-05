@@ -297,9 +297,9 @@ def account_change_password():
     if request.method != 'POST':
         return render_template('account_change_password.html', id=id)
     
-    actual_password    = str(hashlib_blake2b(request.form['actual_password']))
-    new_password       = str(hashlib_blake2b(request.form['new_password']))
-    verif_new_password = str(hashlib_blake2b(request.form['verif_new_password']))
+    actual_password    = str(hash_manager.generate_password_hash(request.form['actual_password']))
+    new_password       = str(hash_manager.generate_password_hash(request.form['new_password']))
+    verif_new_password = str(hash_manager.generate_password_hash(request.form['verif_new_password']))
 
     if actual_password  != database_handler.get_password(id):
         flash('Password is not correct.')
