@@ -4,14 +4,10 @@ from dotenv import load_dotenv
 import socket
 
 def get_ipv4_host():
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
-            return ip
-        except Exception:
-            return "127.0.0.1"
+    try:
+        return socket.gethostbyname(socket.gethostname())
+    except:
+        return "127.0.0.1"
 
 def read_secret(name):
     try:

@@ -67,12 +67,14 @@
 
             {% if session['is_revoked'] %}
                 <p>Session is not active</p>
-                <form action="{{ url_for('settings_delete_session', session_id_hash=session['session_id_hash']) }}" method="get">
+                <form action="{{ url_for('settings_delete_session', session_id_hash=session['session_id_hash']) }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="button">Delete this session</button>
                 </form>
             {% else %}
                 <p>Session is active</p>
-                <form action="{{ url_for('settings_logout_session', session_id_hash=session['session_id_hash']) }}" method="get">
+                <form action="{{ url_for('settings_logout_session', session_id_hash=session['session_id_hash']) }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="button">Log out this session</button>
                 </form>
             {% endif %}

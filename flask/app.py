@@ -4,6 +4,8 @@ import os
 import random
 
 from flask import Flask, request, render_template, flash, redirect, send_file, url_for
+from flask_wtf import CSRFProtect
+
 from io import BytesIO
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -20,6 +22,7 @@ from utils.bank_manager import BankManager
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.config.from_object(Config)
+csrf = CSRFProtect(app)
 
 config = Config()
 database_manager = DatabaseManager()
@@ -1224,4 +1227,5 @@ def thank_you():
         return redirect("/")
     return render_template('thank_you.html', id=session_manager.get_current_user_id())
 
-app.run()
+if __name__ == "__main__" and not config.ENV_PROD:
+    app.run()
