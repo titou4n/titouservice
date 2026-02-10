@@ -1,7 +1,17 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from utils.ipv4_address import ipv4_address
+import socket
+
+def get_ipv4_host():
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except Exception:
+            return "127.0.0.1"
 
 def read_secret(name):
     try:
@@ -9,30 +19,14 @@ def read_secret(name):
             return f.read().strip()
     except FileNotFoundError:
         return None
-    
-###############################################
-#_____DO_NOT_FORGET_TO_SWITCH_PROD_TO_DEV_____#
-###############################################
 
 class Config:
 
-    ipv4_address = ipv4_address()
+    ipv4_address = get_ipv4_host()
+    ENV_PROD = not ipv4_address.startswith("192.168")
+
+    print(f"ENV_PROD : {ENV_PROD}")
     print(f"IPV4 : {ipv4_address}")
-
-    #       ||
-    #       ||
-    #       ||
-    #      \  /
-    #       \/
-
-    #ENV_PROD = True if ipv4_address[:7] != "192.168" else False
-    ENV_PROD = True
-
-    #       /\
-    #      /  \
-    #       ||
-    #       ||
-    #       ||
 
     if not ENV_PROD:
         load_dotenv()
@@ -53,8 +47,9 @@ class Config:
     
     GMAIL_ADDRESS = "titouservice.mail@gmail.com"
     GMAIL_APP_PASSWORD = read_secret("gmail_app_password") if ENV_PROD else os.getenv("GMAIL_APP_PASSWORD")
-    if not OMDB_API_KEY:
+    if not GMAIL_APP_PASSWORD:
         raise RuntimeError("GMAIL_APP_PASSWORD manquante")
+
     
     #___________________________________________________#
 
@@ -62,12 +57,8 @@ class Config:
     BASE_DIR = Path(__file__).parent.resolve()
 
     # ===== Flask =====
-    if not ENV_PROD: # Valeur par défaut : production
-        FLASK_ENV = "developpement"
-    else:
-        FLASK_ENV = "production"
+    FLASK_ENV = "production" if ENV_PROD else "development"
     print(f"FLASK_ENV : {FLASK_ENV}")
-
     DEBUG = not ENV_PROD
 
     # ===== Flask-Session configuration =====
@@ -95,8 +86,12 @@ class Config:
     L’application doit être servie via HTTPS pour que cela ait un sens.
     Valeur par défaut : False
     '''
-    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = ENV_PROD
     SESSION_COOKIE_SAMESITE="Lax"
+
+    SESSION_COOKIE_TIME_DAYS = 0
+    SESSION_COOKIE_TIME_HOURS = 1
+    SESSION_COOKIE_TIME_MINUTES = 0
 
     # ===== Database =====
     DATA_DIR = BASE_DIR / "Data"

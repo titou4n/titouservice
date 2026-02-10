@@ -12,6 +12,7 @@
     <li><a href="{{ url_for('chatroom') }}">Chatroom</a></li>
     <li><a href="{{ url_for('social_network_home') }}">Social-Network</a></li>
     <li><a href="{{ url_for('api_home') }}">API</a></li>
+    <li><a href="{{ url_for('settings_home') }}">Settings</a></li>
     <li><a href="{{ url_for('logout') }}">Log Out</a></li>
   </ul>
 </nav>
@@ -35,7 +36,7 @@
   <div class="finz">
     <h4>Your Profile</h4>
     <p>View and manage your account. You can update your profile details, change your name, password.</p>
-    <form action="{{ url_for('account') }}" method="get">
+    <form action="{{ url_for('account_home') }}" method="get">
       <button class="button" type="submit">View Profile</button>
     </form>
   </div>

@@ -389,8 +389,8 @@ form p {
 }
 
 /*for chatroom my post*/
-.post_color_2 {
-    background-color: #ffedfb;
+.my_post {
+    background-color: var(--primary-light);
     color: var(--text-dark);
     width: 100%;
     margin: 20px auto;

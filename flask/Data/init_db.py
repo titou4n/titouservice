@@ -16,6 +16,8 @@ class DatabaseManager():
 
     def init_database(self):
         self.create_table_account()
+        self.create_table_user_preferences()
+        self.create_table_sessions()
         self.create_table_two_factor_codes()
         self.create_table_metadata()
         self.create_table_bank_transfers()
@@ -69,6 +71,58 @@ class DatabaseManager():
         conn.commit()
         conn.close()
         print("-> TABLE 'account' created with success.")
+
+    def create_table_user_preferences(self):
+
+        if self.verif_table_exist("user_preferences"):
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # =========================
+        # TABLE user_preferences
+        # =========================
+        query = f"""
+        CREATE TABLE user_preferences (
+            user_id INTEGER PRIMARY KEY,
+            twofa_enabled BOOLEAN DEFAULT 0,
+            FOREIGN KEY (user_id) REFERENCES account(id) ON DELETE CASCADE
+        );
+        """
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'user_preferences' created with success.")
+
+    def create_table_sessions(self):
+
+        if self.verif_table_exist("sessions"):
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # =========================
+        # TABLE sessions
+        # =========================
+        query = f"""
+        CREATE TABLE IF NOT EXISTS sessions (
+            session_id_hash TEXT PRIMARY KEY NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at DATETIME NOT NULL,
+            expires_at DATETIME NOT NULL,
+            last_used_at DATETIME NOT NULL,
+            ip_hash TEXT,
+            user_agent_hash TEXT,
+            is_revoked BOOLEAN DEFAULT 0,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+        """
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'sessions' created with success.")
 
     def create_table_two_factor_codes(self):
 
@@ -250,12 +304,11 @@ class DatabaseManager():
         query = f"""
         CREATE TABLE IF NOT EXISTS posts (
             id_post INTEGER PRIMARY KEY AUTOINCREMENT,
-            id INTEGER NOT NULL,
-            name STRING NOT NULL,
+            user_id INTEGER NOT NULL,
             title STRING NOT NULL,
             content STRING NOT NULL,
-            created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (id) REFERENCES account(id) ON DELETE CASCADE
+            created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES account(id) ON DELETE CASCADE
         );
         """
 

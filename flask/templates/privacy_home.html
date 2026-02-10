@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a href="{{ url_for('settings_home') }}">Back to Settings</a></li>
+    </ul>
+</nav>
+<h2>Privacy</h2>
+<div class="post">
+
+    <p>Export your Data</p>
+    <form action="{{ url_for('export_data') }}" method="POST">
+        <button class="button" type="submit">Export Data</button>
+    </form>
+
+    <hr>
+
+    <p class="terms-footer">Je souhaites accéder au <a href="{{ url_for('conditions_uses') }}" target="_blank">CGU</a></p>
+    
+</div>
+{% endblock %}
