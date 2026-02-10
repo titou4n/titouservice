@@ -16,25 +16,25 @@
 
         
         
-        {% if post['id']==id %}
-        <div class="post_color_2">
+        {% if post['user_id']==id %}
+        <div class="my_post">
         {% else %}
         <div class="post">
         {% endif %}
             <div class="post-header">
                 <div>
                     <h3>{{ post['title'] }}</h3>
-                    <a href="{{ url_for('social_network_user_profile', id_account=post['id']) }}" class="profile-link">
-                        <img class="profile-pic" src="{{ url_for('profile_picture', user_id=post['id']) }}" alt="Profile Picture">
+                    <a href="{{ url_for('social_network_user_profile', id_account=post['user_id']) }}" class="profile-link">
+                        <img class="profile-pic" src="{{ url_for('profile_picture', user_id=post['user_id']) }}" alt="Profile Picture">
                     </a>
-                    <p class="post-meta">By <strong>{{ post['name'] }}</strong></p>
+                    <p class="post-meta">By <strong>{{ names[post['user_id']] }}</strong></p>
                 </div>
-                <span class="post-timestamp">{{ post['created'] }}</span>
+                <span class="post-timestamp">{{ format_datetime(post['created']) }}</span>
             </div>
             <p>{{ post['content'] }}</p>
 
             <!------------------For Edit---------------->
-            {% if post['id']==id %}
+            {% if post['user_id']==id %}
                 <div class="post-actions">
                     <a href="{{ url_for('edit_post', id_post=post['id_post']) }}">Edit</a>
                 </div>

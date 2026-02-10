@@ -57,7 +57,101 @@ class DatabaseHandler():
     conn.commit()
     conn.close()
 
-  #_____two_factor_codes_____#
+  ##########################################
+  #____________USER_PREFERENCES____________#
+  ##########################################
+
+  def insert_user_preferences(self, user_id:int):
+    conn = self.get_db_connection()
+    query = f"INSERT INTO user_preferences (user_id) VALUES (?);"
+    conn.execute(query, (user_id,))
+    conn.commit()
+    conn.close()
+
+  def get_user_preferences_2fa(self, user_id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT twofa_enabled FROM user_preferences WHERE user_id=?;"
+    result = conn.execute(query, (user_id,)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result[0]
+
+  def switch_user_preferences_2fa(self, user_id:int):
+    switch_to = not self.get_user_preferences_2fa(user_id=user_id)
+    conn = self.get_db_connection()
+    query = f"UPDATE user_preferences SET twofa_enabled=? WHERE user_id=?;"
+    conn.execute(query, (switch_to, user_id,))
+    conn.commit()
+    conn.close()
+
+  ##########################################
+  #_______________SESSIONS_________________#
+  ##########################################
+
+  def insert_session(self, session_id_hash:str, user_id:int, created_at:datetime, expires_at:datetime, ip_hash:str, user_agent_hash:str, is_revoked:bool):
+    conn = self.get_db_connection()
+    query = f"INSERT INTO sessions (session_id_hash, user_id, created_at, expires_at, last_used_at, ip_hash, user_agent_hash, is_revoked) VALUES (?, ?, ?, ?, ?, ?, ?, ?);"
+    conn.execute(query, (session_id_hash, user_id, created_at, expires_at, created_at, ip_hash, user_agent_hash, is_revoked))
+    conn.commit()
+    conn.close()
+
+  def update_session(self, session_id_hash:str, last_used_at:datetime):
+    conn = self.get_db_connection()
+    query = f"UPDATE sessions SET last_used_at=? WHERE session_id_hash=?;"
+    conn.execute(query, (last_used_at, session_id_hash))
+    conn.commit()
+    conn.close()
+
+  def get_session(self, session_id_hash:str):
+    conn = self.get_db_connection()
+    query = f"SELECT session_id_hash,user_id,created_at,expires_at,last_used_at,ip_hash,user_agent_hash,is_revoked FROM sessions WHERE session_id_hash=?;"
+    result = conn.execute(query, (session_id_hash,)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result
+  
+  def get_all_sessions_from_user_id(self, user_id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT session_id_hash,user_id,created_at,expires_at,last_used_at,ip_hash,user_agent_hash,is_revoked FROM sessions WHERE user_id=?;"
+    result = conn.execute(query, (user_id,)).fetchall()
+    conn.close()
+    return result
+  
+  def revoke_session(self, session_id_hash:str):
+    switch_to = 1
+    conn = self.get_db_connection()
+    query = f"UPDATE sessions SET is_revoked=? WHERE session_id_hash=?;"
+    conn.execute(query, (switch_to, session_id_hash,))
+    conn.commit()
+    conn.close()
+
+  def revoke_all_session_from_user_id(self, user_id:int):
+    switch_to = 1
+    conn = self.get_db_connection()
+    query = f"UPDATE sessions SET is_revoked=? WHERE user_id=?;"
+    conn.execute(query, (switch_to, user_id))
+    conn.commit()
+    conn.close()
+
+  def delete_session(self, session_id_hash:str):
+    conn = self.get_db_connection()
+    query = f"DELETE FROM sessions WHERE session_id_hash=?;"
+    conn.execute(query, (session_id_hash))
+    conn.commit()
+    conn.close()
+
+  def delete_all_session(self):
+    conn = self.get_db_connection()
+    query = f"DELETE FROM sessions;"
+    conn.execute(query)
+    conn.commit()
+    conn.close()
+
+  ##########################################
+  #_________________2FA____________________#
+  ##########################################
 
   def insert_two_factor_codes(self, user_id:int, code_hash:str, created_at:datetime):
     conn = self.get_db_connection()
@@ -108,16 +202,20 @@ class DatabaseHandler():
   def get_id_from_username(self, username:str):
     conn = self.get_db_connection()
     query = f"SELECT id FROM account WHERE username=?;"
-    result = conn.execute(query, (username,)).fetchall()
+    result = conn.execute(query, (username,)).fetchone()
     conn.close()
-    return dict(result[0])["id"]
+    if result is None:
+        return None
+    return result[0]
   
   def get_id_from_name(self, name:str):
     conn = self.get_db_connection()
     query = f"SELECT id FROM account WHERE name=?;"
-    result = conn.execute(query, (name,)).fetchall()
+    result = conn.execute(query, (name,)).fetchone()
     conn.close()
-    return dict(result[0])["id"]
+    if result is None:
+        return None
+    return result[0]
   
   def get_username_from_user_id(self, user_id:int):
     conn = self.get_db_connection()
@@ -131,16 +229,20 @@ class DatabaseHandler():
   def get_password(self, id:int):
     conn = self.get_db_connection()
     query = f"SELECT password FROM account WHERE id=?;"
-    result = conn.execute(query, (id,)).fetchall()
+    result = conn.execute(query, (id,)).fetchone()
     conn.close()
-    return dict(result[0])["password"]
+    if result is None:
+        return None
+    return result[0]
 
   def get_name_from_id(self, id:int):
     conn = self.get_db_connection()
     query = f"SELECT name FROM account WHERE id=?;"
-    result = conn.execute(query, (id,)).fetchall()
+    result = conn.execute(query, (id,)).fetchone()
     conn.close()
-    return dict(result[0])["name"]
+    if result is None:
+        return None
+    return result[0]
   
   def get_email_from_id(self, id:int):
     conn = self.get_db_connection()
@@ -318,22 +420,22 @@ class DatabaseHandler():
   
   def get_id_from_id_post(self, id_post:int):
       conn = self.get_db_connection()
-      query = f"SELECT id FROM posts WHERE id_post = ?;"
+      query = f"SELECT user_id FROM posts WHERE id_post = ?;"
       result = conn.execute(query, (id_post,)).fetchone()
       conn.close()
       return result[0]
 
-  def create_post(self, id:int, name:str, title:str, content:str):
+  def create_post(self, user_id:int, title:str, content:str):
     conn = self.get_db_connection()
-    query = f"INSERT INTO posts (id, name, title, content) VALUES (?, ?, ?, ?);"
-    conn.execute(query,(id, name, title, content))
+    query = f"INSERT INTO posts (user_id, title, content) VALUES (?, ?, ?);"
+    conn.execute(query,(user_id, title, content,))
     conn.commit()
     conn.close()
 
-  def update_post(self, id_post:int, name:str, title:str, content:str):
+  def update_post(self, id_post:int, title:str, content:str):
     conn = self.get_db_connection()
-    query = f"UPDATE posts SET name = ?, title = ?, content = ? WHERE id_post = ?;"
-    conn.execute(query, (name, title, content, id_post))
+    query = f"UPDATE posts SET title = ?, content = ? WHERE id_post = ?;"
+    conn.execute(query, (title, content, id_post))
     conn.commit()
     conn.close()
 
@@ -344,10 +446,10 @@ class DatabaseHandler():
     conn.commit()
     conn.close()
 
-  def delete_all_post_from_id(self, id:int):
+  def delete_all_post_from_id(self, user_id:int):
     conn = self.get_db_connection()
-    query = f"DELETE FROM posts WHERE id = ?"
-    conn.execute(query, (id,))
+    query = f"DELETE FROM posts WHERE user_id = ?"
+    conn.execute(query, (user_id,))
     conn.commit()
     conn.close()
 
