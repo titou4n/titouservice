@@ -11,6 +11,7 @@
 <h2>Search Movie Database</h2>
 <div class="post">
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="movie">Movie Title</label>
         <input class="input" type="text" name="movie" placeholder="Enter a movie title to search..." value="{{ request.form['movie'] }}" required>
         
@@ -66,7 +67,8 @@
         <div class="search-history-item">
             <h4>{{ movie_search['movie_title'] }}</h4>
             <form method="post">
-                <a href="{{ url_for('api_search_movie', movie_title=movie_search['movie_title']) }}" type="submit">View Details →</a>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <a href="{{ url_for('api_infos_movie', movie_title=movie_search['movie_title']) }}" type="submit">View Details →</a>
             </form>
         </div>
     </div>

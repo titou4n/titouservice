@@ -138,7 +138,7 @@ class DatabaseHandler():
   def delete_session(self, session_id_hash:str):
     conn = self.get_db_connection()
     query = f"DELETE FROM sessions WHERE session_id_hash=?;"
-    conn.execute(query, (session_id_hash))
+    conn.execute(query, (session_id_hash,))
     conn.commit()
     conn.close()
 
@@ -470,6 +470,13 @@ class DatabaseHandler():
     movie_search = conn.execute(query, (id,)).fetchall()
     conn.close()
     return movie_search
+  
+  def movie_already_search(self, id:int, movie_title:str):
+    conn = self.get_db_connection()
+    query = f"SELECT * FROM movie_search WHERE id=? AND movie_title=?;"
+    movie_search = conn.execute(query, (id, movie_title)).fetchall()
+    conn.close()
+    return len(movie_search) >= 1
   
   ##################################################
   #________________Social_Network__________________#

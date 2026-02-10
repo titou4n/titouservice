@@ -48,8 +48,8 @@ class SessionManager():
 
     def get_ip_location(self, ip_adress:str) -> (str|None):
         print(ip_adress)
-        url = f"https://ipapi.co/{ip_adress}/json/"    
-        response = requests.get(url)    
+        url = f"https://ipapi.co/{ip_adress}/json/"
+        response = requests.get(url)
         data = response.json()
         if "error" in data and data["error"] or "country_name" not in data:
             return None

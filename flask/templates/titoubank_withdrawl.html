@@ -16,6 +16,7 @@
     <div class="post">
         <h3>Withdraw TitouCoin</h3>
         <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="withdrawl">Amount to Withdraw</label>
             <input class="input" type="number" name="withdrawl" placeholder="Enter amount (e.g., 20)" value="{{ request.form['withdrawl'] }}" min="0.01" step="0.01" required>
             

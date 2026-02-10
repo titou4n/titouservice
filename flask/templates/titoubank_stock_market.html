@@ -60,6 +60,7 @@
             </table> 
         </div>
         <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="stock_number">Number of stock to Buy or Sell</label>
 
             <input
@@ -90,6 +91,7 @@
             </button>
         </form>
         <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button
                 type="submit"
                 class="button_red"

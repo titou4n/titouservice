@@ -14,6 +14,7 @@
         <h4>Security alerts</h4>
         <p>Notify me when:</p>
         <form action="{{ url_for('settings_notify_password_change') }}" method="post" class="auto-submit-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label>
                 <input type="checkbox" name="notify_password_change" class="auto-submit-checkbox"
                     {% if notify_password_change %}checked{% endif %}>
@@ -22,6 +23,7 @@
         </form>
 
         <form action="{{ url_for('settings_notify_twofa_change') }}" method="post" class="auto-submit-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label>
                 <input type="checkbox" name="notify_twofa_change" class="auto-submit-checkbox"
                     {% if notify_twofa_disabled %}checked{% endif %}>

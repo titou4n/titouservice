@@ -13,6 +13,7 @@
     <p style="margin-bottom: 20px;">Your current name: <strong>{{ name }}</strong></p>
     
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="new_name">New Name</label>
         <input class="input" type="text" name="new_name" placeholder="Enter your new name" value="{{ request.form['new_name'] }}" required>
         

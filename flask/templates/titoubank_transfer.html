@@ -16,6 +16,7 @@
     <div class="post">
         <h3>Transfer TitouCoin</h3>
         <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="transfer">Amount to transfer</label>
             <input class="input" type="number" name="transfer_value" placeholder="Enter amount (e.g., 20)" value="{{ request.form['transfer_value'] }}" min="0" step="1" required>
             

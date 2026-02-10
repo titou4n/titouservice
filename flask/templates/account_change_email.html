@@ -15,6 +15,7 @@
     {% endif %}
     
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="email">New email</label>
         <input class="input" type="email" name="email" placeholder="Enter an email" value="{{ request.form['email'] }}" required>
         

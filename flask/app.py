@@ -5,7 +5,6 @@ import random
 
 from flask import Flask, request, render_template, flash, redirect, send_file, url_for
 from flask_wtf import CSRFProtect
-
 from io import BytesIO
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -528,9 +527,8 @@ def settings_switch_2fa():
         flash("Please add an email address first.")
         return redirect("/settings/account/change_email/")
     
-    if database_handler.get_email_verified_from_id(user_id):
-        flash("Please verify your email address first.")
-        flash("Click on 'Verify-it'")
+    if not database_handler.get_email_verified_from_id(user_id):
+        flash(f"Please verify your email address first - Click on 'Verify-it' link.")
         return redirect("/settings/security/")
     
     database_handler.switch_user_preferences_2fa(user_id=user_id)
@@ -553,7 +551,7 @@ def settings_logout_session(session_id_hash:str):
         return redirect("/")
 
     session_manager.logout_session(session_id_hash=session_id_hash)
-    return redirect("/")
+    return redirect(url_for('security_home'))
 
 @app.route("/settings/delete_session/<string:session_id_hash>", methods=['POST'])
 def settings_delete_session(session_id_hash:str):
@@ -561,7 +559,7 @@ def settings_delete_session(session_id_hash:str):
         return redirect("/")
 
     session_manager.delete_session(session_id_hash=session_id_hash)
-    return redirect("/")
+    return redirect(url_for('security_home'))
 
 ###################################
 #_________NOTIFICATIONS___________#
@@ -920,7 +918,7 @@ def titoubank_stock_market_buy():
         flash("Your Balance is not high enough.")
         return redirect("/titoubank/stock_market/")
 
-    database_handler.update_pay(id, new_pay)
+    database_handler.update_pay(user_id, new_pay)
     database_handler.insert_stock_market_transfers(id=user_id,
                                                    type="buy",
                                                    symbol=symbol,
@@ -1179,9 +1177,27 @@ def api_search_movie(movie_title=""):
     
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
-        return render_template("api_search_movie.html", id=user_id, all_movie_search=database_handler.get_movie_search(user_id))
+        all_movie_search=database_handler.get_movie_search(user_id)
+        return render_template("api_search_movie.html",
+                               id=user_id,
+                               all_movie_search=all_movie_search)
     
     movie = str(request.form['movie'])
+    if not movie or movie == None:
+        flash('Movie is required.')
+        return redirect(url_for('api_search_movie'))
+    
+    return redirect(url_for('api_infos_movie', movie_title=movie))
+
+@app.route('/api/infos_movie/<string:movie_title>', methods=['GET', 'POST'])
+@app.route('/api/infos_movie/<string:movie_title>/', methods=['GET', 'POST'])
+def api_infos_movie(movie_title=""):
+    if session_manager.get_current_user_id() is None:
+        return redirect("/")
+    
+    user_id = session_manager.get_current_user_id()
+
+    movie = movie_title
     if not movie or movie == None:
         flash('Movie is required.')
         return redirect("/api/search_movie/")
@@ -1196,7 +1212,8 @@ def api_search_movie(movie_title=""):
         return redirect("/api/search_movie/")
     
     movie_title = infosMovie["Title"]
-    database_handler.insert_movie_search(user_id, movie_title, utils.get_datetime_isoformat())
+    if not database_handler.movie_already_search(user_id, movie_title=movie_title):
+        database_handler.insert_movie_search(user_id, movie_title, utils.get_datetime_isoformat())
     return render_template('api_infosmovie.html',   id=user_id,
                                                 movie_title     = movie_title,
                                                 movie_year      = infosMovie["Year"],
@@ -1206,8 +1223,7 @@ def api_search_movie(movie_title=""):
                                                 movie_director  = infosMovie["Director"],
                                                 movie_plot      = infosMovie["Plot"],
                                                 movie_poster    = infosMovie["Poster"],
-                                                movie_rating    = infosMovie["imdbRating"],
-                                                )
+                                                movie_rating    = infosMovie["imdbRating"])
 
 ##################################################
 #__________________Others________________________#
@@ -1228,4 +1244,4 @@ def thank_you():
     return render_template('thank_you.html', id=session_manager.get_current_user_id())
 
 if __name__ == "__main__" and not config.ENV_PROD:
-    app.run()
+    app.run(debug=True, use_reloader=False)

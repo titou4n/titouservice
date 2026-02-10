@@ -29,6 +29,7 @@
         <h3>Account Security</h3>
         <p>Your IP address {{ ip_address }} - {{ session_location }}</p>
         <form action="{{ url_for('logout') }}" method="get">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="button_red">Log out</button>
         </form>
 
@@ -36,6 +37,7 @@
 
         <h4>Authentication</h4>
         <form action="{{ url_for('settings_switch_2fa') }}" method="post" class="auto-submit-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label>
                 <input type="checkbox" name="enable_2fa" class="auto-submit-checkbox"
                     {% if twofa_enabled %}checked{% endif %}>
@@ -89,7 +91,8 @@
         <hr>
         
         <p>Delete your account</p>
-        <form action="{{ url_for('delete_account') }}" method="POST" class="delete-action">
+        <form action="{{ url_for('delete_account') }}" method="post" class="delete-action">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="button_red" type="submit" onclick="return confirm('Are you sure? This action cannot be undone.')">Delete Account</button>
         </form>
     </div>

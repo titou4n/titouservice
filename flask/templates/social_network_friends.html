@@ -11,6 +11,7 @@
 <h2>Titou Social Network - TSN</h2>
 <div class="post">
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="friend">Add friends :</label>
         <input class="input" type="text" name="friend" placeholder="Add friends..." value="{{ request.form['friend'] }}" required>
         <button class="button" type="submit">Add</button>

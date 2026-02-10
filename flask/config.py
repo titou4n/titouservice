@@ -18,11 +18,12 @@ def read_secret(name):
 
 class Config:
 
-    ipv4_address = get_ipv4_host()
-    ENV_PROD = not ipv4_address.startswith("192.168")
+    #ipv4_address = get_ipv4_host()
+    #ENV_PROD = not ipv4_address.startswith("192.168")
+    ENV_PROD = True
 
     print(f"ENV_PROD : {ENV_PROD}")
-    print(f"IPV4 : {ipv4_address}")
+    #print(f"IPV4 : {ipv4_address}")
 
     if not ENV_PROD:
         load_dotenv()

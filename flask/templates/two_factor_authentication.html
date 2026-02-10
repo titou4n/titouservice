@@ -7,6 +7,7 @@
     <br>
 
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="code-inputs">
             <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*">
             <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*">

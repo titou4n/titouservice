@@ -54,6 +54,7 @@
             {% endif %}
 
             <form action="{{ url_for('social_network_send_message', id_receiver=id_receiver) }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input class="input" type="text" name="message" placeholder="Message" value="{{ request.form['message'] }}" required>
                 <button class="button" type="submit">Send</button>
             </form>

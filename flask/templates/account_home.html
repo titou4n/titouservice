@@ -42,7 +42,8 @@ Balance   : {{ pay }} $</pre>
     <div class="form-actions">
 
         <p>Upload a profile picture</p>
-        <form action="{{ url_for('upload_profile_picture') }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ url_for('upload_profile_picture') }}" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="file" name="profile_picture" accept="image/*" max-size="5242880" required>
             <br>
             <button class="button" type="submit">Upload a profile picture</button>
@@ -52,6 +53,7 @@ Balance   : {{ pay }} $</pre>
 
         <p>Delete your account</p>
         <form action="{{ url_for('delete_account') }}" method="POST" class="delete-action">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="button_red" type="submit" onclick="return confirm('Are you sure? This action cannot be undone.')">Delete Account</button>
         </form>
     </div>
