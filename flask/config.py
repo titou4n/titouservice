@@ -20,7 +20,7 @@ class Config:
 
     #ipv4_address = get_ipv4_host()
     #ENV_PROD = not ipv4_address.startswith("192.168")
-    ENV_PROD = False
+    ENV_PROD = True
 
     print(f"ENV_PROD : {ENV_PROD}")
     #print(f"IPV4 : {ipv4_address}")

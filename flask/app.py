@@ -173,7 +173,6 @@ def forgot_password():
 @app.route('/two_factor_authentication/', methods=['GET', 'POST'])
 @login_required
 def two_factor_authentication():
-    
     user_id = session_manager.get_current_user_id()
     database_handler.delete_old_code_hash()
 
@@ -187,7 +186,6 @@ def two_factor_authentication():
         return render_template('two_factor_authentication.html')
     
     # request.method == 'POST' :
-
     code = str(request.form['code'])
     if not twofa_manager.verif_code(user_id=user_id, code=code):
         flash("Your two-factor authentication failed. Please try again.")
@@ -200,9 +198,6 @@ def two_factor_authentication():
 @app.route('/visitor/', methods=['GET', 'POST'])
 @login_required
 def continue_as_a_visitor():
-    if session_manager.get_current_user_id() is not None:
-        return redirect("/home/")
-    
     username_visitor = config.USERNAME_VISITOR
     password_visitor = hash_manager.generate_password_hash(config.PASSWORD_VISITOR)
 
