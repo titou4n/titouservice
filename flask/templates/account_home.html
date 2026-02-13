@@ -20,6 +20,7 @@
     
     <h3>Account Details</h3>
     <pre>ID        : {{ id }}
+Role      : {{ role_name }} 
 Username  : {{ username }}        
 Name      : {{ name }}
 Balance   : {{ pay }} $</pre>
@@ -44,9 +45,16 @@ Balance   : {{ pay }} $</pre>
         <p>Upload a profile picture</p>
         <form action="{{ url_for('upload_profile_picture') }}" method="post" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="file" name="profile_picture" accept="image/*" max-size="5242880" required>
+            <label for="profile_picture">
+                    Choose a profile picture (max 5MB)
+            </label>
+            <input type="file"
+                    id="profile_picture"
+                    name="profile_picture"
+                    accept="image/*"
+                    required>
             <br>
-            <button class="button" type="submit">Upload a profile picture</button>
+            <button class="button" type="submit">Upload Picture</button>
         </form>
 
         <hr>

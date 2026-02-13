@@ -2,12 +2,11 @@ import sqlite3
 import os
 from config import Config
 
-config = Config()
-
 class DatabaseManager():
     def __init__(self):
-        self.db_path = config.DATABASE_URL
-        if not os.path.exists(config.DATABASE_URL):
+        self.config = Config()
+        self.db_path = self.config.DATABASE_URL
+        if not os.path.exists(self.config.DATABASE_URL):
             self.init_database()
             self.get_plan_database()
             return
@@ -16,6 +15,11 @@ class DatabaseManager():
 
     def init_database(self):
         self.create_table_account()
+        
+        self.create_table_roles()
+        self.create_table_permissions()
+        self.create_table_role_permissions()
+
         self.create_table_user_preferences()
         self.create_table_sessions()
         self.create_table_two_factor_codes()
@@ -26,7 +30,68 @@ class DatabaseManager():
         self.create_table_messages()
         self.create_table_posts()
         self.create_table_movie_search()
+
+        self.init_role_permissions()
         print("-> Base de données initialisée avec succès.")
+
+    def init_role_permissions(self):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        #____________Roles____________#
+        
+        roles = self.config.LIST_ROLES
+        for role in roles:
+            cursor.execute(
+                "INSERT OR IGNORE INTO roles (name) VALUES (?);",
+                (role,)
+            )
+
+        #____________Permissions____________#
+        permissions = self.config.LIST_PERMISSIONS
+        for perm in permissions:
+            cursor.execute(
+                "INSERT OR IGNORE INTO permissions (name) VALUES (?);",
+                (perm,)
+            )
+
+        #____________Roles/Permissions____________#
+
+        # super_admin -> all permissions
+        cursor.execute("SELECT id FROM roles WHERE name = 'super_admin'")
+        super_admin_id = cursor.fetchone()[0]
+
+        cursor.execute("SELECT id FROM permissions")
+        all_permissions = cursor.fetchall()
+        for perm in all_permissions:
+            cursor.execute(
+                "INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
+                (super_admin_id, perm[0])
+            )
+
+        role_permissions_map = {
+            "admin": self.config.LIST_ADMIN_PERMS,
+            "user": self.config.LIST_USER_PERMS,
+            "visitor": self.config.LIST_VISITOR_PERMS
+        }
+
+        for role_name, perms_list in role_permissions_map.items():
+
+            cursor.execute("SELECT id FROM roles WHERE name = ?", (role_name,))
+            role_id = cursor.fetchone()[0]
+
+            for perm_name in perms_list:
+                cursor.execute("SELECT id FROM permissions WHERE name = ?", (perm_name,))
+                perm_id = cursor.fetchone()[0]
+                cursor.execute(
+                    "INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
+                    (role_id, perm_id)
+                )
+
+
+        conn.commit()
+        conn.close()
+
 
     def verif_table_exist(self, table_name):
         conn = sqlite3.connect(self.db_path)
@@ -41,6 +106,10 @@ class DatabaseManager():
 
         conn.close()
         return result is not None
+    
+    ########################################
+    #________________TABLE_________________#
+    ########################################
 
     def create_table_account(self):
 
@@ -56,21 +125,82 @@ class DatabaseManager():
         query = f"""
         CREATE TABLE IF NOT EXISTS account (
             id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-            is_admin INTEGER DEFAULT 0,
+            role_id INTEGER NOT NULL,
             username STRING NOT NULL UNIQUE,
             password STRING NOT NULL,
             name STRING NOT NULL UNIQUE,
             email VARCHAR(255),
             email_verified BOOLEAN DEFAULT 0,
             profile_picture_path STRING,
-            pay DECIMAL DEFAULT {config.BANK_DEFAULT_PAY},
-            nbpasswordchange INTEGER DEFAULT 0
+            pay DECIMAL DEFAULT {self.config.BANK_DEFAULT_PAY},
+            nbpasswordchange INTEGER DEFAULT 0,
+            FOREIGN KEY (role_id) REFERENCES roles(id)
         );
         """
         cursor.execute(query)
         conn.commit()
         conn.close()
         print("-> TABLE 'account' created with success.")
+
+    def create_table_roles(self):
+
+        if self.verif_table_exist("roles"):
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        query = f"""
+        CREATE TABLE roles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL
+        );
+        """
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'roles' created with success.")
+
+    def create_table_permissions(self):
+
+        if self.verif_table_exist("permissions"):
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        query = f"""
+        CREATE TABLE permissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL
+        );
+        """
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'permissions' created with success.")
+
+    def create_table_role_permissions(self):
+
+        if self.verif_table_exist("role_permissions"):
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        query = f"""
+        CREATE TABLE role_permissions (
+            role_id INTEGER,
+            permission_id INTEGER,
+            PRIMARY KEY (role_id, permission_id),
+            FOREIGN KEY (role_id) REFERENCES roles(id),
+            FOREIGN KEY (permission_id) REFERENCES permissions(id)
+        );
+        """
+        cursor.execute(query)
+        conn.commit()
+        conn.close()
+        print("-> TABLE 'role_permissions' created with success.")
 
     def create_table_user_preferences(self):
 
@@ -342,6 +472,10 @@ class DatabaseManager():
         conn.commit()
         conn.close()
         print("-> TABLE 'movie_search' created with success.")
+
+    ########################################
+    #________________OTHER_________________#
+    ########################################
 
     def get_plan_database(self):
         print("Get plan database....")

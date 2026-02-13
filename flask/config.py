@@ -20,7 +20,7 @@ class Config:
 
     #ipv4_address = get_ipv4_host()
     #ENV_PROD = not ipv4_address.startswith("192.168")
-    ENV_PROD = True
+    ENV_PROD = False
 
     print(f"ENV_PROD : {ENV_PROD}")
     #print(f"IPV4 : {ipv4_address}")
@@ -90,6 +90,8 @@ class Config:
     SESSION_COOKIE_TIME_HOURS = 1
     SESSION_COOKIE_TIME_MINUTES = 0
 
+    TWOFA_TIMELAPS_MINUTES = 15
+
     # ===== Database =====
     DATA_DIR = BASE_DIR / "Data"
     DATA_DIR.mkdir(exist_ok=True)
@@ -116,3 +118,19 @@ class Config:
     # ===== BANK =====
     BANK_DEFAULT_PAY = 1000000
     STOCK_MARKET_COEFFICIENT = 1
+
+    # ===== PERMISSIONS/ROLES =====
+    LIST_ROLES = ["super_admin", "admin", "user", "visitor"]
+    LIST_PERMISSIONS = [
+            "access_admin_panel",
+            "manage_users",
+            "edit_settings",
+            "view_own_data"
+        ]
+    
+    LIST_ADMIN_PERMS = ["access_admin_panel", "manage_users", "edit_settings"]
+    LIST_USER_PERMS = ["view_own_data"]
+    LIST_VISITOR_PERMS =[]
+
+    
+
