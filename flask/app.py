@@ -4,6 +4,7 @@ import os
 import random
 
 from flask import Flask, request, render_template, flash, redirect, send_file, url_for
+from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_wtf import CSRFProtect
 from io import BytesIO
 from werkzeug.utils import secure_filename
@@ -18,10 +19,15 @@ from utils.session_manager import SessionManager
 from utils.email_manager import EmailManager
 from utils.hash_manager import HashManager
 from utils.bank_manager import BankManager
+from utils.twofa_manager import TwofaManager
+from models.user import User
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.config.from_object(Config)
 csrf = CSRFProtect(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
 
 config = Config()
 database_manager = DatabaseManager()
@@ -29,13 +35,19 @@ database_handler = DatabaseHandler()
 session_manager = SessionManager(app_instance=app)
 email_manager = EmailManager()
 hash_manager = HashManager()
-bank_manger = BankManager()
+bank_manager = BankManager()
+twofa_manager = TwofaManager()
+user = None
 utils = Utils()
 
 
 @app.context_processor
 def inject_format_datetime():
     return dict(format_datetime=utils.format_datetime)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User(int(user_id))
 
 @app.route('/')
 def index():
@@ -48,10 +60,6 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 @app.route('/login/', methods=['GET', 'POST'])
 def login():
-    if session_manager.get_current_user_id() is not None:
-        session_manager.insert_metadata(user_id=user_id)
-        return redirect("/home/")
-    
     if request.method != 'POST':
         return render_template('login.html')
     
@@ -80,17 +88,16 @@ def login():
     if database_handler.get_user_preferences_2fa(user_id=user_id):
         return redirect('/two_factor_authentication/')
     
+    user = User(user_id)
+    # Flask_login
+    login_user(user)
+
     session_manager.insert_metadata()
     return redirect("/home/")         
 
 @app.route('/register', methods=['GET', 'POST'])
 @app.route('/register/', methods=['GET', 'POST'])
 def register():
-    if session_manager.get_current_user_id() is not None:
-        user_id = session_manager.get_current_user_id()
-        session_manager.insert_metadata()
-        return redirect("/home/")
-    
     if request.method != 'POST':
         return render_template('register.html')
     
@@ -111,11 +118,16 @@ def register():
         flash("Passwords must be identical.")
         return redirect(url_for('register'))
     
-    database_handler.create_account(username, password, name)
+    role_id = database_handler.get_role_id(role_name="user")
+    database_handler.create_account(username, password, name, role_id)
     user_id = database_handler.get_id_from_username(username)
 
     session_manager.send_session(user_id=user_id)
     database_handler.insert_user_preferences(user_id=user_id)
+
+    user = User(user_id)
+    # Flask_login
+    login_user(user)
 
     session_manager.insert_metadata()
     return redirect("/home/")
@@ -159,72 +171,34 @@ def forgot_password():
 
 @app.route('/two_factor_authentication', methods=['GET', 'POST'])
 @app.route('/two_factor_authentication/', methods=['GET', 'POST'])
+@login_required
 def two_factor_authentication():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
     
     user_id = session_manager.get_current_user_id()
     database_handler.delete_old_code_hash()
 
-    if request.method != 'POST':
+    if request.method == 'GET':
+        if not twofa_manager.verif_code(user_id=user_id, code=code):
+            twofa_manager.delete_old_code_hash(user_id=user_id)
+            return redirect("/two_factor_authentication/")
 
-        code_hash = database_handler.get_code_hash_from_user_id(user_id=user_id)
-        if code_hash is not None:
-            created_at = datetime.fromisoformat(code_hash["created_at"])
-            if utils.datetime_is_expired_minutes(created_at, 5):
-                flash("Your code has expired, we have sent you a new one.")
-                database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-                return redirect("/two_factor_authentication/")
-            if code_hash["attempts"] >= 3:
-                flash("Number of attempts reached, we have sent you a new code.")
-                database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-                return redirect("/two_factor_authentication/")
-            return render_template('two_factor_authentication.html')
-        
-        random_code = random.randint(100000,999999)
-        email_manager.send_two_factor_authentication_code_with_html(user_id, random_code)
-        database_handler.insert_two_factor_codes(user_id=user_id,
-                                                 code_hash=hash_manager.generate_password_hash(str(random_code)),
-                                                 created_at=utils.get_datetime_isoformat())
+        twofa_manager.send_code(user_id=user_id)
         flash(f"An email containing a two-factor authentication code has been sent to the following address: {email_manager.get_hide_email(user_id=user_id)} ")
         return render_template('two_factor_authentication.html')
     
-    code = str(request.form['code'])
+    # request.method == 'POST' :
 
-    code_hash = database_handler.get_code_hash_from_user_id(user_id=user_id)
-    if code_hash is None:
+    code = str(request.form['code'])
+    if not twofa_manager.verif_code(user_id=user_id, code=code):
         flash("Your two-factor authentication failed. Please try again.")
-        database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
         return redirect("/two_factor_authentication/")
-    
-    if code_hash["used"]:
-        flash("This code has already been used, we have sent you a new one.")
-        database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-        return redirect("/two_factor_authentication/")
-    
-    if code_hash["attempts"] >= 3:
-        flash("Number of attempts reached, we have sent you a new code.")
-        database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-        return redirect("/two_factor_authentication/")
-    
-    created_at = datetime.fromisoformat(code_hash["created_at"])
-    if utils.datetime_is_expired_minutes(created_at, 5):
-        flash("Your code has expired, we have sent you a new one.")
-        database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-        return redirect("/two_factor_authentication/")
-    
-    if hash_manager.generate_password_hash(code) != code_hash["code_hash"]:
-        flash("The code is incorrect")
-        database_handler.add_attempts_two_factor_codes(id_two_factor_codes=code_hash["id_two_factor_codes"])
-        return redirect("/two_factor_authentication/")
-    
-    database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-    database_handler.update_email_verified_from_id(user_id)
+
     flash("Your two-factor authentication sucess.")
     return redirect("/home/")
 
-@app.route('/visitor', methods=['POST'])
-@app.route('/visitor/', methods=['POST'])
+@app.route('/visitor', methods=['GET', 'POST'])
+@app.route('/visitor/', methods=['GET', 'POST'])
+@login_required
 def continue_as_a_visitor():
     if session_manager.get_current_user_id() is not None:
         return redirect("/home/")
@@ -250,25 +224,20 @@ def continue_as_a_visitor():
      
     user_id = database_handler.get_id_from_username(username_visitor)
     session_manager.send_session(user_id=user_id)
-
-    session_manager.insert_metadata(user_id=user_id)
     return redirect("/home/")
 
 @app.route('/home')
 @app.route('/home/')
+@login_required
 def home():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     return render_template('home.html', id=user_id, name=database_handler.get_name_from_id(user_id))
 
 @app.route('/logout')
 @app.route('/logout/')
+@login_required
 def logout():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
+    logout_user()
     session_manager.logout()
     return redirect("/")
 
@@ -278,10 +247,8 @@ def logout():
 
 @app.route('/settings', methods=['GET', 'POST'])
 @app.route('/settings/', methods=['GET', 'POST'])
-def settings_home():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-        
+@login_required
+def settings_home():  
     user_id = session_manager.get_current_user_id()
     return render_template('settings_home.html',
                            id=user_id,
@@ -293,11 +260,11 @@ def settings_home():
 
 @app.route('/settings/account', methods=['GET', 'POST'])
 @app.route('/settings/account/', methods=['GET', 'POST'])
+@login_required
 def account_home():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-        
     user_id = session_manager.get_current_user_id()
+    user = User(user_id)
+
     email = database_handler.get_email_from_id(user_id)
     user_has_email = not(email is None)
     email_verified = int(database_handler.get_email_verified_from_id(user_id))
@@ -305,6 +272,7 @@ def account_home():
         email_verified = False
     else:
         email_verified = True
+
     return render_template('account_home.html',
                            id=user_id,
                            username=database_handler.get_username_from_user_id(user_id=user_id),
@@ -312,14 +280,14 @@ def account_home():
                            pay=database_handler.get_pay(user_id),
                            user_has_email = user_has_email,
                            email=email,
-                           email_verified=email_verified)
+                           email_verified=email_verified,
+                           role_name = user.role_name
+                           )
 
 @app.route('/settings/account/change_email', methods=['GET', 'POST'])
 @app.route('/settings/account/change_email/', methods=['GET', 'POST'])
+@login_required
 def account_change_email():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id=session_manager.get_current_user_id()
     if request.method != 'POST':
         email=database_handler.get_email_from_id(user_id)
@@ -340,10 +308,8 @@ def account_change_email():
 
 @app.route('/settings/account/change_username', methods=['GET', 'POST'])
 @app.route('/settings/account/change_username/', methods=['GET', 'POST'])
+@login_required
 def account_change_username():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
         return render_template('account_change_username.html', id=user_id, username=database_handler.get_username_from_user_id(user_id))
@@ -363,10 +329,8 @@ def account_change_username():
 
 @app.route('/settings/account/change_password', methods=['GET', 'POST'])
 @app.route('/settings/account/change_password/', methods=['GET', 'POST'])
+@login_required
 def account_change_password():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
         return render_template('account_change_password.html', id=user_id)
@@ -389,10 +353,8 @@ def account_change_password():
 
 @app.route('/settings/account/change_name', methods=['GET', 'POST'])
 @app.route('/settings/account/change_name/', methods=['GET', 'POST'])
+@login_required
 def account_change_name():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
         return render_template('account_change_name.html', id=user_id, name=database_handler.get_name_from_id(user_id))
@@ -412,20 +374,20 @@ def account_change_name():
 
 @app.route('/settings/account/upload_profile_picture', methods=['GET', 'POST'])
 @app.route('/settings/account/upload_profile_picture/', methods=['GET', 'POST'])
+@login_required
 def upload_profile_picture():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
         return redirect(url_for("account_home"))
     
     #################################################
 
+    @login_required
     def allowed_file(filename):
         return '.' in filename and \
             filename.rsplit('.', 1)[1].lower() in app.config["ALLOWED_EXTENSIONS_PROFILE_PICTURE"]
     
+    @login_required
     def get_file_extension(filename):
         return filename.rsplit('.', 1)[1].lower() if '.' in filename else None
     
@@ -457,9 +419,8 @@ def upload_profile_picture():
     return redirect(url_for("account_home"))
 
 @app.route("/settings/profile_picture/<int:user_id>")
+@login_required
 def profile_picture(user_id):
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
     
     path = database_handler.get_profile_picture_path_from_id(user_id)
 
@@ -470,9 +431,8 @@ def profile_picture(user_id):
 
 @app.route('/settings/account/delete_account', methods=['GET', 'POST'])
 @app.route('/settings/account/delete_account/', methods=['GET', 'POST'])
+@login_required
 def delete_account():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
     
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
@@ -490,10 +450,8 @@ def delete_account():
 
 @app.route('/settings/security', methods=['GET', 'POST'])
 @app.route('/settings/security/', methods=['GET', 'POST'])
-def security_home():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-        
+@login_required
+def security_home():  
     user_id = session_manager.get_current_user_id()
     email = database_handler.get_email_from_id(user_id)
     sessions = database_handler.get_all_sessions_from_user_id(user_id=user_id)
@@ -514,10 +472,8 @@ def security_home():
 
 @app.route('/settings/switch_2fa', methods=['GET', 'POST'])
 @app.route('/settings/switch_2fa/', methods=['GET', 'POST'])
+@login_required
 def settings_switch_2fa():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     if request.method != 'POST':
         return redirect("/settings/security/")
     
@@ -537,27 +493,21 @@ def settings_switch_2fa():
 
 @app.route("/settings/logout_all", methods=['GET', 'POST'])
 @app.route("/settings/logout_all/", methods=['GET', 'POST'])
-def settings_logout_all():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
+@login_required
+def settings_logout_all():  
     user_id = session_manager.get_current_user_id()
     session_manager.logout_user_from_all_devices(user_id=user_id)
     return redirect("/")
 
 @app.route("/settings/logout_session/<string:session_id_hash>", methods=['POST'])
+@login_required
 def settings_logout_session(session_id_hash:str):
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-
     session_manager.logout_session(session_id_hash=session_id_hash)
     return redirect(url_for('security_home'))
 
 @app.route("/settings/delete_session/<string:session_id_hash>", methods=['POST'])
+@login_required
 def settings_delete_session(session_id_hash:str):
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-
     session_manager.delete_session(session_id_hash=session_id_hash)
     return redirect(url_for('security_home'))
 
@@ -567,10 +517,8 @@ def settings_delete_session(session_id_hash:str):
 
 @app.route('/settings/notifications', methods=['GET', 'POST'])
 @app.route('/settings/notifications/', methods=['GET', 'POST'])
-def notifications_home():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-        
+@login_required
+def notifications_home():  
     user_id = session_manager.get_current_user_id()
     return render_template('notifications_home.html',
                            id=user_id)
@@ -578,10 +526,8 @@ def notifications_home():
 #TODO
 @app.route('/settings/notify_password_change', methods=['GET', 'POST'])
 @app.route('/settings/notify_password_change/', methods=['GET', 'POST'])
+@login_required
 def settings_notify_password_change():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     flash("Not Implemented")
     if request.method != 'POST':
         return redirect("/settings/notifications/")
@@ -591,10 +537,8 @@ def settings_notify_password_change():
 #TODO
 @app.route('/settings/notify_twofa_change', methods=['GET', 'POST'])
 @app.route('/settings/notify_twofa_change/', methods=['GET', 'POST'])
+@login_required
 def settings_notify_twofa_change():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     flash("Not Implemented")
     if request.method != 'POST':
         return redirect("/settings/notifications/")
@@ -607,10 +551,8 @@ def settings_notify_twofa_change():
 
 @app.route('/settings/privacy', methods=['GET', 'POST'])
 @app.route('/settings/privacy/', methods=['GET', 'POST'])
+@login_required
 def privacy_home():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-        
     user_id = session_manager.get_current_user_id()
     return render_template('privacy_home.html',
                            id=user_id)
@@ -618,10 +560,8 @@ def privacy_home():
 
 @app.route('/settings/privacy/export_data', methods=['GET', 'POST'])
 @app.route('/settings/privacy/export_data/', methods=['GET', 'POST'])
-def export_data():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
+@login_required
+def export_data():    
     user_id = session_manager.get_current_user_id()
     content = "=== PERSONALE DATA EXPORT ===\n"
     content += f"Date       : {utils.format_datetime(utils.get_datetime_isoformat())}\n"
@@ -646,10 +586,8 @@ def export_data():
 
 @app.route('/settings/appearance', methods=['GET', 'POST'])
 @app.route('/settings/appearance/', methods=['GET', 'POST'])
-def appearance_home():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-        
+@login_required
+def appearance_home():      
     user_id = session_manager.get_current_user_id()
     return render_template('appearance_home.html',
                            id=user_id)
@@ -661,10 +599,8 @@ def appearance_home():
 
 @app.route('/settings/about_support', methods=['GET', 'POST'])
 @app.route('/settings/about_support/', methods=['GET', 'POST'])
-def about_support_home():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-        
+@login_required
+def about_support_home():     
     user_id = session_manager.get_current_user_id()
     return render_template('about_support_home.html',
                            id=user_id)
@@ -676,10 +612,8 @@ def about_support_home():
 
 @app.route('/titoubank', methods=['GET', 'POST'])
 @app.route('/titoubank/', methods=['GET', 'POST'])
+@login_required
 def titoubank():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     return render_template('titoubank_home.html',
                            id=user_id,
@@ -688,10 +622,8 @@ def titoubank():
         
 @app.route("/titoubank/withdrawl", methods=['GET', 'POST'])
 @app.route("/titoubank/withdrawl/", methods=['GET', 'POST'])
+@login_required
 def withdrawl():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
         return render_template('titoubank_withdrawl.html', id=user_id)
@@ -713,10 +645,8 @@ def withdrawl():
     
 @app.route('/titoubank/transfer', methods=['GET', 'POST'])
 @app.route('/titoubank/transfer/', methods=['GET', 'POST'])
+@login_required
 def transfer():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
         return render_template('titoubank_transfer.html', id=user_id, all_transfer_history=database_handler.get_all_bank_transfer(user_id))
@@ -749,10 +679,8 @@ def transfer():
 
 @app.route('/titoubank/stock_market', methods=['GET', 'POST'])
 @app.route('/titoubank/stock_market/', methods=['GET', 'POST'])
+@login_required
 def titoubank_stock_market():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
         twelvedata_api_key = config.TWELVEDATA_API_KEY
@@ -772,7 +700,7 @@ def titoubank_stock_market():
         #result = {'meta': {'symbol': 'BTC/USD', 'interval': '1day', 'currency_base': 'Bitcoin', 'currency_quote': 'US Dollar', 'exchange': 'Coinbase Pro', 'type': 'Digital Currency'}, 'values': [{'datetime': '2026-01-20', 'open': '92559.65', 'high': '92807.99', 'low': '90558.99', 'close': '91255.19'}, {'datetime': '2026-01-19', 'open': '93630', 'high': '93630', 'low': '91935.3', 'close': '92559.66'}, {'datetime': '2026-01-18', 'open': '95109.99', 'high': '95485', 'low': '93559.78', 'close': '93633.53'}, {'datetime': '2026-01-17', 'open': '95503.99', 'high': '95600', 'low': '94980.12', 'close': '95109.99'}, {'datetime': '2026-01-16', 'open': '95578.2', 'high': '95830.49', 'low': '94229.04', 'close': '95504'}, {'datetime': '2026-01-15', 'open': '96954.02', 'high': '97176.42', 'low': '95066.19', 'close': '95587.65'}, {'datetime': '2026-01-14', 'open': '95385.59', 'high': '97963.62', 'low': '94518.63', 'close': '96955.16'}, {'datetime': '2026-01-13', 'open': '91188.08', 'high': '96250', 'low': '90925.17', 'close': '95384.23'}, {'datetime': '2026-01-12', 'open': '90878.51', 'high': '92406.3', 'low': '90003.46', 'close': '91188.09'}, {'datetime': '2026-01-11', 'open': '90387.36', 'high': '91173.12', 'low': '90109', 'close': '90872.01'}], 'status': 'ok'}
         
         pay_of_account = database_handler.get_pay(id=user_id)
-        sum_stock_number = bank_manger.get_sum_transfers_from_id_symbol(user_id=user_id, symbol=symbol)
+        sum_stock_number = bank_manager.get_sum_transfers_from_id_symbol(user_id=user_id, symbol=symbol)
 
         ### GET PRICE ###
         twelvedata_api_key = config.TWELVEDATA_API_KEY
@@ -795,10 +723,8 @@ def titoubank_stock_market():
 
 @app.route('/titoubank/stock_market/sell', methods=['GET', 'POST'])
 @app.route('/titoubank/stock_market/sell/', methods=['GET', 'POST'])
+@login_required
 def titoubank_stock_market_sell():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
         return redirect("/titoubank/stock_market/")
@@ -810,7 +736,7 @@ def titoubank_stock_market_sell():
     
     symbol = "BTC/USD"
 
-    sum_stock_number = bank_manger.get_sum_transfers_from_id_symbol(user_id=user_id, symbol=symbol)
+    sum_stock_number = bank_manager.get_sum_transfers_from_id_symbol(user_id=user_id, symbol=symbol)
     if stock_number >= sum_stock_number:
         flash("You don't have enough stock.")
         return redirect("/titoubank/stock_market/")
@@ -844,16 +770,14 @@ def titoubank_stock_market_sell():
     
 @app.route('/titoubank/stock_market/sell_all', methods=['GET', 'POST'])
 @app.route('/titoubank/stock_market/sell_all/', methods=['GET', 'POST'])
-def titoubank_stock_market_sell_all():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
+@login_required
+def titoubank_stock_market_sell_all(): 
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
         return redirect("/titoubank/stock_market/")
     
     symbol = "BTC/USD"
-    stock_number = bank_manger.get_sum_transfers_from_id_symbol(user_id=user_id, symbol=symbol)
+    stock_number = bank_manager.get_sum_transfers_from_id_symbol(user_id=user_id, symbol=symbol)
     
     ### GET PRICE ###
     twelvedata_api_key = config.TWELVEDATA_API_KEY
@@ -884,10 +808,8 @@ def titoubank_stock_market_sell_all():
 
 @app.route('/titoubank/stock_market/buy', methods=['GET', 'POST'])
 @app.route('/titoubank/stock_market/buy/', methods=['GET', 'POST'])
+@login_required
 def titoubank_stock_market_buy():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
         return redirect("/titoubank/stock_market/")
@@ -932,12 +854,10 @@ def titoubank_stock_market_buy():
 #__________________Chatroom______________________#
 ##################################################
 
-@app.route('/chatroom', methods=['GET', 'POST'])
-@app.route('/chatroom/', methods=['GET', 'POST'])
+@app.route('/chatroom', methods=['GET'])
+@app.route('/chatroom/', methods=['GET'])
+@login_required
 def chatroom():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     posts = database_handler.get_posts()
 
@@ -953,10 +873,8 @@ def chatroom():
 
 @app.route('/chatroom/create_post', methods=['GET', 'POST'])
 @app.route('/chatroom/create_post/', methods=['GET', 'POST'])
+@login_required
 def create_post():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
         return render_template('chatroom_create_post.html', id=user_id)
@@ -973,10 +891,8 @@ def create_post():
 
 @app.route('/chatroom/edit_post/<int:id_post>', methods=['GET', 'POST'])
 @app.route('/chatroom/edit_post/<int:id_post>/', methods=['GET', 'POST'])
+@login_required
 def edit_post(id_post):
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     if user_id != database_handler.get_id_from_id_post(id_post):
         flash("You cannot edit this post.")
@@ -997,11 +913,8 @@ def edit_post(id_post):
 
 @app.route('/chatroom/delete/<int:id_post>', methods=('POST',))
 @app.route('/chatroom/delete/<int:id_post>/', methods=('POST',))
+@login_required
 def delete_post(id_post):
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
-    user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
         return redirect("/edit_post/")
     
@@ -1016,16 +929,14 @@ def delete_post(id_post):
 
 @app.route('/social_network', methods=['GET', 'POST'])
 @app.route('/social_network/', methods=['GET', 'POST'])
+@login_required
 def social_network_home():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
     return render_template('social_network_home.html', id=session_manager.get_current_user_id())
 
 @app.route('/social_network/friends', methods=['GET', 'POST'])
 @app.route('/social_network/friends/', methods=['GET', 'POST'])
+@login_required
 def social_network_friends():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
     
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
@@ -1055,10 +966,8 @@ def social_network_friends():
 
 @app.route('/social_network/user_profile/<int:id_account>', methods=['GET', 'POST'])
 @app.route('/social_network/user_profile/<int:id_account>/', methods=['GET', 'POST'])
+@login_required
 def social_network_user_profile(id_account:int):
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     if user_id == id_account:
         return redirect(url_for('account_home'))
@@ -1073,10 +982,8 @@ def social_network_user_profile(id_account:int):
 
 @app.route('/social_network/follow_action/<int:id_followed>', methods=['GET', 'POST'])
 @app.route('/social_network/follow_action/<int:id_followed>', methods=['GET', 'POST'])
+@login_required
 def social_network_follow_action(id_followed:int):
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
     if id_followed == user_id:
         flash("You cannot follow yourself")
@@ -1091,10 +998,8 @@ def social_network_follow_action(id_followed:int):
 
 @app.route('/social_network/unfollow_action/<int:id_unfollowed>', methods=['GET', 'POST'])
 @app.route('/social_network/unfollow_action/<int:id_unfollowed>', methods=['GET', 'POST'])
-def social_network_unfollow_action(id_unfollowed:int):
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
+@login_required
+def social_network_unfollow_action(id_unfollowed:int): 
     user_id = session_manager.get_current_user_id()
     if id_unfollowed == user_id:
         flash("You cannot unfollow yourself")
@@ -1106,10 +1011,8 @@ def social_network_unfollow_action(id_unfollowed:int):
 
 @app.route('/social_network/chat', methods=['GET', 'POST'])
 @app.route('/social_network/chat/', methods=['GET', 'POST'])
+@login_required
 def social_network_chat():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
-    
     user_id = session_manager.get_current_user_id()
 
     id_all_followeds = database_handler.get_all_followeds_from_id(user_id)
@@ -1120,9 +1023,8 @@ def social_network_chat():
 
 @app.route('/social_network/chat/<int:id_receiver>', methods=['GET', 'POST'])
 @app.route('/social_network/chat/<int:id_receiver>/', methods=['GET', 'POST'])
+@login_required
 def social_network_chat_selected(id_receiver:int):
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
     
     user_id = session_manager.get_current_user_id()
 
@@ -1136,9 +1038,8 @@ def social_network_chat_selected(id_receiver:int):
 
 @app.route('/social_network/chat/send_message/<int:id_receiver>', methods=['GET', 'POST'])
 @app.route('/social_network/chat/send_message/<int:id_receiver>/', methods=['GET', 'POST'])
+@login_required
 def social_network_send_message(id_receiver:int):
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
     
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
@@ -1164,6 +1065,7 @@ def social_network_send_message(id_receiver:int):
 
 @app.route('/api')
 @app.route('/api/')
+@login_required
 def api_home():
     if session_manager.get_current_user_id() is None:
         return render_template('/')
@@ -1171,9 +1073,8 @@ def api_home():
 
 @app.route('/api/search_movie', methods=['GET', 'POST'])
 @app.route('/api/search_movie/', methods=['GET', 'POST'])
+@login_required
 def api_search_movie(movie_title=""):
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
     
     user_id = session_manager.get_current_user_id()
     if request.method != 'POST':
@@ -1191,9 +1092,8 @@ def api_search_movie(movie_title=""):
 
 @app.route('/api/infos_movie/<string:movie_title>', methods=['GET', 'POST'])
 @app.route('/api/infos_movie/<string:movie_title>/', methods=['GET', 'POST'])
+@login_required
 def api_infos_movie(movie_title=""):
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
     
     user_id = session_manager.get_current_user_id()
 
@@ -1232,15 +1132,11 @@ def api_infos_movie(movie_title=""):
 @app.route('/conditions_uses')
 @app.route('/conditions_uses/')
 def conditions_uses():
-    if session_manager.get_current_user_id() is None:
-        return render_template('conditions_uses.html')
     return render_template('conditions_uses.html', id=session_manager.get_current_user_id())
 
-@app.route('/thank_you', methods=['GET', 'POST'])
-@app.route('/thank_you/', methods=['GET', 'POST'])
+@app.route('/thank_you')
+@app.route('/thank_you/')
 def thank_you():
-    if session_manager.get_current_user_id() is None:
-        return redirect("/")
     return render_template('thank_you.html', id=session_manager.get_current_user_id())
 
 if __name__ == "__main__" and not config.ENV_PROD:

@@ -18,7 +18,8 @@ class DatabaseHandler():
     self.db_path = config.DATABASE_URL
 
     if not self.verif_username_exists(str(config.USERNAME_VISITOR)):
-      self.create_account(str(config.USERNAME_VISITOR), str(hash_manager.generate_password_hash(config.PASSWORD_VISITOR)), str(config.NAME_VISITOR))
+      role_id = self.get_role_id(role_name="visitor")
+      self.create_account(str(config.USERNAME_VISITOR), str(hash_manager.generate_password_hash(config.PASSWORD_VISITOR)), str(config.NAME_VISITOR), role_id=role_id)
 
   def get_db_connection(self):
     conn = sqlite3.connect(self.db_path, check_same_thread=False)
@@ -50,12 +51,21 @@ class DatabaseHandler():
   #________________ACCOUNT_________________#
   ##########################################
 
-  def create_account(self, username:str, password:str, name:str):
+  def create_account(self, username:str, password:str, name:str, role_id:int):
     conn = self.get_db_connection()
-    query = f"INSERT INTO account (username, password, name) VALUES (?, ?, ?);"
-    conn.execute(query, (username, password, name))
+    query = f"INSERT INTO account (username, password, name, role_id) VALUES (?, ?, ?, ?);"
+    conn.execute(query, (username, password, name, role_id))
     conn.commit()
     conn.close()
+
+  def get_user(self, user_id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT id, role_id, username, password, name, email, email_verified, pay FROM account WHERE id=?"
+    result = conn.execute(query, (user_id,)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result
 
   ##########################################
   #____________USER_PREFERENCES____________#
@@ -84,6 +94,48 @@ class DatabaseHandler():
     conn.execute(query, (switch_to, user_id,))
     conn.commit()
     conn.close()
+
+  ##########################################
+  #___________PERMISSIONS/ROLES____________#
+  ##########################################
+
+  def get_permissions_id(self, role_id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT role_id, permission_id FROM role_permissions WHERE role_id=?;"
+    result = conn.execute(query, (role_id,)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result
+  
+  def get_permissions_name(self, permission_id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT name FROM permissions WHERE id=?;"
+    result = conn.execute(query, (permission_id,)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result[0]
+  
+  def get_role_name(self, role_id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT name FROM roles WHERE id=?;"
+    result = conn.execute(query, (role_id,)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result[0]
+  
+  def get_role_id(self, role_name:int):
+    conn = self.get_db_connection()
+    query = f"SELECT id FROM roles WHERE name=?;"
+    result = conn.execute(query, (role_name,)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result[0]
+  
+
 
   ##########################################
   #_______________SESSIONS_________________#
@@ -187,10 +239,22 @@ class DatabaseHandler():
 
   def delete_old_code_hash(self):
     conn = self.get_db_connection()
-    query = f"DELETE FROM two_factor_codes WHERE created_at < datetime('now', '-10 minutes');"
+    query = f"DELETE FROM two_factor_codes WHERE created_at < datetime('now', '-30 minutes');"
     conn.execute(query)
     conn.commit()
     conn.close()
+
+  def update_twofa_code_to_used(self, id_two_factor_codes:int):
+    used = 1
+    conn = self.get_db_connection()
+    query = f"UPDATE two_factor_codes SET used=? WHERE id_two_factor_codes=?;"
+    conn.execute(query, (used, id_two_factor_codes,))
+    conn.commit()
+    conn.close()
+
+  ##########################################
+  #_______________ACCOUNT__________________#
+  ##########################################
 
   def update_profile_picture_path_from_id(self, id:int, profile_picture_path:str):
     conn = self.get_db_connection()
