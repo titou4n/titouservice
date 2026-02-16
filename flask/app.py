@@ -1,14 +1,12 @@
 # Import Externe
 import requests
 import os
-import random
 
 from flask import Flask, request, render_template, flash, redirect, send_file, url_for
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_wtf import CSRFProtect
 from io import BytesIO
 from werkzeug.utils import secure_filename
-from datetime import datetime
 
 # Import Local
 from Data.init_db import DatabaseManager
@@ -18,8 +16,10 @@ from utils.utils import Utils
 from utils.session_manager import SessionManager
 from utils.email_manager import EmailManager
 from utils.hash_manager import HashManager
-from utils.bank_manager import BankManager
-from utils.twofa_manager import TwofaManager
+from utils.bank_manager import BankManager, InvalidTransferAmountError, InsufficientFundsError, IdNotFoundError
+from utils.twofa_manager import TwofaManager, TwoFactorAuthError, TwoFactorCodeAlreadyUsedError, TwoFactorCodeExpiredError, TwoFactorCodeNotFoundError, TwoFactorInvalidCodeError, TwoFactorTooManyAttemptsError
+from utils.twelvedata_manager import TwelveDataManager
+from utils.stock_market_manager import StockMarketManager, InvalidStockAmountError, NotEnoughStockError, ApiUnavailableError
 from models.user import User
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -37,9 +37,10 @@ email_manager = EmailManager()
 hash_manager = HashManager()
 bank_manager = BankManager()
 twofa_manager = TwofaManager()
-user = None
+stock_market_manager = StockMarketManager()
+twelve_data_manager = TwelveDataManager()
 utils = Utils()
-
+user = None
 
 @app.context_processor
 def inject_format_datetime():
@@ -60,7 +61,7 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 @app.route('/login/', methods=['GET', 'POST'])
 def login():
-    if request.method != 'POST':
+    if request.method == 'GET':
         return render_template('login.html')
     
     username = str(request.form['username'])
@@ -98,7 +99,7 @@ def login():
 @app.route('/register', methods=['GET', 'POST'])
 @app.route('/register/', methods=['GET', 'POST'])
 def register():
-    if request.method != 'POST':
+    if request.method == 'GET':
         return render_template('register.html')
     
     username        = str(request.form['username'])
@@ -140,7 +141,7 @@ def forgot_password():
         session_manager.insert_metadata()
         return redirect("/home/")
     
-    if request.method != 'POST':
+    if request.method == 'GET':
         return render_template('forgot_password.html')
     
     username = str(request.form['username'])
@@ -177,22 +178,36 @@ def two_factor_authentication():
     database_handler.delete_old_code_hash()
 
     if request.method == 'GET':
-        if not twofa_manager.verif_code(user_id=user_id, code=code):
-            twofa_manager.delete_old_code_hash(user_id=user_id)
-            return redirect("/two_factor_authentication/")
-
-        twofa_manager.send_code(user_id=user_id)
+        if twofa_manager.verif_need_to_sent_new_code(user_id=user_id):
+            database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
+            twofa_manager.send_code(user_id=user_id)
         flash(f"An email containing a two-factor authentication code has been sent to the following address: {email_manager.get_hide_email(user_id=user_id)} ")
         return render_template('two_factor_authentication.html')
     
     # request.method == 'POST' :
     code = str(request.form['code'])
-    if not twofa_manager.verif_code(user_id=user_id, code=code):
-        flash("Your two-factor authentication failed. Please try again.")
-        return redirect("/two_factor_authentication/")
 
-    flash("Your two-factor authentication sucess.")
-    return redirect("/home/")
+    try:
+        twofa_manager.verif_code(code, user_id)
+        flash("Your two-factor authentication sucess.")
+        return redirect("/home/")
+
+    except TwoFactorCodeNotFoundError:
+        flash("No authentication code found.", "error")
+
+    except TwoFactorCodeAlreadyUsedError:
+        flash("This code was already used.", "error")
+
+    except TwoFactorTooManyAttemptsError:
+        flash("Too many attempts. Request a new code.", "error")
+
+    except TwoFactorCodeExpiredError:
+        flash("Code expired. Request a new one.", "error")
+
+    except TwoFactorInvalidCodeError:
+        flash("Invalid code.", "error")
+
+    return redirect(url_for("two_factor_authentication"))
 
 @app.route('/visitor', methods=['GET', 'POST'])
 @app.route('/visitor/', methods=['GET', 'POST'])
@@ -257,47 +272,34 @@ def settings_home():
 @app.route('/settings/account/', methods=['GET', 'POST'])
 @login_required
 def account_home():
-    user_id = session_manager.get_current_user_id()
-    user = User(user_id)
-
-    email = database_handler.get_email_from_id(user_id)
-    user_has_email = not(email is None)
-    email_verified = int(database_handler.get_email_verified_from_id(user_id))
-    if email_verified == 0:
-        email_verified = False
-    else:
-        email_verified = True
-
     return render_template('account_home.html',
-                           id=user_id,
-                           username=database_handler.get_username_from_user_id(user_id=user_id),
-                           name=database_handler.get_name_from_id(user_id),
-                           pay=database_handler.get_pay(user_id),
-                           user_has_email = user_has_email,
-                           email=email,
-                           email_verified=email_verified,
-                           role_name = user.role_name
-                           )
+                           id=current_user.id,
+                           username=current_user.username,
+                           name=current_user.name,
+                           pay=round(current_user.pay,2),
+                           user_has_email=(current_user.email is not None),
+                           email=current_user.email,
+                           email_verified=current_user.email_verified,
+                           role_name = current_user.role_name)                        
 
 @app.route('/settings/account/change_email', methods=['GET', 'POST'])
 @app.route('/settings/account/change_email/', methods=['GET', 'POST'])
 @login_required
 def account_change_email():
-    user_id=session_manager.get_current_user_id()
-    if request.method != 'POST':
-        email=database_handler.get_email_from_id(user_id)
-        user_has_email = not(email is None)
+    if request.method == 'GET':
         return render_template('account_change_email.html',
-                               id=user_id,
-                               user_has_email = user_has_email,
-                               email=email)
+                               id=current_user.id,
+                               user_has_email=(current_user.email is not None),
+                               email=current_user.email)
     
+
     email = str(request.form['email'])
     if not email:
         flash('Email is required !')
         return redirect("/settings/account/change_email/")
     
-    database_handler.update_email_from_id(user_id, email)
+    database_handler.update_email_from_id(current_user.id, email)
+    database_handler.update_email_verified_from_id(current_user.id, False)
     flash('Your email has been updated')
     return redirect(url_for("account_home"))
 
@@ -306,7 +308,7 @@ def account_change_email():
 @login_required
 def account_change_username():
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
+    if request.method == 'GET':
         return render_template('account_change_username.html', id=user_id, username=database_handler.get_username_from_user_id(user_id))
     
     new_username = str(request.form['new_username'])
@@ -327,7 +329,7 @@ def account_change_username():
 @login_required
 def account_change_password():
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
+    if request.method == 'GET':
         return render_template('account_change_password.html', id=user_id)
     
     actual_password    = str(hash_manager.generate_password_hash(request.form['actual_password']))
@@ -351,7 +353,7 @@ def account_change_password():
 @login_required
 def account_change_name():
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
+    if request.method == 'GET':
         return render_template('account_change_name.html', id=user_id, name=database_handler.get_name_from_id(user_id))
     
     new_name = str(request.form['new_name'])
@@ -372,7 +374,7 @@ def account_change_name():
 @login_required
 def upload_profile_picture():
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
+    if request.method == 'GET':
         return redirect(url_for("account_home"))
     
     #################################################
@@ -428,11 +430,10 @@ def profile_picture(user_id):
 @app.route('/settings/account/delete_account/', methods=['GET', 'POST'])
 @login_required
 def delete_account():
-    
-    user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
+    if request.method == 'GET':
         return redirect(url_for("account_home"))
     
+    user_id = session_manager.get_current_user_id()
     database_handler.delete_all_post_from_id(user_id)
     database_handler.delete_account(user_id)
     session_manager.logout()
@@ -469,7 +470,7 @@ def security_home():
 @app.route('/settings/switch_2fa/', methods=['GET', 'POST'])
 @login_required
 def settings_switch_2fa():
-    if request.method != 'POST':
+    if request.method == 'GET':
         return redirect("/settings/security/")
     
     user_id = session_manager.get_current_user_id()
@@ -524,7 +525,7 @@ def notifications_home():
 @login_required
 def settings_notify_password_change():
     flash("Not Implemented")
-    if request.method != 'POST':
+    if request.method == 'GET':
         return redirect("/settings/notifications/")
     
     return redirect("/settings/notifications/")
@@ -535,7 +536,7 @@ def settings_notify_password_change():
 @login_required
 def settings_notify_twofa_change():
     flash("Not Implemented")
-    if request.method != 'POST':
+    if request.method == 'GET':
         return redirect("/settings/notifications/")
     
     return redirect("/settings/notifications/")
@@ -605,8 +606,8 @@ def about_support_home():
 #__________________TitouBank_____________________#
 ##################################################
 
-@app.route('/titoubank', methods=['GET', 'POST'])
-@app.route('/titoubank/', methods=['GET', 'POST'])
+@app.route('/titoubank')
+@app.route('/titoubank/')
 @login_required
 def titoubank():
     user_id = session_manager.get_current_user_id()
@@ -620,230 +621,154 @@ def titoubank():
 @login_required
 def withdrawl():
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
+    if request.method == 'GET':
         return render_template('titoubank_withdrawl.html', id=user_id)
     
-    withdrawl = int(request.form['withdrawl'])
-    if withdrawl <= 0:
-        flash("Zero or negative withdrawal is impossible.")
-        return redirect("/titoubank/withdrawl/")
+    withdrawl_amount = int(request.form['withdrawl'])
 
-    pay = database_handler.get_pay(user_id)
-    if pay - withdrawl < 0:
-        flash("Your Balance is not high enough.")
-        return redirect("/titoubank/withdrawl/")
-    
-    new_pay_senders = pay - withdrawl
-    database_handler.update_pay(user_id, new_pay_senders)
-    flash('"{}" TC have been withdrawn from your account.'.format(withdrawl))
-    return redirect("/titoubank/")     
+    try:
+        bank_manager.withdrawl(user_id, withdrawl_amount)
+        flash("Withdrawl successful.", "success")
+
+    except InvalidTransferAmountError as e:
+        flash(str(e), "error")
+
+    except IdNotFoundError as e:
+        flash(str(e), "error")
+
+    except InsufficientFundsError as e:
+        flash(str(e), "error")
+
+    return redirect(url_for("withdrawl"))
     
 @app.route('/titoubank/transfer', methods=['GET', 'POST'])
 @app.route('/titoubank/transfer/', methods=['GET', 'POST'])
 @login_required
 def transfer():
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
+    if request.method == 'GET':
         return render_template('titoubank_transfer.html', id=user_id, all_transfer_history=database_handler.get_all_bank_transfer(user_id))
     
-    transfer_value = int(request.form['transfer_value'])
-    id_receiver = int(request.form['id_receiver'])
+    amount = int(request.form['transfer_value'])
+    receiver_id = int(request.form['id_receiver'])
 
-    if transfer_value <= 0:
-        flash("Zero or negative transfer is impossible.")
-        return redirect("/titoubank/transfer/")
-    
-    if not database_handler.verif_id_exists(id_receiver):
-        flash("This ID does not exist.")
-        return redirect("/titoubank/transfer/")
-    
-    pay = database_handler.get_pay(user_id)
-    new_pay_senders = pay - transfer_value
+    try:
+        bank_manager.transfer(user_id, receiver_id, amount)
+        flash("Transfer successful.", "success")
 
-    if pay - transfer_value < 0:
-        flash("Your Balance is not high enough.")
-        return redirect("/titoubank/transfer/")
-    
-    new_pay_receiver = database_handler.get_pay(id_receiver)+transfer_value
-    database_handler.update_pay(user_id, new_pay_senders)
-    database_handler.update_pay(id_receiver, new_pay_receiver)
-    database_handler.insert_bank_transfer(user_id, id_receiver, transfer_value, utils.get_datetime_isoformat())
-    receiver_name = database_handler.get_name_from_id(id_receiver)
-    flash('"{}" TC have been sent to {}'.format(transfer_value, receiver_name))
-    return redirect("/titoubank/")
+    except InvalidTransferAmountError as e:
+        flash(str(e), "error")
 
-@app.route('/titoubank/stock_market', methods=['GET', 'POST'])
-@app.route('/titoubank/stock_market/', methods=['GET', 'POST'])
+    except IdNotFoundError as e:
+        flash(str(e), "error")
+
+    except InsufficientFundsError as e:
+        flash(str(e), "error")
+
+    return redirect("/titoubank/transfer/")
+
+@app.route('/titoubank/stock_market')
+@app.route('/titoubank/stock_market/')
 @login_required
 def titoubank_stock_market():
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
-        twelvedata_api_key = config.TWELVEDATA_API_KEY
-        symbol = "BTC/USD"
-        interval = "1day"
-        output_size = 10
-        #requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
-        requestURL = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={interval}&outputsize={output_size}&apikey={twelvedata_api_key}"
-        r = requests.get(requestURL)
-        result = r.json()
+    symbol = "BTC/USD"
 
-        if "status" in result and result["status"] == "error":  # run out api credits : result["code"] == 429
-            #flash(result["message"])
-            flash(f"You have run out of API credits for the current minute.")
-            return redirect("/titoubank/")
+    prices_data = twelve_data_manager.get_prices(symbol=symbol)
+    current_price_data = twelve_data_manager.get_current_price(symbol=symbol)
+    if not prices_data or not current_price_data:
+        flash("Stock market API unavailable.")
+        return render_template("titoubank_stock_market.html", id=user_id)
+    current_price = float(current_price_data["price"])
 
-        #result = {'meta': {'symbol': 'BTC/USD', 'interval': '1day', 'currency_base': 'Bitcoin', 'currency_quote': 'US Dollar', 'exchange': 'Coinbase Pro', 'type': 'Digital Currency'}, 'values': [{'datetime': '2026-01-20', 'open': '92559.65', 'high': '92807.99', 'low': '90558.99', 'close': '91255.19'}, {'datetime': '2026-01-19', 'open': '93630', 'high': '93630', 'low': '91935.3', 'close': '92559.66'}, {'datetime': '2026-01-18', 'open': '95109.99', 'high': '95485', 'low': '93559.78', 'close': '93633.53'}, {'datetime': '2026-01-17', 'open': '95503.99', 'high': '95600', 'low': '94980.12', 'close': '95109.99'}, {'datetime': '2026-01-16', 'open': '95578.2', 'high': '95830.49', 'low': '94229.04', 'close': '95504'}, {'datetime': '2026-01-15', 'open': '96954.02', 'high': '97176.42', 'low': '95066.19', 'close': '95587.65'}, {'datetime': '2026-01-14', 'open': '95385.59', 'high': '97963.62', 'low': '94518.63', 'close': '96955.16'}, {'datetime': '2026-01-13', 'open': '91188.08', 'high': '96250', 'low': '90925.17', 'close': '95384.23'}, {'datetime': '2026-01-12', 'open': '90878.51', 'high': '92406.3', 'low': '90003.46', 'close': '91188.09'}, {'datetime': '2026-01-11', 'open': '90387.36', 'high': '91173.12', 'low': '90109', 'close': '90872.01'}], 'status': 'ok'}
-        
-        pay_of_account = database_handler.get_pay(id=user_id)
-        sum_stock_number = bank_manager.get_sum_transfers_from_id_symbol(user_id=user_id, symbol=symbol)
+    return render_template(
+        "titoubank_stock_market.html",
+        id=user_id,
+        prices=prices_data["values"],
+        pay_of_account=round(database_handler.get_pay(user_id), 2),
+        sum_stock_number=bank_manager.get_sum_transfers_from_id_symbol(user_id, symbol),
+        current_price=round(current_price, 2),
+        coefficient=config.STOCK_MARKET_COEFFICIENT,
+        all_stock_market_transfers=database_handler.get_all_stock_market_transfers_from_id_symbol(user_id, symbol)
+    )
 
-        ### GET PRICE ###
-        twelvedata_api_key = config.TWELVEDATA_API_KEY
-        requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
-        r = requests.get(requestURL)
-        current_price = r.json()
-
-        coefficient = config.STOCK_MARKET_COEFFICIENT
-        all_stock_market_transfers = database_handler.get_all_stock_market_transfers_from_id_symbol(id=user_id, symbol=symbol)
-
-        return render_template("titoubank_stock_market.html",
-                               id=user_id,
-                               prices=result["values"],
-                               pay_of_account=round(pay_of_account, 2),
-                               sum_stock_number=sum_stock_number,
-                               current_price=round(float(current_price["price"]), 2),
-                               coefficient=coefficient,
-                               all_stock_market_transfers=all_stock_market_transfers)
-    return redirect("/titoubank/stock_market/")
-
-@app.route('/titoubank/stock_market/sell', methods=['GET', 'POST'])
-@app.route('/titoubank/stock_market/sell/', methods=['GET', 'POST'])
+@app.route('/titoubank/stock_market/sell', methods=['POST'])
+@app.route('/titoubank/stock_market/sell/', methods=['POST'])
 @login_required
 def titoubank_stock_market_sell():
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
-        return redirect("/titoubank/stock_market/")
-    
-    stock_number = float(request.form['stock_number'])
-    if stock_number <= 0:
-        flash("Zero or negative stock is impossible.")
-        return redirect("/titoubank/stock_market/")
-    
     symbol = "BTC/USD"
 
-    sum_stock_number = bank_manager.get_sum_transfers_from_id_symbol(user_id=user_id, symbol=symbol)
-    if stock_number >= sum_stock_number:
+    try:
+        stock_number = float(request.form["stock_number"])
+        result = stock_market_manager.sell(user_id=user_id, symbol=symbol, stock_number=stock_number)
+        flash(f"You sold {result['stock_number']} {result['symbol']} for {round(result['total_value'], 2)} TC")
+
+    except InvalidStockAmountError:
+        flash("Stock number must be positive.")
+
+    except NotEnoughStockError:
         flash("You don't have enough stock.")
-        return redirect("/titoubank/stock_market/")
-    
-    ### GET PRICE ###
-    twelvedata_api_key = config.TWELVEDATA_API_KEY
-    requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
-    r = requests.get(requestURL)
-    result = r.json()
 
-    if "status" in result and result["status"] == "error":  # run out api credits : result["code"] == 429
-        #flash(result["message"])
-        flash(f"You have run out of API credits for the current minute.")
-        return redirect("/titoubank/")
+    except ApiUnavailableError:
+        flash("Stock API unavailable. Try later.")
 
-    current_price = float(result["price"])
+    except Exception:
+        flash("Unexpected error.")
+
+    return redirect(url_for("titoubank_stock_market"))
     
-    pay = database_handler.get_pay(user_id)
-    #new_pay = pay + (stock_number*current_price)/int(config.STOCK_MARKET_COEFFICIENT)
-    new_pay = pay + (stock_number*current_price)
-    
-    database_handler.update_pay(id, new_pay)
-    database_handler.insert_stock_market_transfers(id=user_id,
-                                                   type="sell",
-                                                   symbol=symbol,
-                                                   stock_number=stock_number,
-                                                   stock_price=current_price,
-                                                   transfer_datetime=utils.get_datetime_isoformat())
-    flash('You have sell {} {} which is equivalent to {} TC'.format(stock_number, symbol, stock_number*current_price))
-    return redirect("/titoubank/stock_market/")
-    
-@app.route('/titoubank/stock_market/sell_all', methods=['GET', 'POST'])
-@app.route('/titoubank/stock_market/sell_all/', methods=['GET', 'POST'])
+@app.route('/titoubank/stock_market/sell_all', methods=['POST'])
+@app.route('/titoubank/stock_market/sell_all/', methods=['POST'])
 @login_required
 def titoubank_stock_market_sell_all(): 
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
-        return redirect("/titoubank/stock_market/")
-    
     symbol = "BTC/USD"
-    stock_number = bank_manager.get_sum_transfers_from_id_symbol(user_id=user_id, symbol=symbol)
-    
-    ### GET PRICE ###
-    twelvedata_api_key = config.TWELVEDATA_API_KEY
-    requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
-    r = requests.get(requestURL)
-    result = r.json()
 
-    if "status" in result and result["status"] == "error":  # run out api credits : result["code"] == 429
-        #flash(result["message"])
-        flash(f"You have run out of API credits for the current minute.")
-        return redirect("/titoubank/")
+    try:
+        stock_number = bank_manager.get_sum_transfers_from_id_symbol(user_id=user_id, symbol=symbol)
+        result = stock_market_manager.sell(user_id=user_id, symbol=symbol, stock_number=stock_number)
+        flash(f"You sold {result['stock_number']} {result['symbol']} for {round(result['total_value'], 2)} TC")
 
-    current_price = float(result["price"])
-    
-    pay = database_handler.get_pay(user_id)
-    #new_pay = pay + (stock_number*current_price)/int(config.STOCK_MARKET_COEFFICIENT)
-    new_pay = pay + (stock_number*current_price)
-    
-    database_handler.update_pay(user_id, new_pay)
-    database_handler.insert_stock_market_transfers(id=user_id,
-                                                   type="sell",
-                                                   symbol=symbol,
-                                                   stock_number=stock_number,
-                                                   stock_price=current_price,
-                                                   transfer_datetime=utils.get_datetime_isoformat())
-    flash('You have sell {} {} which is equivalent to {} TC'.format(stock_number, symbol, stock_number*current_price))
-    return redirect("/titoubank/stock_market/")
+    except InvalidStockAmountError:
+        flash("Stock number must be positive.")
 
-@app.route('/titoubank/stock_market/buy', methods=['GET', 'POST'])
-@app.route('/titoubank/stock_market/buy/', methods=['GET', 'POST'])
+    except NotEnoughStockError:
+        flash("You don't have enough stock.")
+
+    except ApiUnavailableError:
+        flash("Stock API unavailable. Try later.")
+
+    except Exception:
+        flash("Unexpected error.")
+
+    return redirect(url_for("titoubank_stock_market"))
+
+@app.route('/titoubank/stock_market/buy', methods=['POST'])
+@app.route('/titoubank/stock_market/buy/', methods=['POST'])
 @login_required
 def titoubank_stock_market_buy():
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
-        return redirect("/titoubank/stock_market/")
-    
-    stock_number = float(request.form['stock_number'])
-    if stock_number <= 0:
-        flash("Zero or negative stock is impossible.")
-        return redirect("/titoubank/stock_market/")
-    
-    ### GET PRICE ###
-    twelvedata_api_key = config.TWELVEDATA_API_KEY
     symbol = "BTC/USD"
-    requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={twelvedata_api_key}"
-    r = requests.get(requestURL)
-    result = r.json()
 
-    if "status" in result and result["status"] == "error":  # run out api credits : result["code"] == 429
-        #flash(result["message"])
-        flash(f"You have run out of API credits for the current minute.")
-        return redirect("/titoubank/")
+    try:
+        stock_number = float(request.form["stock_number"])
+        result = stock_market_manager.buy(user_id=user_id, symbol=symbol, stock_number=stock_number)
+        flash(f"You sold {result['stock_number']} {result['symbol']} for {round(result['total_value'], 2)} TC")
 
-    current_price = float(result["price"])
-    
-    pay = database_handler.get_pay(user_id)
-    #new_pay = pay - (stock_number*current_price)/int(config.STOCK_MARKET_COEFFICIENT)
-    new_pay = pay - (stock_number*current_price)
-    if new_pay < 0:
-        flash("Your Balance is not high enough.")
-        return redirect("/titoubank/stock_market/")
+    except InvalidStockAmountError:
+        flash("Stock number must be positive.")
 
-    database_handler.update_pay(user_id, new_pay)
-    database_handler.insert_stock_market_transfers(id=user_id,
-                                                   type="buy",
-                                                   symbol=symbol,
-                                                   stock_number=stock_number,
-                                                   stock_price=current_price,
-                                                   transfer_datetime=utils.get_datetime_isoformat())
-    flash('You have buy {} {} which is equivalent to {} TC'.format(stock_number, symbol, stock_number*current_price))
-    return redirect("/titoubank/stock_market/")
+    except NotEnoughStockError:
+        flash("You don't have enough stock.")
+
+    except ApiUnavailableError:
+        flash("Stock API unavailable. Try later.")
+
+    except Exception:
+        flash("Unexpected error.")
+
+    return redirect(url_for("titoubank_stock_market"))
 
 ##################################################
 #__________________Chatroom______________________#
@@ -858,6 +783,7 @@ def chatroom():
 
     all_users_id = []
     for post in posts:
+        
         all_users_id.append(post["user_id"])
 
     names = {}
@@ -871,7 +797,7 @@ def chatroom():
 @login_required
 def create_post():
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
+    if request.method == 'GET':
         return render_template('chatroom_create_post.html', id=user_id)
     
     title = str(request.form['title'])
@@ -893,7 +819,7 @@ def edit_post(id_post):
         flash("You cannot edit this post.")
         return redirect("/chatroom/")
     
-    if request.method != 'POST':
+    if request.method == 'GET':
         return render_template('chatroom_edit_post.html',id=user_id, post=database_handler.get_post_from_id(id_post))
     
     title = str(request.form['title'])
@@ -910,7 +836,7 @@ def edit_post(id_post):
 @app.route('/chatroom/delete/<int:id_post>/', methods=('POST',))
 @login_required
 def delete_post(id_post):
-    if request.method != 'POST':
+    if request.method == 'GET':
         return redirect("/edit_post/")
     
     post = database_handler.get_post_from_id(id_post)
@@ -934,7 +860,7 @@ def social_network_home():
 def social_network_friends():
     
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
+    if request.method == 'GET':
 
         id_all_followers = database_handler.get_all_followers_from_id(user_id)
         all_followers = []
@@ -1037,7 +963,7 @@ def social_network_chat_selected(id_receiver:int):
 def social_network_send_message(id_receiver:int):
     
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
+    if request.method == 'GET':
         id_all_followeds = database_handler.get_all_followeds_from_id(user_id)
         all_followeds = []
         for id_followed in id_all_followeds:
@@ -1072,7 +998,7 @@ def api_home():
 def api_search_movie(movie_title=""):
     
     user_id = session_manager.get_current_user_id()
-    if request.method != 'POST':
+    if request.method == 'GET':
         all_movie_search=database_handler.get_movie_search(user_id)
         return render_template("api_search_movie.html",
                                id=user_id,

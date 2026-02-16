@@ -28,7 +28,7 @@
     {% for all_transfer_history in all_transfer_history|reverse %}
     <div class="post">
         <div class="transfer-history-item">
-            <p>{{ all_transfer_history['transfer_date'] }}</p>
+            <p>{{ format_datetime(all_transfer_history['transfer_date']) }}</p>
             <h4>{{ all_transfer_history['id_sender'] }} to {{ all_transfer_history['id_receiver'] }}</h4>
 
             {% if all_transfer_history['id_sender']==id %}

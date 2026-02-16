@@ -18,10 +18,10 @@
         <form method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="transfer">Amount to transfer</label>
-            <input class="input" type="number" name="transfer_value" placeholder="Enter amount (e.g., 20)" value="{{ request.form['transfer_value'] }}" min="0" step="1" required>
+            <input class="input" type="number" name="transfer_value" placeholder="Enter amount" value="{{ request.form['transfer_value'] }}" min="0" step="1" required>
             
             <label for="transfer">ID of the recipient</label>
-            <input class="input" type="number" name="id_receiver" placeholder="Enter ID (e.g., 20)" value="{{ request.form['id_receiver'] }}" min="0" step="1" required>
+            <input class="input" type="number" name="id_receiver" placeholder="Enter ID" value="{{ request.form['id_receiver'] }}" min="0" step="1" required>
 
             <p class="withdrawal-info">Transfer are processed instantly to your account.</p>
             
@@ -36,7 +36,7 @@
     {% for all_transfer_history in all_transfer_history|reverse %}
     <div class="post">
         <div class="transfer-history-item">
-            <p>{{ all_transfer_history['transfer_date'] }}</p>
+            <p>{{ format_datetime(all_transfer_history['transfer_date']) }}</p>
             <h4>{{ all_transfer_history['id_sender'] }} to {{ all_transfer_history['id_receiver'] }}</h4>
 
             {% if all_transfer_history['id_sender']==id %}

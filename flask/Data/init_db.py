@@ -92,7 +92,6 @@ class DatabaseManager():
         conn.commit()
         conn.close()
 
-
     def verif_table_exist(self, table_name):
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()

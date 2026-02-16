@@ -369,8 +369,7 @@ class DatabaseHandler():
     conn.commit()
     conn.close()
 
-  def update_email_verified_from_id(self, id:int):
-    switch_to = 1
+  def update_email_verified_from_id(self, id:int, switch_to:bool):
     conn = self.get_db_connection()
     query = f"UPDATE account SET email_verified=? WHERE id=?;"
     conn.execute(query, (switch_to, id,))
@@ -443,10 +442,10 @@ class DatabaseHandler():
   
   #### stock_market_transfers ####
 
-  def insert_stock_market_transfers(self, id:int, type:str, symbol:int, stock_number:float, stock_price:float, transfer_datetime:datetime):
+  def insert_stock_market_transfers(self, user_id:int, type:str, symbol:int, stock_number:float, stock_price:float, transfer_datetime:datetime):
     conn = self.get_db_connection()
     query = f"INSERT INTO stock_market_transfers (id_account, type, symbol, stock_number, stock_price, transfer_datetime) VALUES (?,?,?,?,?,?);"
-    conn.execute(query, (id, type, symbol, stock_number, stock_price, transfer_datetime,))
+    conn.execute(query, (user_id, type, symbol, stock_number, stock_price, transfer_datetime,))
     conn.commit()
     conn.close()
 

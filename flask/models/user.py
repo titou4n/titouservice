@@ -17,6 +17,7 @@ class User(UserMixin):
         
         self.id = user_id
         self.username = user["username"]
+        self.name = user["name"]
         self.email = user["email"]
         self.email_verified = user["email_verified"]
         self.pay = user["pay"]

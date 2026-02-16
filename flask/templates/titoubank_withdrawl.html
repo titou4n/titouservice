@@ -18,7 +18,7 @@
         <form method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="withdrawl">Amount to Withdraw</label>
-            <input class="input" type="number" name="withdrawl" placeholder="Enter amount (e.g., 20)" value="{{ request.form['withdrawl'] }}" min="0.01" step="0.01" required>
+            <input class="input" type="number" name="withdrawl" placeholder="Enter amount" value="{{ request.form['withdrawl'] }}" min="0.01" step="0.01" required>
             
             <p class="withdrawal-info">Withdrawals are processed instantly to your account.</p>
             

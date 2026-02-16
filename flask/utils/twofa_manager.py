@@ -25,66 +25,75 @@ class TwofaManager():
                                                       code_hash=self.hash_manager.generate_password_hash(str(random_code)),
                                                       created_at=self.utils.get_datetime_isoformat())
 
+    def verif_need_to_sent_new_code(self, user_id:int) -> bool:
+        code_hash = self.database_handler.get_code_hash_from_user_id(user_id=user_id)
+        if code_hash is None:
+            #raise TwoFactorCodeNotFoundError("No 2FA code found for this user.")
+            return True
+        
+        if code_hash["used"]:
+            #raise TwoFactorCodeAlreadyUsedError("This 2FA code has already been used.")
+            return True
+        
+        if code_hash["attempts"] >= 3:
+            #raise TwoFactorTooManyAttemptsError("Too many invalid attempts.")
+            return True
+        
+        created_at = datetime.datetime.fromisoformat(code_hash["created_at"])
+        if self.utils.datetime_is_expired_minutes(created_at, self.config.TWOFA_TIMELAPS_MINUTES):
+            #raise TwoFactorCodeExpiredError("The 2FA code has expired.")
+            return True
+        
+        return False
+
     def verif_code(self, code:int, user_id:int) -> bool:
 
         code_hash = self.database_handler.get_code_hash_from_user_id(user_id=user_id)
         if code_hash is None:
             self.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-            return False
+            raise TwoFactorCodeNotFoundError("No 2FA code found for this user.")
         
         if code_hash["used"]:
             self.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-            return False
+            raise TwoFactorCodeAlreadyUsedError("This 2FA code has already been used.")
         
         if code_hash["attempts"] >= 3:
             self.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-            return False
+            raise TwoFactorTooManyAttemptsError("Too many invalid attempts.")
         
-        created_at = datetime.fromisoformat(code_hash["created_at"])
+        created_at = datetime.datetime.fromisoformat(code_hash["created_at"])
         if self.utils.datetime_is_expired_minutes(created_at, self.config.TWOFA_TIMELAPS_MINUTES):
             self.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-            return False
+            raise TwoFactorCodeExpiredError("The 2FA code has expired.")
         
         if self.hash_manager.generate_password_hash(code) != code_hash["code_hash"]:
             self.database_handler.add_attempts_two_factor_codes(id_two_factor_codes=code_hash["id_two_factor_codes"])
-            return False
+            raise TwoFactorInvalidCodeError("Invalid 2FA code.")
         
         self.database_handler.update_twofa_code_to_used(id_two_factor_codes=code_hash["id_two_factor_codes"])
         self.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
+        self.database_handler.update_email_verified_from_id(user_id, True)
         return True
     
     def delete_old_code_hash(self, user_id):
         self.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
 
-        '''
-    code_hash = database_handler.get_code_hash_from_user_id(user_id=user_id)
-    if code_hash is None:
-        flash("Your two-factor authentication failed. Please try again.")
-        database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-        return redirect("/two_factor_authentication/")
-    
-    if code_hash["used"]:
-        flash("This code has already been used, we have sent you a new one.")
-        database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-        return redirect("/two_factor_authentication/")
-    
-    if code_hash["attempts"] >= 3:
-        flash("Number of attempts reached, we have sent you a new code.")
-        database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-        return redirect("/two_factor_authentication/")
-    
-    created_at = datetime.fromisoformat(code_hash["created_at"])
-    if utils.datetime_is_expired_minutes(created_at, 5):
-        flash("Your code has expired, we have sent you a new one.")
-        database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-        return redirect("/two_factor_authentication/")
-    
-    if hash_manager.generate_password_hash(code) != code_hash["code_hash"]:
-        flash("The code is incorrect")
-        database_handler.add_attempts_two_factor_codes(id_two_factor_codes=code_hash["id_two_factor_codes"])
-        return redirect("/two_factor_authentication/")
-    
-    database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-    database_handler.update_email_verified_from_id(user_id)
-    '''
-    
+
+class TwoFactorAuthError(Exception):
+    """Base exception for 2FA errors."""
+    pass
+
+class TwoFactorCodeNotFoundError(TwoFactorAuthError):
+    pass
+
+class TwoFactorCodeAlreadyUsedError(TwoFactorAuthError):
+    pass
+
+class TwoFactorTooManyAttemptsError(TwoFactorAuthError):
+    pass
+
+class TwoFactorCodeExpiredError(TwoFactorAuthError):
+    pass
+
+class TwoFactorInvalidCodeError(TwoFactorAuthError):
+    pass
