@@ -111,9 +111,13 @@ class Config:
     PATH_DEFAULT_PROFILE_PICTURE = BASE_DIR / "static" / "img" / "profile-default.png"
 
     # ===== Visitor =====
+    USERNAME_SUPER_ADMIN = "super_admin"
+    NAME_SUPER_ADMIN = "super_admin" # SAME THAT ROLE !!!
+
+    # ===== Visitor =====
     USERNAME_VISITOR = "UsernameVisitor"
     PASSWORD_VISITOR = "PasswordVisitor"
-    NAME_VISITOR = "Visitor"
+    NAME_VISITOR = "visitor" # SAME THAT ROLE !!!
 
     # ===== BANK =====
     BANK_DEFAULT_PAY = 1000000
@@ -130,5 +134,11 @@ class Config:
     LIST_USER_PERMS = ["view_own_data"]
     LIST_VISITOR_PERMS =[]
 
+    DICT_ROLE_PERMISSION = {
+        "super_admin":LIST_PERMISSIONS,
+        "admin":LIST_ADMIN_PERMS,
+        "user":LIST_USER_PERMS,
+        "visitor":LIST_VISITOR_PERMS
+        }
     
 

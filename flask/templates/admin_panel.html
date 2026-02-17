@@ -9,7 +9,7 @@
 <section id="intro" class="mid">
   <div id="not-media">
     <h3>Hi {{ name }}, Welcome on Admin Panel ⚙️</h3>
-    <p>Flask environnement : {{ flask_env }} </p>
+    <p>Flask environnement : {{ flask_env }}</p>
   </div>
 </section>
 
@@ -17,10 +17,10 @@
 <section id="first-row" class="mid">
 
   <div class="finz">
-    <h4>Admin Panel</h4>
-    <p>Go to the Admin Panel</p>
-    <form action="{{ url_for('admin_panel') }}" method="get">
-      <button class="button" type="submit">Notifications</button>
+    <h4>Role and permission</h4>
+    <p>Role and permission manager</p>
+    <form action="{{ url_for('role_permission_manager') }}" method="get">
+      <button class="button" type="submit">Role and permission</button>
     </form>
   </div>
 
@@ -28,7 +28,7 @@
     <h4>Admin Panel</h4>
     <p>Go to the Admin Panel</p>
     <form action="{{ url_for('admin_panel') }}" method="get">
-      <button class="button" type="submit">Notifications</button>
+      <button class="button" type="submit">Admin Panel</button>
     </form>
   </div>
 
@@ -36,7 +36,7 @@
     <h4>Admin Panel</h4>
     <p>Go to the Admin Panel</p>
     <form action="{{ url_for('admin_panel') }}" method="get">
-      <button class="button" type="submit">Notifications</button>
+      <button class="button" type="submit">Admin Panel</button>
     </form>
   </div>
 

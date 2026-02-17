@@ -2,6 +2,7 @@
 import requests
 import os
 
+from functools import wraps
 from flask import Flask, request, render_template, flash, redirect, send_file, url_for
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_wtf import CSRFProtect
@@ -49,6 +50,24 @@ def inject_format_datetime():
 @login_manager.user_loader
 def load_user(user_id):
     return User(int(user_id))
+
+def require_permission(permission_name: str):
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(*args, **kwargs):
+
+            if not current_user.is_authenticated:
+                flash("Please log in first.", "warning")
+                return redirect(url_for("login"))
+
+            if not current_user.has_permission(permission_name):
+                flash("You do not have permission to access this page.", "danger")
+                return redirect(url_for("home"))
+
+            return view_func(*args, **kwargs)
+
+        return wrapper
+    return decorator
 
 @app.route('/')
 def index():
@@ -190,7 +209,18 @@ def two_factor_authentication():
     try:
         twofa_manager.verif_code(code, user_id)
         flash("Your two-factor authentication sucess.")
-        return redirect("/home/")
+
+        print(current_user.email)
+        print(current_user.email_verified)
+        if current_user.email == config.EMAIL_ADDRESS:
+            role_id = database_handler.get_role_id(role_name=config.NAME_SUPER_ADMIN)
+            database_handler.update_role_id(
+                user_id=current_user.id,
+                role_id=role_id)
+            flash("You are now a super administrator.")
+            return redirect(url_for("admin_panel"))
+
+        return redirect(url_for("home"))
 
     except TwoFactorCodeNotFoundError:
         flash("No authentication code found.", "error")
@@ -234,14 +264,21 @@ def continue_as_a_visitor():
      
     user_id = database_handler.get_id_from_username(username_visitor)
     session_manager.send_session(user_id=user_id)
+
+    user = User(user_id)
+    # Flask_login
+    login_user(user)
+
     return redirect("/home/")
 
 @app.route('/home')
 @app.route('/home/')
 @login_required
 def home():
-    user_id = session_manager.get_current_user_id()
-    return render_template('home.html', id=user_id, name=database_handler.get_name_from_id(user_id))
+    return render_template('home.html',
+                           id=current_user.id,
+                           name=database_handler.get_name_from_id(current_user.id),
+                           access_admin_panel=current_user.has_permission("access_admin_panel"))
 
 @app.route('/logout')
 @app.route('/logout/')
@@ -255,16 +292,28 @@ def logout():
 #___________________ADMIN________________________#
 ##################################################
 
-@app.route('/admin_panel', methods=['GET', 'POST'])
-@app.route('/admin_panel/', methods=['GET', 'POST'])
+@app.route('/admin_panel', methods=['GET'])
+@app.route('/admin_panel/', methods=['GET'])
 @login_required
+@require_permission("access_admin_panel")
 def admin_panel():
-    if not current_user.has_permission("access_admin_panel"):
-        return redirect(url_for("home"))
+    #if not current_user.has_permission("access_admin_panel"):
+    #    return redirect(url_for("home"))
     
     return render_template('admin_panel.html',
                            id=current_user.id,
                            flask_env = config.FLASK_ENV)
+
+@app.route('/admin_panel/role_permission_manager', methods=['GET'])
+@app.route('/admin_panel/role_permission_manager/', methods=['GET'])
+@login_required
+@require_permission("access_admin_panel")
+def role_permission_manager():
+    return render_template('role_permission_manager.html',
+                           id=current_user.id,
+                           flask_env = config.FLASK_ENV,
+                           dict_role_permission=config.DICT_ROLE_PERMISSION)
+
 
 ##################################################
 #__________________SETTINGS______________________#
