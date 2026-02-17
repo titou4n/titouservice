@@ -42,10 +42,10 @@ class Config:
     if not OMDB_API_KEY:
         raise RuntimeError("OMDB_API_KEY manquante")
     
-    GMAIL_ADDRESS = "titouservice.mail@gmail.com"
-    GMAIL_APP_PASSWORD = read_secret("gmail_app_password") if ENV_PROD else os.getenv("GMAIL_APP_PASSWORD")
-    if not GMAIL_APP_PASSWORD:
-        raise RuntimeError("GMAIL_APP_PASSWORD manquante")
+    EMAIL_ADDRESS = "titouservice.mail@gmail.com"
+    EMAIL_APP_PASSWORD = read_secret("email_app_password") if ENV_PROD else os.getenv("EMAIL_APP_PASSWORD")
+    if not EMAIL_APP_PASSWORD:
+        raise RuntimeError("EMAIL_APP_PASSWORD manquante")
 
     
     #___________________________________________________#
