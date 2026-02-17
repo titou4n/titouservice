@@ -11,8 +11,8 @@ class EmailManager:
     def __init__(self):
         self.smtp_server = "smtp.gmail.com"
         self.smtp_port = 587
-        self.sender_email_address = config.GMAIL_ADDRESS
-        self.sender_email_password = config.GMAIL_APP_PASSWORD
+        self.sender_email_address = config.EMAIL_ADDRESS
+        self.sender_email_password = config.EMAIL_APP_PASSWORD
 
     def get_hide_email(self, user_id:int) -> (str|None):
         receiver_email_address = database_handler.get_email_from_id(id=user_id)
