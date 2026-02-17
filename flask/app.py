@@ -213,8 +213,8 @@ def two_factor_authentication():
         print(current_user.email)
         print(current_user.email_verified)
         if current_user.email == config.EMAIL_ADDRESS:
-            role_id = database_handler.get_role_id(role_name=config.NAME_SUPER_ADMIN)
-            database_handler.update_role_id(
+            role_id = database_handler.get_role_id(role_name=config.ROLE_NAME_SUPER_ADMIN)
+            database_handler.update_user_role(
                 user_id=current_user.id,
                 role_id=role_id)
             flash("You are now a super administrator.")
@@ -297,9 +297,6 @@ def logout():
 @login_required
 @require_permission("access_admin_panel")
 def admin_panel():
-    #if not current_user.has_permission("access_admin_panel"):
-    #    return redirect(url_for("home"))
-    
     return render_template('admin_panel.html',
                            id=current_user.id,
                            flask_env = config.FLASK_ENV)
@@ -309,10 +306,47 @@ def admin_panel():
 @login_required
 @require_permission("access_admin_panel")
 def role_permission_manager():
-    return render_template('role_permission_manager.html',
+    return render_template('admin_role_permission_manager.html',
                            id=current_user.id,
                            flask_env = config.FLASK_ENV,
                            dict_role_permission=config.DICT_ROLE_PERMISSION)
+
+@app.route('/admin_panel/role_permission_manager/update_role', methods=['GET', 'POST'])
+@app.route('/admin_panel/role_permission_manager/update_role/', methods=['GET', 'POST'])
+@login_required
+@require_permission("access_admin_panel")
+def update_role():
+    if request.method == 'GET':
+        return render_template("admin_update_role.html", id=current_user.id)
+    
+    account_id = request.form.get("account_id")
+    selected_role = request.form.get("roles")
+
+    if not account_id:
+        flash("Please select an account ID.", "warning")
+        return redirect(url_for("role_permission_manager"))
+    
+    if not database_handler.verif_id_exists(id=account_id):
+        flash("ID doesn't exist", "warning")
+        return redirect(url_for("update_role"))
+
+    if not selected_role:
+        flash("Please select a role.", "warning")
+        return redirect(url_for("update_role"))
+    
+    if current_user.id == account_id:
+        flash("You cannot change your own role.", "warning")
+        return redirect(url_for("update_role"))
+    
+    if database_handler.get_user(account_id)["role_id"] == database_handler.get_role_id(config.ROLE_NAME_SUPER_ADMIN):
+        flash("You cannot change the role of a Super Admin.", "warning")
+        return redirect(url_for("update_role"))
+
+    role_id = database_handler.get_role_id(role_name=selected_role)
+    database_handler.update_user_role(user_id=account_id, role_id=role_id)
+
+    flash("Role updated successfully.", "success")
+    return redirect(url_for("admin_panel"))
 
 
 ##################################################

@@ -37,6 +37,19 @@ class User(UserMixin):
     def get_id(self):
         return str(self.id)
     
+
+    def reload_data(self):
+        user = self.database_handler.get_user(user_id=self.id)
+        
+        self.username = user["username"]
+        self.name = user["name"]
+        self.email = user["email"]
+        self.email_verified = user["email_verified"]
+        self.pay = user["pay"]
+        self.role_id = user["role_id"]
+
+        self.role_name = self.database_handler.get_role_name(role_id=self.role_id)
+        self.load_permissions()
     
     ################################
     #________Permissions___________#
@@ -52,8 +65,10 @@ class User(UserMixin):
             self._permissions = permissions
 
     def has_permission(self, permission_name: str) -> bool:
+        self.reload_data()
         if self._permissions is None:
             self.load_permissions()
-   
-        return permission_name in self._permissions
 
+        print("User permissions:", self._permissions)
+        print("Checking:", permission_name)
+        return permission_name in self._permissions

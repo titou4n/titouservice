@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a href="{{ url_for('admin_panel') }}">Back to Admin Panel</a></li>
+    </ul>
+</nav>
+
+<h2>Change Your Name</h2>
+<div class="little_post">
+    
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label for="id">Account ID</label>
+        <input class="input" type="number" name="account_id" placeholder="Enter ID" value="{{ request.form['account_id'] }}" min="0" step="1" required>
+
+        <label for="role-select">Please select a role</label>
+        <select name="roles" id="role-select">
+            <option value="">Please select a role</option>
+            <option value="admin">Admin</option>
+            <option value="user">User</option>
+            <option value="visitor">Visitor</option>
+        </select>
+
+        <br>
+        <br>
+        <button class="button" type="submit">Update Role</button>
+    </form>
+
+</div>
+{% endblock %}

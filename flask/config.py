@@ -110,14 +110,16 @@ class Config:
     # ===== DEFAULT =====
     PATH_DEFAULT_PROFILE_PICTURE = BASE_DIR / "static" / "img" / "profile-default.png"
 
-    # ===== Visitor =====
+    # ===== SUPER_ADMIN =====
     USERNAME_SUPER_ADMIN = "super_admin"
-    NAME_SUPER_ADMIN = "super_admin" # SAME THAT ROLE !!!
+    ROLE_NAME_SUPER_ADMIN = "super_admin"
+    NAME_SUPER_ADMIN = ROLE_NAME_SUPER_ADMIN
 
     # ===== Visitor =====
     USERNAME_VISITOR = "UsernameVisitor"
     PASSWORD_VISITOR = "PasswordVisitor"
-    NAME_VISITOR = "visitor" # SAME THAT ROLE !!!
+    ROLE_NAME_VISITOR = "visitor"
+    NAME_VISITOR = ROLE_NAME_VISITOR
 
     # ===== BANK =====
     BANK_DEFAULT_PAY = 1000000
@@ -140,5 +142,3 @@ class Config:
         "user":LIST_USER_PERMS,
         "visitor":LIST_VISITOR_PERMS
         }
-    
-

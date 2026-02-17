@@ -71,11 +71,7 @@ class DatabaseManager():
             )
 
         # ____________ Other roles ____________ #
-        role_permissions_map = {
-            "admin": self.config.LIST_ADMIN_PERMS,
-            "user": self.config.LIST_USER_PERMS,
-            "visitor": self.config.LIST_VISITOR_PERMS
-        }
+        role_permissions_map = self.config.DICT_ROLE_PERMISSION
 
         for role_name, perms_list in role_permissions_map.items():
 

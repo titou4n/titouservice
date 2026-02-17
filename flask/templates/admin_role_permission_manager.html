@@ -13,6 +13,19 @@
   </div>
 </section>
 
+
+<section id="first-row" class="mid">
+
+  <div class="finz">
+    <h4>Update Role</h4>
+    <p>Update Role</p>
+    <form action="{{ url_for('update_role') }}" method="get">
+      <button class="button" type="submit">Update Role</button>
+    </form>
+  </div>
+
+</section>
+
 <!-----------------Role/Permission---------------->
 <h3 class="balance-label">Roles & Permissions</h3>
 {% if dict_role_permission %}
