@@ -123,12 +123,10 @@ class Config:
     LIST_ROLES = ["super_admin", "admin", "user", "visitor"]
     LIST_PERMISSIONS = [
             "access_admin_panel",
-            "manage_users",
-            "edit_settings",
             "view_own_data"
         ]
     
-    LIST_ADMIN_PERMS = ["access_admin_panel", "manage_users", "edit_settings"]
+    LIST_ADMIN_PERMS = ["access_admin_panel", "view_own_data"]
     LIST_USER_PERMS = ["view_own_data"]
     LIST_VISITOR_PERMS =[]
 

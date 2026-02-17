@@ -43,7 +43,7 @@ class User(UserMixin):
     ################################
 
     def load_permissions(self):
-        permissions = self.database_handler.get_permissions_by_role(role_id=self.role_id)
+        permissions = self.database_handler.get_permissions_name(self.id)
 
         if permissions is None:
             self._permissions = []

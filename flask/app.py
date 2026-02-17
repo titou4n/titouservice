@@ -252,6 +252,21 @@ def logout():
     return redirect("/")
 
 ##################################################
+#___________________ADMIN________________________#
+##################################################
+
+@app.route('/admin_panel', methods=['GET', 'POST'])
+@app.route('/admin_panel/', methods=['GET', 'POST'])
+@login_required
+def admin_panel():
+    if not current_user.has_permission("access_admin_panel"):
+        return redirect(url_for("home"))
+    
+    return render_template('admin_panel.html',
+                           id=current_user.id,
+                           flask_env = config.FLASK_ENV)
+
+##################################################
 #__________________SETTINGS______________________#
 ##################################################
 
