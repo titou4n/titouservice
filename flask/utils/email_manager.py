@@ -4,18 +4,17 @@ from email.mime.multipart import MIMEMultipart
 from config import Config
 from Data.database_handler import DatabaseHandler
 
-database_handler = DatabaseHandler()
-config = Config()
-
 class EmailManager:
     def __init__(self):
+        self.database_handler = DatabaseHandler()
+        self.config = Config()
         self.smtp_server = "smtp.gmail.com"
         self.smtp_port = 587
-        self.sender_email_address = config.EMAIL_ADDRESS
-        self.sender_email_password = config.EMAIL_APP_PASSWORD
+        self.sender_email_address = self.config.EMAIL_ADDRESS
+        self.sender_email_password = self.config.EMAIL_APP_PASSWORD
 
     def get_hide_email(self, user_id:int) -> (str|None):
-        receiver_email_address = database_handler.get_email_from_id(id=user_id)
+        receiver_email_address = self.database_handler.get_email_from_id(id=user_id)
         if receiver_email_address is None:
             return None
         
@@ -55,7 +54,7 @@ class EmailManager:
             print("Erreur send_email() :", e)
 
     def send_email_with_html_content(self, user_id:int, subject:str, html_content:str):
-        receiver_email_address = database_handler.get_email_from_id(id=user_id)
+        receiver_email_address = self.database_handler.get_email_from_id(id=user_id)
 
         if receiver_email_address is None:
             return False
@@ -88,8 +87,8 @@ class EmailManager:
             return False
 
     def send_two_factor_authentication_code_with_html(self, user_id:int, code:int):
-        name = database_handler.get_name_from_id(id=user_id)
-        receiver_email_address = database_handler.get_email_from_id(id=user_id)
+        name = self.database_handler.get_name_from_id(id=user_id)
+        receiver_email_address = self.database_handler.get_email_from_id(id=user_id)
 
         if receiver_email_address is None:
             return False
@@ -140,8 +139,8 @@ class EmailManager:
         return self.send_email_with_html_content(user_id=user_id, subject=subject, html_content=html_content)
         
     def send_new_password_code_with_html(self, user_id:int, new_password:int):
-        name = database_handler.get_name_from_id(id=user_id)
-        receiver_email_address = database_handler.get_email_from_id(id=user_id)
+        name = self.database_handler.get_name_from_id(id=user_id)
+        receiver_email_address = self.database_handler.get_email_from_id(id=user_id)
 
         if receiver_email_address is None:
             return False

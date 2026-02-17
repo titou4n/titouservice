@@ -38,59 +38,64 @@ class DatabaseManager():
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        #____________Roles____________#
-        
-        roles = self.config.LIST_ROLES
-        for role in roles:
+        # ____________ Roles ____________ #
+        for role in self.config.LIST_ROLES:
             cursor.execute(
                 "INSERT OR IGNORE INTO roles (name) VALUES (?);",
                 (role,)
             )
 
-        #____________Permissions____________#
-        permissions = self.config.LIST_PERMISSIONS
-        for perm in permissions:
+        # ____________ Permissions ____________ #
+        for perm in self.config.LIST_PERMISSIONS:
             cursor.execute(
                 "INSERT OR IGNORE INTO permissions (name) VALUES (?);",
                 (perm,)
             )
 
-        #____________Roles/Permissions____________#
+        conn.commit()
 
-        # super_admin -> all permissions
-        cursor.execute("SELECT id FROM roles WHERE name = 'super_admin'")
-        super_admin_id = cursor.fetchone()[0]
+        # ____________ Super Admin (all permissions) ____________ #
+        cursor.execute("SELECT id FROM roles WHERE name = ?", ("super_admin",))
+        super_admin = cursor.fetchone()
+        if not super_admin:
+            raise ValueError("super_admin role not found.")
+        super_admin_id = super_admin[0]
 
         cursor.execute("SELECT id FROM permissions")
-        all_permissions = cursor.fetchall()
+        all_permissions = self.config.LIST_PERMISSIONS
+
         for perm in all_permissions:
             cursor.execute(
                 "INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
-                (super_admin_id, perm[0])
+                (super_admin_id, perm)
             )
 
-        role_permissions_map = {
-            "admin": self.config.LIST_ADMIN_PERMS,
-            "user": self.config.LIST_USER_PERMS,
-            "visitor": self.config.LIST_VISITOR_PERMS
-        }
+        # ____________ Other roles ____________ #
+        role_permissions_map = self.config.DICT_ROLE_PERMISSION
 
         for role_name, perms_list in role_permissions_map.items():
 
             cursor.execute("SELECT id FROM roles WHERE name = ?", (role_name,))
-            role_id = cursor.fetchone()[0]
+            role = cursor.fetchone()
+            if not role:
+                raise ValueError(f"Role '{role_name}' not found.")
+            role_id = role[0]
 
             for perm_name in perms_list:
                 cursor.execute("SELECT id FROM permissions WHERE name = ?", (perm_name,))
-                perm_id = cursor.fetchone()[0]
+                perm = cursor.fetchone()
+                if not perm:
+                    raise ValueError(f"Permission '{perm_name}' not found.")
+                perm_id = perm[0]
+
                 cursor.execute(
                     "INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
                     (role_id, perm_id)
                 )
 
-
         conn.commit()
         conn.close()
+
 
     def verif_table_exist(self, table_name):
         conn = sqlite3.connect(self.db_path)

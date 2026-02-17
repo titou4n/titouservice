@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a href="{{ url_for('admin_panel') }}">Back to Admin Panel</a></li>
+    </ul>
+</nav>
+
+<section id="intro" class="mid">
+  <div id="not-media">
+    <h3>Welcome on Role and permission manager - Admin Panel ⚙️</h3>
+    <p>See and change : Role and permission</p>
+  </div>
+</section>
+
+
+<section id="first-row" class="mid">
+
+  <div class="finz">
+    <h4>Update Role</h4>
+    <p>Update Role</p>
+    <form action="{{ url_for('update_role') }}" method="get">
+      <button class="button" type="submit">Update Role</button>
+    </form>
+  </div>
+
+</section>
+
+<!-----------------Role/Permission---------------->
+<h3 class="balance-label">Roles & Permissions</h3>
+{% if dict_role_permission %}
+    {% for role, permissions in dict_role_permission.items() %}
+    <div class="post">
+        <h4>{{ role }}</h4>
+        <p>
+            {% if permissions %}
+                {% for perm in permissions %}
+                    {{ perm }}<br>
+                {% endfor %}
+            {% else %}
+                No permissions
+            {% endif %}
+        </p>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="post">
+    <p>No Role and Permissions</p>
+</div>
+{% endif %}
+<!------------------------------------------------->
+
+
+{% endblock %}

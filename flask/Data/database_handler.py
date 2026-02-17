@@ -5,21 +5,23 @@ import os
 from Data.init_db import DatabaseManager
 from config import Config
 from utils.hash_manager import HashManager
-
-
-database_manager = DatabaseManager()
-hash_manager = HashManager()
-config = Config()
+from utils.utils import Utils
 
 class DatabaseHandler():
   def __init__(self):
-    if not os.path.exists(config.DATABASE_URL):
-        database_manager.init_database()
-    self.db_path = config.DATABASE_URL
+    self.database_manager = DatabaseManager()
+    self.hash_manager = HashManager()
+    self.config = Config()
+    self.utils = Utils()
 
-    if not self.verif_username_exists(str(config.USERNAME_VISITOR)):
-      role_id = self.get_role_id(role_name="visitor")
-      self.create_account(str(config.USERNAME_VISITOR), str(hash_manager.generate_password_hash(config.PASSWORD_VISITOR)), str(config.NAME_VISITOR), role_id=role_id)
+    self.db_path = self.config.DATABASE_URL
+
+    if not os.path.exists(self.config.DATABASE_URL):
+        self.database_manager.init_database()
+
+    if not self.verif_username_exists(str(self.config.USERNAME_VISITOR)):
+      role_id = self.get_role_id(role_name=self.config.ROLE_NAME_VISITOR)
+      self.create_account(str(self.config.USERNAME_VISITOR), str(self.hash_manager.generate_password_hash(self.config.PASSWORD_VISITOR)), str(self.config.ROLE_NAME_VISITOR), role_id=role_id)
 
   def get_db_connection(self):
     conn = sqlite3.connect(self.db_path, check_same_thread=False)
@@ -135,7 +137,12 @@ class DatabaseHandler():
         return None
     return result[0]
   
-
+  def update_user_role(self, role_id:int, user_id:int):
+    conn = self.get_db_connection()
+    query = f"UPDATE account SET role_id=? WHERE id=?;"
+    conn.execute(query, (role_id, user_id))
+    conn.commit()
+    conn.close()
 
   ##########################################
   #_______________SESSIONS_________________#
