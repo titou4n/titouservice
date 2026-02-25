@@ -1,34 +1,24 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-import socket
-
-def get_ipv4_host():
-    try:
-        return socket.gethostbyname(socket.gethostname())
-    except:
-        return "127.0.0.1"
-
-def read_secret(name):
-    try:
-        with open(f"/run/secrets/{name}") as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        return None
 
 class Config:
 
-    #ipv4_address = get_ipv4_host()
-    #ENV_PROD = not ipv4_address.startswith("192.168")
     ENV_PROD = False
 
     print(f"ENV_PROD : {ENV_PROD}")
-    #print(f"IPV4 : {ipv4_address}")
 
     if not ENV_PROD:
         load_dotenv()
 
     #_______________________KEY_________________________#
+
+    def read_secret(name):
+        try:
+            with open(f"/run/secrets/{name}") as f:
+                return f.read().strip()
+        except FileNotFoundError:
+            return None
 
     SECRET_KEY = read_secret("secret_key") if ENV_PROD else os.getenv("SECRET_KEY")
     if not SECRET_KEY:
@@ -113,32 +103,120 @@ class Config:
     # ===== SUPER_ADMIN =====
     USERNAME_SUPER_ADMIN = "super_admin"
     ROLE_NAME_SUPER_ADMIN = "super_admin"
-    NAME_SUPER_ADMIN = ROLE_NAME_SUPER_ADMIN
+    NAME_SUPER_ADMIN = "Super Admin"
+
+    ROLE_NAME_ADMIN = "admin"
 
     # ===== Visitor =====
     USERNAME_VISITOR = "UsernameVisitor"
     PASSWORD_VISITOR = "PasswordVisitor"
     ROLE_NAME_VISITOR = "visitor"
-    NAME_VISITOR = ROLE_NAME_VISITOR
+    NAME_VISITOR = "Visitor"
+
+    # ===== DEBUG USER =====
+    USERNAME_DEBUG = str(11)
+    PASSWORD_DEBUG = str(11)
+    ROLE_NAME_DEBUG = ROLE_NAME_SUPER_ADMIN
 
     # ===== BANK =====
     BANK_DEFAULT_PAY = 1000000
     STOCK_MARKET_COEFFICIENT = 1
 
     # ===== PERMISSIONS/ROLES =====
-    LIST_ROLES = ["super_admin", "admin", "user", "visitor"]
-    LIST_PERMISSIONS = [
-            "access_admin_panel",
-            "view_own_data"
+    LIST_DEFAULT_ROLES = ["super_admin", "admin", "moderator","user", "visitor"]
+
+    LIST_PERMISSIONS_USER = [
+        # Permission User
+        "view_profile",
+        "edit_profile",
+        "delete_account",
+        "change_password",
+        "export_own_data",
         ]
     
-    LIST_ADMIN_PERMS = ["access_admin_panel", "view_own_data"]
-    LIST_USER_PERMS = ["view_own_data"]
-    LIST_VISITOR_PERMS =[]
+    LIST_PERMISSIONS_MANAGE_CONTENT = [
+        # Permission content
+        "view_content",
+        "create_content",
+        "edit_own_content",
+        "edit_all_content",
+        "delete_own_content",
+        "delete_all_content",
+        "publish_content",
+        ]
+    
+
+    LIST_PERMISSIONS_MANAGE_USERS = [
+        # Permission - manage users
+        "view_users",
+        "create_user",
+        "edit_user",
+        "delete_user",
+        "ban_user",
+        "assign_role",
+        ]
+
+    LIST_PERMISSIONS_MANAGE_ROLE = [
+        # Permission - manage role
+        "view_roles",
+        "create_role",
+        "edit_role",
+        "delete_role",
+        "manage_permissions",
+        ]
+    
+    LIST_PERMISSIONS_SYSTEM = [
+        # Permission - SYSTEM
+        "access_admin_panel",
+        "view_logs",
+        "manage_settings",
+        "backup_database",
+        "restore_database",
+
+        "export_data",
+        "import_data",
+        "access_statistics",
+        "moderate_comments",
+        "view_sensitive_data",
+        ]
+    
+    LIST_ALL_PERMISSIONS = (  LIST_PERMISSIONS_USER
+                            + LIST_PERMISSIONS_MANAGE_CONTENT
+                            + LIST_PERMISSIONS_MANAGE_USERS
+                            + LIST_PERMISSIONS_MANAGE_ROLE
+                            + LIST_PERMISSIONS_SYSTEM)
+    
+    LIST_VISITOR_PERMS =["view_content",]
+    
+    LIST_USER_PERMS = [
+        "view_profile",
+        "edit_profile",
+        "delete_account",
+        "change_password",
+
+        "view_content",
+        "create_content",
+        "edit_own_content",
+        "delete_own_content",
+        "publish_content",
+        ]
+    
+    LIST_MODERATOR_PERMS = LIST_USER_PERMS + ["edit_all_content", "delete_all_content"]
+
+    LIST_ADMIN_PERMS = LIST_ALL_PERMISSIONS
+
+    DICT_PERMISSIONS_BY_TYPE = {
+        "LIST_PERMISSIONS_USER":LIST_PERMISSIONS_USER,
+        "LIST_PERMISSIONS_MANAGE_CONTENT":LIST_PERMISSIONS_MANAGE_CONTENT,
+        "LIST_PERMISSIONS_MANAGE_USERS":LIST_PERMISSIONS_MANAGE_USERS,
+        "LIST_PERMISSIONS_MANAGE_ROLE":LIST_PERMISSIONS_MANAGE_ROLE,
+        "LIST_PERMISSIONS_SYSTEM":LIST_PERMISSIONS_SYSTEM,
+    }
 
     DICT_ROLE_PERMISSION = {
-        "super_admin":LIST_PERMISSIONS,
+        "super_admin":LIST_ALL_PERMISSIONS,
         "admin":LIST_ADMIN_PERMS,
+        "moderator":LIST_MODERATOR_PERMS,
         "user":LIST_USER_PERMS,
         "visitor":LIST_VISITOR_PERMS
         }

@@ -15,6 +15,7 @@ from Data.database_handler import DatabaseHandler
 from config import Config
 from utils.utils import Utils
 from utils.session_manager import SessionManager
+from utils.permissions_manager import PermissionsManager
 from utils.email_manager import EmailManager
 from utils.hash_manager import HashManager
 from utils.bank_manager import BankManager, InvalidTransferAmountError, InsufficientFundsError, IdNotFoundError
@@ -34,6 +35,7 @@ config = Config()
 database_manager = DatabaseManager()
 database_handler = DatabaseHandler()
 session_manager = SessionManager(app_instance=app)
+permission_manager = PermissionsManager()
 email_manager = EmailManager()
 hash_manager = HashManager()
 bank_manager = BankManager()
@@ -275,6 +277,7 @@ def continue_as_a_visitor():
 @app.route('/home/')
 @login_required
 def home():
+    print(permission_manager.get_dict())
     return render_template('home.html',
                            id=current_user.id,
                            name=database_handler.get_name_from_id(current_user.id),
@@ -305,19 +308,23 @@ def admin_panel():
 @app.route('/admin_panel/role_permission_manager/', methods=['GET'])
 @login_required
 @require_permission("access_admin_panel")
+@require_permission("view_roles")
 def role_permission_manager():
     return render_template('admin_role_permission_manager.html',
                            id=current_user.id,
                            flask_env = config.FLASK_ENV,
-                           dict_role_permission=config.DICT_ROLE_PERMISSION)
+                           dict_role_permission=permission_manager.get_dict())
 
-@app.route('/admin_panel/role_permission_manager/update_role', methods=['GET', 'POST'])
-@app.route('/admin_panel/role_permission_manager/update_role/', methods=['GET', 'POST'])
+@app.route('/admin_panel/role_permission_manager/assign_role', methods=['GET', 'POST'])
+@app.route('/admin_panel/role_permission_manager/assign_role/', methods=['GET', 'POST'])
 @login_required
 @require_permission("access_admin_panel")
-def update_role():
+@require_permission("assign_role")
+def assign_role():
     if request.method == 'GET':
-        return render_template("admin_update_role.html", id=current_user.id)
+        return render_template("admin_assign_role.html",
+                               id=current_user.id,
+                               dict_role_permission=permission_manager.get_dict())
     
     account_id = request.form.get("account_id")
     selected_role = request.form.get("roles")
@@ -328,26 +335,96 @@ def update_role():
     
     if not database_handler.verif_id_exists(id=account_id):
         flash("ID doesn't exist", "warning")
-        return redirect(url_for("update_role"))
+        return redirect(url_for("assign_role"))
 
     if not selected_role:
         flash("Please select a role.", "warning")
-        return redirect(url_for("update_role"))
+        return redirect(url_for("assign_role"))
     
     if current_user.id == account_id:
         flash("You cannot change your own role.", "warning")
-        return redirect(url_for("update_role"))
+        return redirect(url_for("assign_role"))
     
     if database_handler.get_user(account_id)["role_id"] == database_handler.get_role_id(config.ROLE_NAME_SUPER_ADMIN):
         flash("You cannot change the role of a Super Admin.", "warning")
-        return redirect(url_for("update_role"))
+        return redirect(url_for("assign_role"))
+    
+    if database_handler.get_user(account_id)["role_id"] == database_handler.get_role_id(config.ROLE_NAME_ADMIN):
+        flash("You cannot change the role of an Admin.", "warning")
+        return redirect(url_for("assign_role"))
 
     role_id = database_handler.get_role_id(role_name=selected_role)
     database_handler.update_user_role(user_id=account_id, role_id=role_id)
 
-    flash("Role updated successfully.", "success")
+    flash("Role assigned successfully.", "success")
     return redirect(url_for("admin_panel"))
 
+@app.route('/admin_panel/role_permission_manager/create_role', methods=['GET', 'POST'])
+@app.route('/admin_panel/role_permission_manager/create_role/', methods=['GET', 'POST'])
+@login_required
+@require_permission("access_admin_panel")
+@require_permission("create_role")
+def create_role():
+    if request.method == 'GET':
+        return render_template("admin_create_role.html",
+                               id=current_user.id,
+                               dict_permissions=config.DICT_PERMISSIONS_BY_TYPE)
+    
+    role_name = str(request.form.get("role_name"))
+    list_permissions_name = request.form.getlist("permissions")
+
+    if role_name is None or role_name == "":
+        flash("Please enter role name.", "warning")
+        return redirect(url_for("create_role"))
+
+    if database_handler.role_exists(role_name):
+        flash("This role already exists.", "error")
+        return redirect(url_for("create_role"))
+
+    database_handler.insert_role(role_name)
+    flash("Role created successfully.", "success")
+    
+    database_handler.insert_role(role_name=role_name)
+    role_id = database_handler.get_role_id(role_name=role_name)
+
+    for permission_name in list_permissions_name:
+        permission_id = database_handler.get_permission_id(permission_name=permission_name)
+        database_handler.insert_permission(role_id=role_id, permission_id=permission_id)
+    
+    return redirect(url_for("role_permission_manager"))
+
+@app.route('/admin_panel/role_permission_manager/edit_role/<string:role_name>', methods=['GET', 'POST'])
+@app.route('/admin_panel/role_permission_manager/edit_role/<string:role_name>/', methods=['GET', 'POST'])
+@login_required
+@require_permission("access_admin_panel")
+@require_permission("edit_role")
+def edit_role(role_name:str):
+    if request.method == 'GET':
+        flash("Not implemented... SORRY")
+        return redirect(url_for("role_permission_manager"))
+        #return render_template("admin_edit_role.html",
+        #                       id=current_user.id,
+        #                      dict_permissions=config.DICT_PERMISSIONS_BY_TYPE)
+    
+    role_id = database_handler.get_role_id(role_name=role_name)
+    flash("Not implemented... SORRY")
+    return redirect(url_for("role_permission_manager"))
+
+@app.route('/admin_panel/role_permission_manager/delete_role/<string:role_name>', methods=['POST'])
+@app.route('/admin_panel/role_permission_manager/delete_role/<string:role_name>/', methods=['POST'])
+@login_required
+@require_permission("access_admin_panel")
+@require_permission("delete_role")
+def delete_role(role_name:str):
+
+    if role_name in config.LIST_DEFAULT_ROLES:
+        flash(f"You cannot delete this role - It is a default role", "warning")
+        return redirect(url_for("role_permission_manager"))
+    
+    role_id = database_handler.get_role_id(role_name=role_name)
+    permission_manager.delete_role(role_id=role_id)
+    flash(f"Role '{role_name}' deleted successfully.", "success")
+    return redirect(url_for("role_permission_manager"))
 
 ##################################################
 #__________________SETTINGS______________________#

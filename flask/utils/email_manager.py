@@ -83,7 +83,7 @@ class EmailManager:
             return True
 
         except Exception as e:
-            print("Erreur send_email() :", e)
+            print("Erreur send_email_with_html_content() :", e)
             return False
 
     def send_two_factor_authentication_code_with_html(self, user_id:int, code:int):

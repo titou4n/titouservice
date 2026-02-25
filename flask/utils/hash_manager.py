@@ -6,8 +6,8 @@ class HashManager():
         pass
 
     def generate_password_hash(self, password:str):
-        #return generate_password_hash(password)
-        return self.hashlib_blake2b(password)
+        #return generate_password_hash(str(password))
+        return self.hashlib_blake2b(str(password))
 
     def hashlib_blake2b(self, password:str):
         '''

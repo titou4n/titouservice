@@ -17,10 +17,18 @@
 <section id="first-row" class="mid">
 
   <div class="finz">
-    <h4>Update Role</h4>
-    <p>Update Role</p>
-    <form action="{{ url_for('update_role') }}" method="get">
-      <button class="button" type="submit">Update Role</button>
+    <h4>Assign Role</h4>
+    <p>Assign Role</p>
+    <form action="{{ url_for('assign_role') }}" method="get">
+      <button class="button" type="submit">Assign Role</button>
+    </form>
+  </div>
+
+  <div class="finz">
+    <h4>Create Role</h4>
+    <p>Create Role</p>
+    <form action="{{ url_for('create_role') }}" method="get">
+      <button class="button" type="submit">Create Role</button>
     </form>
   </div>
 
@@ -29,18 +37,32 @@
 <!-----------------Role/Permission---------------->
 <h3 class="balance-label">Roles & Permissions</h3>
 {% if dict_role_permission %}
-    {% for role, permissions in dict_role_permission.items() %}
+    {% for role_name, permissions in dict_role_permission.items() %}
     <div class="post">
-        <h4>{{ role }}</h4>
-        <p>
-            {% if permissions %}
-                {% for perm in permissions %}
-                    {{ perm }}<br>
-                {% endfor %}
-            {% else %}
-                No permissions
-            {% endif %}
-        </p>
+      {% if role_name %}
+        <h4>{{ role_name }}</h4>
+      {% endif %}
+      <p>
+          {% if permissions %}
+              {% for perm in permissions %}
+                  {{ perm }}<br>
+              {% endfor %}
+          {% else %}
+              No permissions
+          {% endif %}
+      </p>
+      {% if role_name %}
+      
+        <form action="{{ url_for('edit_role', role_name=role_name) }}" method="get">
+          <button class="button" type="submit">Edit</button>
+        </form>
+
+        <form action="{{ url_for('delete_role', role_name=role_name) }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="button_red" type="submit" onclick="return confirm('Are you sure? This action cannot be undone.');">Delete</button>
+        </form>
+
+      {% endif %}
     </div>
     {% endfor %}
 {% else %}

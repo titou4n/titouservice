@@ -57,12 +57,12 @@ class User(UserMixin):
 
     def load_permissions(self):
         self.role_name = self.database_handler.get_role_name(role_id=self.role_id)
-        permissions = self.database_handler.get_permissions_name(self.role_id)
-
-        if permissions is None:
-            self._permissions = []
-        else:
-            self._permissions = permissions
+        list_permission_id = self.database_handler.get_list_permission_id(self.role_id)
+        print(list_permission_id)
+        self._permissions = []
+        for permission_id in list_permission_id:
+            permission_name = self.database_handler.get_permission_name(permission_id=permission_id)
+            self._permissions.append(permission_name)
 
     def has_permission(self, permission_name: str) -> bool:
         self.reload_data()

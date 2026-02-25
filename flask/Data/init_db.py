@@ -39,14 +39,14 @@ class DatabaseManager():
         cursor = conn.cursor()
 
         # ____________ Roles ____________ #
-        for role in self.config.LIST_ROLES:
+        for role in self.config.LIST_DEFAULT_ROLES:
             cursor.execute(
                 "INSERT OR IGNORE INTO roles (name) VALUES (?);",
                 (role,)
             )
 
         # ____________ Permissions ____________ #
-        for perm in self.config.LIST_PERMISSIONS:
+        for perm in self.config.LIST_ALL_PERMISSIONS:
             cursor.execute(
                 "INSERT OR IGNORE INTO permissions (name) VALUES (?);",
                 (perm,)
@@ -54,23 +54,7 @@ class DatabaseManager():
 
         conn.commit()
 
-        # ____________ Super Admin (all permissions) ____________ #
-        cursor.execute("SELECT id FROM roles WHERE name = ?", ("super_admin",))
-        super_admin = cursor.fetchone()
-        if not super_admin:
-            raise ValueError("super_admin role not found.")
-        super_admin_id = super_admin[0]
-
-        cursor.execute("SELECT id FROM permissions")
-        all_permissions = self.config.LIST_PERMISSIONS
-
-        for perm in all_permissions:
-            cursor.execute(
-                "INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
-                (super_admin_id, perm)
-            )
-
-        # ____________ Other roles ____________ #
+        # ____________ Insert roles ____________ #
         role_permissions_map = self.config.DICT_ROLE_PERMISSION
 
         for role_name, perms_list in role_permissions_map.items():

@@ -6,7 +6,6 @@
     </ul>
 </nav>
 
-<h2>Change Your Name</h2>
 <div class="little_post">
     
     <form method="post">
@@ -18,11 +17,12 @@
         <label for="role-select">Please select a role</label>
         <select name="roles" id="role-select">
             <option value="">Please select a role</option>
-            <option value="admin">Admin</option>
-            <option value="user">User</option>
-            <option value="visitor">Visitor</option>
+            {% if dict_role_permission %}
+                {% for role in dict_role_permission.keys() %}
+                    <option value="{{ role }}">{{ role }}</option>
+                {% endfor %}
+            {% endif %}
         </select>
-
         <br>
         <br>
         <button class="button" type="submit">Update Role</button>

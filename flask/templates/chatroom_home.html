@@ -14,8 +14,6 @@
 
     {% for post in posts|reverse %}
 
-        
-        
         {% if post['user_id']==id %}
         <div class="my_post">
         {% else %}
@@ -40,7 +38,6 @@
                 </div>
             {% endif %}
             <!------------------------------------------>
-
             
         </div>
     {% endfor %}

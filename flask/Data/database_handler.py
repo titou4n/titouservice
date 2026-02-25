@@ -19,6 +19,10 @@ class DatabaseHandler():
     if not os.path.exists(self.config.DATABASE_URL):
         self.database_manager.init_database()
 
+    if not self.config.ENV_PROD and not self.verif_username_exists(str(self.config.USERNAME_DEBUG)):
+      role_id = self.get_role_id(role_name=self.config.ROLE_NAME_DEBUG)
+      self.create_account(str(self.config.USERNAME_DEBUG), str(self.hash_manager.generate_password_hash(self.config.PASSWORD_DEBUG)), str(self.config.ROLE_NAME_DEBUG), role_id=role_id)
+
     if not self.verif_username_exists(str(self.config.USERNAME_VISITOR)):
       role_id = self.get_role_id(role_name=self.config.ROLE_NAME_VISITOR)
       self.create_account(str(self.config.USERNAME_VISITOR), str(self.hash_manager.generate_password_hash(self.config.PASSWORD_VISITOR)), str(self.config.ROLE_NAME_VISITOR), role_id=role_id)
@@ -101,16 +105,55 @@ class DatabaseHandler():
   #___________PERMISSIONS/ROLES____________#
   ##########################################
 
-  def get_permissions_id(self, role_id:int):
+  def get_all_couple_role_and_permissions_id(self):
     conn = self.get_db_connection()
-    query = f"SELECT role_id, permission_id FROM role_permissions WHERE role_id=?;"
-    result = conn.execute(query, (role_id,)).fetchone()
+    query = f"SELECT role_id, permission_id FROM role_permissions;"
+    result = conn.execute(query,).fetchall()
     conn.close()
     if result is None:
         return None
     return result
+
+  def get_list_permission_id(self, role_id:int) -> list:
+    conn = self.get_db_connection()
+    query = f"SELECT permission_id FROM role_permissions WHERE role_id=?;"
+    result = conn.execute(query, (role_id,)).fetchall()
+    conn.close()
+    if result is None:
+        return []
+    list_result = []
+    for permission_id_object in result:
+      list_result.append(permission_id_object[0])
+    return list_result
   
-  def get_permissions_name(self, permission_id:int):
+  def insert_permission(self, role_id:int, permission_id:int) -> None:
+    conn = self.get_db_connection()
+    query = f"INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?);"
+    conn.execute(query, (role_id, permission_id))
+    conn.commit()
+    conn.close()
+
+  def delete_role_from_role_permission(self, role_id:int) -> None:
+    conn = self.get_db_connection()
+    query = f"DELETE FROM role_permissions WHERE role_id=?;"
+    conn.execute(query, (role_id,))
+    conn.commit()
+    conn.close()
+  
+  ##########################################
+  #_____________PERMISSIONS________________#
+  ##########################################
+
+  def get_permission_id(self, permission_name:int):
+    conn = self.get_db_connection()
+    query = f"SELECT id FROM permissions WHERE name=?;"
+    result = conn.execute(query, (permission_name,)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result[0]
+
+  def get_permission_name(self, permission_id:int):
     conn = self.get_db_connection()
     query = f"SELECT name FROM permissions WHERE id=?;"
     result = conn.execute(query, (permission_id,)).fetchone()
@@ -118,20 +161,45 @@ class DatabaseHandler():
     if result is None:
         return None
     return result[0]
-  
-  def get_role_name(self, role_id:int):
+
+  ##########################################
+  #_________________ROLES__________________#
+  ##########################################
+
+  def role_exists(self, role_name):
     conn = self.get_db_connection()
-    query = f"SELECT name FROM roles WHERE id=?;"
-    result = conn.execute(query, (role_id,)).fetchone()
+    query = "SELECT id FROM roles WHERE name=?"
+    result = conn.execute(query, (role_name,)).fetchone()
     conn.close()
-    if result is None:
-        return None
-    return result[0]
+    return result is not None
+  
+  def insert_role(self, role_name:str):
+    conn = self.get_db_connection()
+    query = f"INSERT OR IGNORE INTO roles (name) VALUES (?);"
+    conn.execute(query, (role_name,))
+    conn.commit()
+    conn.close()
+
+  def delete_role(self, role_id:str):
+    conn = self.get_db_connection()
+    query = f"DELETE FROM roles WHERE id=?;"
+    conn.execute(query, (role_id,))
+    conn.commit()
+    conn.close()
   
   def get_role_id(self, role_name:int):
     conn = self.get_db_connection()
     query = f"SELECT id FROM roles WHERE name=?;"
     result = conn.execute(query, (role_name,)).fetchone()
+    conn.close()
+    if result is None:
+        return None
+    return result[0]
+
+  def get_role_name(self, role_id:int):
+    conn = self.get_db_connection()
+    query = f"SELECT name FROM roles WHERE id=?;"
+    result = conn.execute(query, (role_id,)).fetchone()
     conn.close()
     if result is None:
         return None

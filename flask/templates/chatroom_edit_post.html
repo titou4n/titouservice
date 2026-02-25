@@ -25,6 +25,7 @@
     
     <div class="form-actions">
         <form action="{{ url_for('delete_post', id_post=post['id_post']) }}" method="POST" class="delete-action">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="button_red" type="submit" onclick="return confirm('Are you sure? This action cannot be undone.')">Delete Post</button>
         </form>
     </div>
