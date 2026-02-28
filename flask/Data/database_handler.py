@@ -25,7 +25,7 @@ class DatabaseHandler():
 
     if not self.verif_username_exists(str(self.config.USERNAME_VISITOR)):
       role_id = self.get_role_id(role_name=self.config.ROLE_NAME_VISITOR)
-      self.create_account(str(self.config.USERNAME_VISITOR), str(self.hash_manager.generate_password_hash(self.config.PASSWORD_VISITOR)), str(self.config.ROLE_NAME_VISITOR), role_id=role_id)
+      self.create_account(str(self.config.USERNAME_VISITOR), str(self.hash_manager.generate_password_hash(self.config.PASSWORD_VISITOR)), str(self.config.NAME_VISITOR), role_id=role_id)
 
   def get_db_connection(self):
     conn = sqlite3.connect(self.db_path, check_same_thread=False)
@@ -166,6 +166,15 @@ class DatabaseHandler():
   #_________________ROLES__________________#
   ##########################################
 
+  def get_all_role(self):
+    conn = self.get_db_connection()
+    query = f"SELECT * FROM roles;"
+    result = conn.execute(query,).fetchall()
+    conn.close()
+    if result is None:
+        return None
+    return result
+
   def role_exists(self, role_name):
     conn = self.get_db_connection()
     query = "SELECT id FROM roles WHERE name=?"
@@ -177,6 +186,13 @@ class DatabaseHandler():
     conn = self.get_db_connection()
     query = f"INSERT OR IGNORE INTO roles (name) VALUES (?);"
     conn.execute(query, (role_name,))
+    conn.commit()
+    conn.close()
+
+  def update_role(self, role_id:int, role_name:str):
+    conn = self.get_db_connection()
+    query = f"UPDATE roles SET name=? WHERE id=?;"
+    conn.execute(query, (role_name, role_id))
     conn.commit()
     conn.close()
 

@@ -127,24 +127,30 @@ class Config:
 
     LIST_PERMISSIONS_USER = [
         # Permission User
-        "view_profile",
-        "edit_profile",
-        "delete_account",
-        "change_password",
+        "view_own_profile",
+        "edit_own_profile",
+        "delete_own_account",
+        "change_own_password",
         "export_own_data",
+
+        "view_other_profile",
+        "follow_profile",
         ]
     
-    LIST_PERMISSIONS_MANAGE_CONTENT = [
+    LIST_PERMISSIONS_USER_CONTENT = [
         # Permission content
         "view_content",
         "create_content",
         "edit_own_content",
-        "edit_all_content",
         "delete_own_content",
-        "delete_all_content",
-        "publish_content",
+
+        "view_messages",
+        "create_messages",
+        "edit_own_messages",
+        "delete_own_messages",
         ]
     
+    LIST_PERMISSIONS_MANAGE_CONTENT = (LIST_PERMISSIONS_USER_CONTENT + ["edit_all_content", "delete_all_content",])
 
     LIST_PERMISSIONS_MANAGE_USERS = [
         # Permission - manage users
@@ -186,20 +192,10 @@ class Config:
                             + LIST_PERMISSIONS_MANAGE_ROLE
                             + LIST_PERMISSIONS_SYSTEM)
     
-    LIST_VISITOR_PERMS =["view_content",]
+    LIST_VISITOR_PERMS =["view_content",
+                         "view_own_profile",]
     
-    LIST_USER_PERMS = [
-        "view_profile",
-        "edit_profile",
-        "delete_account",
-        "change_password",
-
-        "view_content",
-        "create_content",
-        "edit_own_content",
-        "delete_own_content",
-        "publish_content",
-        ]
+    LIST_USER_PERMS = LIST_PERMISSIONS_USER + LIST_PERMISSIONS_USER_CONTENT
     
     LIST_MODERATOR_PERMS = LIST_USER_PERMS + ["edit_all_content", "delete_all_content"]
 

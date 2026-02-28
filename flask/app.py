@@ -154,6 +154,37 @@ def register():
     session_manager.insert_metadata()
     return redirect("/home/")
 
+@app.route('/visitor', methods=['GET', 'POST'])
+@app.route('/visitor/', methods=['GET', 'POST'])
+def continue_as_a_visitor():
+    username_visitor = config.USERNAME_VISITOR
+    password_visitor = hash_manager.generate_password_hash(config.PASSWORD_VISITOR)
+
+    if not username_visitor or username_visitor == None:
+        flash('Username is required.')
+        return render_template('login.html')
+    
+    if not password_visitor or password_visitor == None:
+        flash('Password is required.')
+        return render_template('login.html')
+    
+    if not database_handler.verif_username_exists(username_visitor) :
+        flash('Username is not correct.')
+        return render_template('login.html')
+
+    if password_visitor != database_handler.get_password(database_handler.get_id_from_username(username_visitor)) :
+        flash('Password is not correct.')
+        return render_template('login.html')
+     
+    user_id = database_handler.get_id_from_username(username_visitor)
+    session_manager.send_session(user_id=user_id)
+
+    user = User(user_id)
+    # Flask_login
+    login_user(user)
+
+    return redirect("/home/")
+
 @app.route('/forgot_password', methods=['GET', 'POST'])
 @app.route('/forgot_password/', methods=['GET', 'POST'])
 def forgot_password():
@@ -240,38 +271,6 @@ def two_factor_authentication():
         flash("Invalid code.", "error")
 
     return redirect(url_for("two_factor_authentication"))
-
-@app.route('/visitor', methods=['GET', 'POST'])
-@app.route('/visitor/', methods=['GET', 'POST'])
-@login_required
-def continue_as_a_visitor():
-    username_visitor = config.USERNAME_VISITOR
-    password_visitor = hash_manager.generate_password_hash(config.PASSWORD_VISITOR)
-
-    if not username_visitor or username_visitor == None:
-        flash('Username is required.')
-        return render_template('login.html')
-    
-    if not password_visitor or password_visitor == None:
-        flash('Password is required.')
-        return render_template('login.html')
-    
-    if not database_handler.verif_username_exists(username_visitor) :
-        flash('Username is not correct.')
-        return render_template('login.html')
-
-    if password_visitor != database_handler.get_password(database_handler.get_id_from_username(username_visitor)) :
-        flash('Password is not correct.')
-        return render_template('login.html')
-     
-    user_id = database_handler.get_id_from_username(username_visitor)
-    session_manager.send_session(user_id=user_id)
-
-    user = User(user_id)
-    # Flask_login
-    login_user(user)
-
-    return redirect("/home/")
 
 @app.route('/home')
 @app.route('/home/')
@@ -381,16 +380,10 @@ def create_role():
         flash("This role already exists.", "error")
         return redirect(url_for("create_role"))
 
-    database_handler.insert_role(role_name)
-    flash("Role created successfully.", "success")
-    
-    database_handler.insert_role(role_name=role_name)
-    role_id = database_handler.get_role_id(role_name=role_name)
+    permission_manager.create_role(role_name=role_name,
+                                   list_permissions=list_permissions_name)
 
-    for permission_name in list_permissions_name:
-        permission_id = database_handler.get_permission_id(permission_name=permission_name)
-        database_handler.insert_permission(role_id=role_id, permission_id=permission_id)
-    
+    flash("Role created successfully.", "success")
     return redirect(url_for("role_permission_manager"))
 
 @app.route('/admin_panel/role_permission_manager/edit_role/<string:role_name>', methods=['GET', 'POST'])
@@ -400,15 +393,37 @@ def create_role():
 @require_permission("edit_role")
 def edit_role(role_name:str):
     if request.method == 'GET':
-        flash("Not implemented... SORRY")
-        return redirect(url_for("role_permission_manager"))
-        #return render_template("admin_edit_role.html",
-        #                       id=current_user.id,
-        #                      dict_permissions=config.DICT_PERMISSIONS_BY_TYPE)
+
+        if role_name in config.LIST_DEFAULT_ROLES:
+            flash(f"You cannot edit this role - It is a default role", "warning")
+            return redirect(url_for("role_permission_manager"))
     
+        return render_template("admin_edit_role.html",
+                               id=current_user.id,
+                               dict_permissions=config.DICT_PERMISSIONS_BY_TYPE,
+                               current_role_name=role_name)
+    
+    new_role_name = str(request.form.get("role_name"))
+    list_permissions_name = request.form.getlist("permissions")
+
+    if new_role_name is None or new_role_name == "":
+        flash("Please enter role name.", "warning")
+        return redirect(url_for("create_role"))
+
+    if database_handler.role_exists(new_role_name):
+        flash("This role already exists.", "error")
+        return redirect(url_for("create_role"))
+
     role_id = database_handler.get_role_id(role_name=role_name)
-    flash("Not implemented... SORRY")
-    return redirect(url_for("role_permission_manager"))
+    try:
+        permission_manager.edit_role(role_id=role_id,
+                                    new_role_name=new_role_name,
+                                    list_permissions=list_permissions_name)
+        flash("Role edited successfully.", "success")
+    except:
+        flash("An error has occurred", "faile")
+    finally:
+        return redirect(url_for("role_permission_manager"))
 
 @app.route('/admin_panel/role_permission_manager/delete_role/<string:role_name>', methods=['POST'])
 @app.route('/admin_panel/role_permission_manager/delete_role/<string:role_name>/', methods=['POST'])
@@ -426,6 +441,7 @@ def delete_role(role_name:str):
     flash(f"Role '{role_name}' deleted successfully.", "success")
     return redirect(url_for("role_permission_manager"))
 
+
 ##################################################
 #__________________SETTINGS______________________#
 ##################################################
@@ -439,6 +455,7 @@ def settings_home():
                            id=user_id,
                            name=database_handler.get_name_from_id(user_id))
 
+
 ###################################
 #_____________ACCOUNT_____________#
 ###################################
@@ -446,6 +463,7 @@ def settings_home():
 @app.route('/settings/account', methods=['GET', 'POST'])
 @app.route('/settings/account/', methods=['GET', 'POST'])
 @login_required
+@require_permission("view_own_profile")
 def account_home():
     return render_template('account_home.html',
                            id=current_user.id,
@@ -460,6 +478,7 @@ def account_home():
 @app.route('/settings/account/change_email', methods=['GET', 'POST'])
 @app.route('/settings/account/change_email/', methods=['GET', 'POST'])
 @login_required
+@require_permission("edit_own_profile")
 def account_change_email():
     if request.method == 'GET':
         return render_template('account_change_email.html',
@@ -481,6 +500,7 @@ def account_change_email():
 @app.route('/settings/account/change_username', methods=['GET', 'POST'])
 @app.route('/settings/account/change_username/', methods=['GET', 'POST'])
 @login_required
+@require_permission("edit_own_profile")
 def account_change_username():
     user_id = session_manager.get_current_user_id()
     if request.method == 'GET':
@@ -502,6 +522,7 @@ def account_change_username():
 @app.route('/settings/account/change_password', methods=['GET', 'POST'])
 @app.route('/settings/account/change_password/', methods=['GET', 'POST'])
 @login_required
+@require_permission("change_own_password")
 def account_change_password():
     user_id = session_manager.get_current_user_id()
     if request.method == 'GET':
@@ -526,6 +547,7 @@ def account_change_password():
 @app.route('/settings/account/change_name', methods=['GET', 'POST'])
 @app.route('/settings/account/change_name/', methods=['GET', 'POST'])
 @login_required
+@require_permission("edit_own_profile")
 def account_change_name():
     user_id = session_manager.get_current_user_id()
     if request.method == 'GET':
@@ -544,9 +566,25 @@ def account_change_name():
     flash('Your name has been updated')
     return redirect(url_for("account_home"))
 
+@app.route('/settings/account/delete_account', methods=['GET', 'POST'])
+@app.route('/settings/account/delete_account/', methods=['GET', 'POST'])
+@login_required
+@require_permission("delete_own_account")
+def delete_account():
+    if request.method == 'GET':
+        return redirect(url_for("account_home"))
+    
+    user_id = session_manager.get_current_user_id()
+    database_handler.delete_all_post_from_id(user_id)
+    database_handler.delete_account(user_id)
+    session_manager.logout()
+    flash('Your account was successfully deleted!')
+    return redirect("/")
+
 @app.route('/settings/account/upload_profile_picture', methods=['GET', 'POST'])
 @app.route('/settings/account/upload_profile_picture/', methods=['GET', 'POST'])
 @login_required
+@require_permission("edit_own_profile")
 def upload_profile_picture():
     user_id = session_manager.get_current_user_id()
     if request.method == 'GET':
@@ -601,19 +639,6 @@ def profile_picture(user_id):
 
     return send_file(path)
 
-@app.route('/settings/account/delete_account', methods=['GET', 'POST'])
-@app.route('/settings/account/delete_account/', methods=['GET', 'POST'])
-@login_required
-def delete_account():
-    if request.method == 'GET':
-        return redirect(url_for("account_home"))
-    
-    user_id = session_manager.get_current_user_id()
-    database_handler.delete_all_post_from_id(user_id)
-    database_handler.delete_account(user_id)
-    session_manager.logout()
-    flash('Your account was successfully deleted!')
-    return redirect("/")
 
 ###################################
 #_____________SECURTY_____________#
@@ -644,6 +669,7 @@ def security_home():
 @app.route('/settings/switch_2fa', methods=['GET', 'POST'])
 @app.route('/settings/switch_2fa/', methods=['GET', 'POST'])
 @login_required
+@require_permission("edit_own_profile")
 def settings_switch_2fa():
     if request.method == 'GET':
         return redirect("/settings/security/")
@@ -682,6 +708,7 @@ def settings_delete_session(session_id_hash:str):
     session_manager.delete_session(session_id_hash=session_id_hash)
     return redirect(url_for('security_home'))
 
+
 ###################################
 #_________NOTIFICATIONS___________#
 ###################################
@@ -698,6 +725,7 @@ def notifications_home():
 @app.route('/settings/notify_password_change', methods=['GET', 'POST'])
 @app.route('/settings/notify_password_change/', methods=['GET', 'POST'])
 @login_required
+@require_permission("edit_own_profile")
 def settings_notify_password_change():
     flash("Not Implemented")
     if request.method == 'GET':
@@ -709,12 +737,14 @@ def settings_notify_password_change():
 @app.route('/settings/notify_twofa_change', methods=['GET', 'POST'])
 @app.route('/settings/notify_twofa_change/', methods=['GET', 'POST'])
 @login_required
+@require_permission("edit_own_profile")
 def settings_notify_twofa_change():
     flash("Not Implemented")
     if request.method == 'GET':
         return redirect("/settings/notifications/")
     
     return redirect("/settings/notifications/")
+
 
 ###################################
 #____________PRIVACY______________#
@@ -732,6 +762,7 @@ def privacy_home():
 @app.route('/settings/privacy/export_data', methods=['GET', 'POST'])
 @app.route('/settings/privacy/export_data/', methods=['GET', 'POST'])
 @login_required
+@require_permission("export_own_data")
 def export_data():    
     user_id = session_manager.get_current_user_id()
     content = "=== PERSONALE DATA EXPORT ===\n"
@@ -952,6 +983,7 @@ def titoubank_stock_market_buy():
 @app.route('/chatroom', methods=['GET'])
 @app.route('/chatroom/', methods=['GET'])
 @login_required
+@require_permission("view_content")
 def chatroom():
     user_id = session_manager.get_current_user_id()
     posts = database_handler.get_posts()
@@ -970,6 +1002,7 @@ def chatroom():
 @app.route('/chatroom/create_post', methods=['GET', 'POST'])
 @app.route('/chatroom/create_post/', methods=['GET', 'POST'])
 @login_required
+@require_permission("create_content")
 def create_post():
     user_id = session_manager.get_current_user_id()
     if request.method == 'GET':
@@ -988,6 +1021,7 @@ def create_post():
 @app.route('/chatroom/edit_post/<int:id_post>', methods=['GET', 'POST'])
 @app.route('/chatroom/edit_post/<int:id_post>/', methods=['GET', 'POST'])
 @login_required
+@require_permission("edit_own_content")
 def edit_post(id_post):
     user_id = session_manager.get_current_user_id()
     if user_id != database_handler.get_id_from_id_post(id_post):
@@ -1010,6 +1044,7 @@ def edit_post(id_post):
 @app.route('/chatroom/delete/<int:id_post>', methods=('POST',))
 @app.route('/chatroom/delete/<int:id_post>/', methods=('POST',))
 @login_required
+@require_permission("delete_own_content")
 def delete_post(id_post):
     if request.method == 'GET':
         return redirect("/edit_post/")
@@ -1063,6 +1098,7 @@ def social_network_friends():
 @app.route('/social_network/user_profile/<int:id_account>', methods=['GET', 'POST'])
 @app.route('/social_network/user_profile/<int:id_account>/', methods=['GET', 'POST'])
 @login_required
+@require_permission("view_other_profile")
 def social_network_user_profile(id_account:int):
     user_id = session_manager.get_current_user_id()
     if user_id == id_account:
@@ -1073,12 +1109,12 @@ def social_network_user_profile(id_account:int):
                            id=user_id,
                            id1_follow_id2=id1_follow_id2,
                            user_profile_id=id_account,
-                           name=database_handler.get_name_from_id(id_account),
-                           pay=database_handler.get_pay(id_account))
+                           name=database_handler.get_name_from_id(id_account))
 
 @app.route('/social_network/follow_action/<int:id_followed>', methods=['GET', 'POST'])
 @app.route('/social_network/follow_action/<int:id_followed>', methods=['GET', 'POST'])
 @login_required
+@require_permission("follow_profile")
 def social_network_follow_action(id_followed:int):
     user_id = session_manager.get_current_user_id()
     if id_followed == user_id:
@@ -1095,6 +1131,7 @@ def social_network_follow_action(id_followed:int):
 @app.route('/social_network/unfollow_action/<int:id_unfollowed>', methods=['GET', 'POST'])
 @app.route('/social_network/unfollow_action/<int:id_unfollowed>', methods=['GET', 'POST'])
 @login_required
+@require_permission("follow_profile")
 def social_network_unfollow_action(id_unfollowed:int): 
     user_id = session_manager.get_current_user_id()
     if id_unfollowed == user_id:
@@ -1135,6 +1172,7 @@ def social_network_chat_selected(id_receiver:int):
 @app.route('/social_network/chat/send_message/<int:id_receiver>', methods=['GET', 'POST'])
 @app.route('/social_network/chat/send_message/<int:id_receiver>/', methods=['GET', 'POST'])
 @login_required
+@require_permission("create_own_messages")
 def social_network_send_message(id_receiver:int):
     
     user_id = session_manager.get_current_user_id()

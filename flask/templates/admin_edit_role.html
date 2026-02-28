@@ -12,6 +12,8 @@
     <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+        <p>Current role name : {{ current_role_name }}</p>
+
         <label>Role Name</label>
         <input class="input" type="text" name="role_name" placeholder="Enter role name" value="{{ request.form['role_name'] }}" required>
         <br>
