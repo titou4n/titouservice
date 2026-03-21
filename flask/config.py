@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 class Config:
 
-    ENV_PROD = False
+    ENV_PROD = True
 
     print(f"ENV_PROD : {ENV_PROD}")
 
