@@ -9,6 +9,18 @@ class Utils():
     #_______________DATETIME___________________#
     ############################################
 
+    def format_date(self, dt):
+        if dt is None:
+            return "—"
+
+        if isinstance(dt, str):
+            try:
+                dt = datetime.fromisoformat(dt)
+            except ValueError:
+                return dt
+
+        return dt.astimezone().strftime("%d %b %Y")
+
     def format_datetime(self, dt):
         if dt is None:
             return "—"

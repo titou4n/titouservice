@@ -1,6 +1,7 @@
 # Import Externe
 import requests
 import os
+import io
 
 from functools import wraps
 from flask import Flask, request, render_template, flash, redirect, send_file, url_for
@@ -22,6 +23,7 @@ from utils.bank_manager import BankManager, InvalidTransferAmountError, Insuffic
 from utils.twofa_manager import TwofaManager, TwoFactorAuthError, TwoFactorCodeAlreadyUsedError, TwoFactorCodeExpiredError, TwoFactorCodeNotFoundError, TwoFactorInvalidCodeError, TwoFactorTooManyAttemptsError
 from utils.twelvedata_manager import TwelveDataManager
 from utils.stock_market_manager import StockMarketManager, InvalidStockAmountError, NotEnoughStockError, ApiUnavailableError
+from utils.view_data import ViewDataWithMatplolib
 from models.user import User
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -43,6 +45,7 @@ twofa_manager = TwofaManager()
 stock_market_manager = StockMarketManager()
 twelve_data_manager = TwelveDataManager()
 utils = Utils()
+view_data = ViewDataWithMatplolib(utils=utils, database_handler=database_handler)
 user = None
 
 @app.context_processor
@@ -70,6 +73,22 @@ def require_permission(permission_name: str):
 
         return wrapper
     return decorator
+
+@app.route("/graph/connections-per-day")
+def get_graph_connection_per_day():
+    buffer = io.BytesIO()
+
+    try:
+        view_data.get_graph_connection_per_day(
+            type_graph="stackplot",
+            output_path=buffer
+        )
+        buffer.seek(0)
+        return send_file(buffer, mimetype="image/png")
+
+    except Exception as e:
+        print(f"Error Graph : {e}")
+        return "", 204
 
 @app.route('/')
 def index():
