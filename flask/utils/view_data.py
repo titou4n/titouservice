@@ -10,7 +10,7 @@ class ViewDataWithMatplolib():
     def __init__(self, utils:Utils, database_handler:DatabaseHandler):
         self.utils = utils
         self.database_handler=database_handler
-        self.color = "steelblue"
+        self.color = "#9B7ED8"
         self.path = "connections_per_day.png"
 
     def get_graph_connection_per_day_by_user(self, id: int, output_path:str) -> None:
