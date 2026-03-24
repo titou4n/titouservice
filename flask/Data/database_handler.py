@@ -53,6 +53,13 @@ class DatabaseHandler():
     conn.close()
     return metadata
   
+  def get_all_metadata(self):
+    conn = self.get_db_connection()
+    query = f"SELECT * FROM metadata"
+    metadata = conn.execute(query).fetchall()
+    conn.close()
+    return metadata
+  
   ##########################################
   #________________ACCOUNT_________________#
   ##########################################
