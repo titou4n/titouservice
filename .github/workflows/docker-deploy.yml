@@ -19,7 +19,12 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image
-        run: docker build -t titou4n/titouservice:latest -f flask/Dockerfile ./flask
+        run: |
+          docker build -t titou4n/titouservice:latest -f flask/Dockerfile ./flask
+          # Tag avec le SHA du commit pour versionner
+          docker tag titou4n/titouservice:latest titou4n/titouservice:${{ github.sha }}
 
       - name: Push Docker image
-        run: docker push titou4n/titouservice:latest
+        run: |
+          docker push titou4n/titouservice:latest
+          docker push titou4n/titouservice:${{ github.sha }}
