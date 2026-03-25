@@ -1,38 +1,36 @@
 services:
   flask:
+    image: TON_DOCKERHUB_USER/titouservice:latest
     container_name: titouservice-flask
-    build:
-      context: ./flask
-      dockerfile: Dockerfile
-    image: titouservice-flask:latest
-    expose:
-      - "5000"
     restart: unless-stopped
+
+    ports:
+      - "5000:5000"
+
     volumes:
-      - ./flask:/app
-      # volume persistant pour la DB
-      #- db-data:/app/Data
+      - db-data:/app/Data   # uniquement la DB
+
     networks:
       - titouservice-network
+
     secrets:
       - secret_key
       - email_app_password
       - omdb_api_key
       - twelvedata_api_key
-    command: bash -c "python Data/init_db.py && python app.py"
 
   web:
+    image: TON_DOCKERHUB_USER/titouservice-nginx:latest
     container_name: titouservice-web
-    build:
-      context: .
-      dockerfile: ./nginx/Dockerfile
-    image: titouservice-web:latest
     restart: unless-stopped
+
     ports:
       - "8080:80"
       - "8443:443"
+
     networks:
       - titouservice-network
+
     depends_on:
       - flask
 
