@@ -19,7 +19,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image
-        run: docker build -t myusername/titouservice:latest -f flask/Dockerfile ./flask
+        run: docker build -t titou4n/titouservice:latest -f flask/Dockerfile ./flask
 
       - name: Push Docker image
-        run: docker push myusername/titouservice:latest
+        run: docker push titou4n/titouservice:latest
