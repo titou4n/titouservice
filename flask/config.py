@@ -6,8 +6,8 @@ class Config:
 
     try:
         load_dotenv()
-        ENV_PROD = os.getenv("ENV_PROD")
-    except :
+        ENV_PROD = os.getenv("ENV_PROD", "false").lower() == "true"
+    except Exception as e:
         ENV_PROD = True
 
     # ===== Flask =====
@@ -15,7 +15,7 @@ class Config:
     DEBUG = not ENV_PROD
 
     print(f"[TITOUSERVICE - INFO - ENV] : {FLASK_ENV}")
-    debug_on_off = "OFF" if DEBUG else "ON"
+    debug_on_off = "ON" if DEBUG else "OFF"
     print(f"[TITOUSERVICE - INFO - DEBUG IS {debug_on_off}]")
 
     #_______________________KEY_________________________#
