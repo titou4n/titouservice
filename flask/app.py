@@ -87,7 +87,7 @@ def get_graph_connection_per_day():
         return send_file(buffer, mimetype="image/png")
 
     except Exception as e:
-        print(f"Error Graph : {e}")
+        print(f"[TITOUSERVICE - ERROR] Graph : {e}")
         return "", 204
 
 @app.route('/')
@@ -295,7 +295,6 @@ def two_factor_authentication():
 @app.route('/home/')
 @login_required
 def home():
-    print(permission_manager.get_dict())
     return render_template('home.html',
                            id=current_user.id,
                            name=database_handler.get_name_from_id(current_user.id),

@@ -4,12 +4,19 @@ from dotenv import load_dotenv
 
 class Config:
 
-    ENV_PROD = True
-
-    print(f"ENV_PROD : {ENV_PROD}")
-
-    if not ENV_PROD:
+    try:
         load_dotenv()
+        ENV_PROD = os.getenv("ENV_PROD")
+    except :
+        ENV_PROD = True
+
+    # ===== Flask =====
+    FLASK_ENV = "production" if ENV_PROD else "development"
+    DEBUG = not ENV_PROD
+
+    print(f"[TITOUSERVICE - INFO - ENV] : {FLASK_ENV}")
+    debug_on_off = "OFF" if DEBUG else "ON"
+    print(f"[TITOUSERVICE - INFO - DEBUG IS {debug_on_off}]")
 
     #_______________________KEY_________________________#
 
@@ -43,11 +50,6 @@ class Config:
     # ===== Base directory =====
     BASE_DIR = Path(__file__).parent.resolve()
 
-    # ===== Flask =====
-    FLASK_ENV = "production" if ENV_PROD else "development"
-    print(f"FLASK_ENV : {FLASK_ENV}")
-    DEBUG = not ENV_PROD
-
     # ===== Flask-Session configuration =====
     SESSION_TYPE = "filesystem"                     # backend session
     SESSION_FILE_DIR = BASE_DIR / "flask_session"   # dossier temporaire pour stocker les sessions
@@ -55,7 +57,7 @@ class Config:
     SESSION_USE_SIGNER = True                       # sécurise le cookie de session
     
     '''
-    SESSION_COOKIE_NAME¶
+    SESSION_COOKIE_NAME
     Le nom du cookie de session. Peut être modifié dans le cas où vous avez déjà un cookie avec le même nom.
     Valeur par défaut : session
     '''
