@@ -4,11 +4,7 @@ from dotenv import load_dotenv
 
 class Config:
 
-    try:
-        load_dotenv()
-        ENV_PROD = os.getenv("ENV_PROD", "false").lower() == "true"
-    except Exception as e:
-        ENV_PROD = True
+    ENV_PROD = True
 
     # ===== Flask =====
     FLASK_ENV = "production" if ENV_PROD else "development"
@@ -17,6 +13,9 @@ class Config:
     print(f"[TITOUSERVICE - INFO - ENV] : {FLASK_ENV}")
     debug_on_off = "ON" if DEBUG else "OFF"
     print(f"[TITOUSERVICE - INFO - DEBUG IS {debug_on_off}]")
+
+    if not ENV_PROD:
+        load_dotenv()
 
     #_______________________KEY_________________________#
 
