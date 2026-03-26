@@ -28,7 +28,7 @@ jobs:
         run: |
           docker build -t titou4n/titouservice-nginx:latest -f nginx/Dockerfile ./nginx
           # Tag avec le SHA du commit pour versionner
-          docker tag titou4n/titouservice:latest titou4n/titouservice-nginx:${{ github.sha }}
+          docker tag titou4n/titouservice-nginx:latest titou4n/titouservice-nginx:${{ github.sha }}
 
       - name: Push Docker image
         run: |
