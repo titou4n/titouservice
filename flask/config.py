@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 class Config:
 
-    ENV_PROD = True
+    ENV_PROD = False
 
     print(f"ENV_PROD : {ENV_PROD}")
 
@@ -85,7 +85,9 @@ class Config:
     # ===== Database =====
     DATA_DIR = BASE_DIR / "Data"
     DATA_DIR.mkdir(exist_ok=True)
-    DATABASE_URL = os.path.join(DATA_DIR, "database.db")
+    DATABASE_FOLDER = DATA_DIR / "db"
+    DATABASE_FOLDER.mkdir(exist_ok=True)
+    DATABASE_URL = os.path.join(DATABASE_FOLDER, "database.db")
 
     # ===== Uploads =====
     

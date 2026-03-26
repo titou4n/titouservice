@@ -1,83 +1,83 @@
 ================================================================================
                     FICHE RÉCAP - COMMANDES DOCKER
-                       TitouService Project
+                       docker-compose Project
 ================================================================================
 
 ## 1. GESTION DES CONTENEURS
 ================================================================================
 
 # Créer et démarrer les conteneurs
-docker-compose -f titouservice.yml up -d
+docker-compose up -d
 
 # Démarrer (conteneurs existants)
-docker-compose -f titouservice.yml start
+docker-compose start
 
 # Arrêter les conteneurs
-docker-compose -f titouservice.yml stop
+docker-compose stop
 
 # Arrêter et supprimer les conteneurs
-docker-compose -f titouservice.yml down
+docker-compose down
 
 # Redémarrer les conteneurs
-docker-compose -f titouservice.yml restart
+docker-compose restart
 
 # Voir l'état des conteneurs
-docker-compose -f titouservice.yml ps
+docker-compose ps
 
 # Supprimer les volumes aussi
-docker-compose -f titouservice.yml down -v
+docker-compose down -v
 
 
 ## 2. LOGS & DEBUGGING
 ================================================================================
 
 # Voir tous les logs en temps réel
-docker-compose -f titouservice.yml logs -f
+docker-compose logs -f
 
 # Logs d'un seul conteneur
-docker-compose -f titouservice.yml logs -f flask
-docker-compose -f titouservice.yml logs -f web
+docker-compose logs -f flask
+docker-compose logs -f web
 
 # Voir les 50 dernières lignes
-docker-compose -f titouservice.yml logs --tail=50
+docker-compose logs --tail=50
 
 # Sans suivi (affiche juste)
-docker-compose -f titouservice.yml logs
+docker-compose logs
 
 
 ## 3. ACCÈS AUX CONTENEURS
 ================================================================================
 
 # Ouvrir un shell dans le conteneur Flask
-docker exec -it titouservice-flask /bin/bash
+docker exec -it docker-compose-flask /bin/bash
 
 # Ouvrir un shell dans Nginx
-docker exec -it titouservice-web /bin/sh
+docker exec -it docker-compose-nginx /bin/sh
 
 # Exécuter une commande sans shell
-docker exec titouservice-flask python -c "print('test')"
+docker exec docker-compose-flask python -c "print('test')"
 
 # Copier un fichier du conteneur à la machine
-docker cp titouservice-flask:/app/file.txt ./file.txt
+docker cp docker-compose-flask:/app/file.txt ./file.txt
 
 # Copier un fichier de la machine au conteneur
-docker cp ./file.txt titouservice-flask:/app/file.txt
+docker cp ./file.txt docker-compose-flask:/app/file.txt
 
 
 ## 4. BUILD & IMAGES
 ================================================================================
 
 # Reconstruire les images (sans cache)
-docker-compose -f titouservice.yml up -d --build
+docker-compose up -d --build
 
 # Reconstruire sans utiliser le cache
-docker-compose -f titouservice.yml build --no-cache
+docker-compose build --no-cache
 
 # Voir les images locales
 docker images
 
 # Supprimer une image
-docker rmi titouservice-flask:latest
+docker rmi docker-compose-flask:latest
 
 # Supprimer les images non utilisées
 docker image prune -a
@@ -90,13 +90,13 @@ docker image prune -a
 docker network ls
 
 # Inspécter un réseau
-docker network inspect titouservice-network
+docker network inspect docker-compose-network
 
 # Tester la connectivité entre conteneurs
-docker exec titouservice-web ping titouservice-flask
+docker exec docker-compose-nginx ping docker-compose-flask
 
 # Tester une URL depuis un conteneur
-docker exec titouservice-web curl http://titouservice-flask:5000/
+docker exec docker-compose-nginx curl http://docker-compose-flask:5000/
 
 
 ## 6. VOLUMES
@@ -128,20 +128,20 @@ docker ps
 docker ps -a
 
 # Inspecter un conteneur
-docker inspect titouservice-flask
+docker inspect docker-compose-flask
 
 # Voir les modifications dans un conteneur
-docker diff titouservice-flask
+docker diff docker-compose-flask
 
 # Voir l'historique des images
-docker history titouservice-flask:latest
+docker history docker-compose-flask:latest
 
 
 ## 8. NETTOYAGE
 ================================================================================
 
 # Arrêter et supprimer tout
-docker-compose -f titouservice.yml down
+docker-compose down
 
 # Supprimer les conteneurs arrêtés
 docker container prune
@@ -169,37 +169,37 @@ curl http://localhost:8080/
 curl http://localhost:5000/
 
 # Voir les logs Nginx
-docker exec titouservice-web tail -f /var/log/nginx/access.log
+docker exec docker-compose-nginx tail -f /var/log/nginx/access.log
 
 # Voir les logs erreurs Nginx
-docker exec titouservice-web tail -f /var/log/nginx/error.log
+docker exec docker-compose-nginx tail -f /var/log/nginx/error.log
 
 
 ## 10. COMMANDES AVANCÉES
 ================================================================================
 
 # Afficher le contenu d'un fichier dans le conteneur
-docker exec titouservice-flask cat /app/app.py
+docker exec docker-compose-flask cat /app/app.py
 
 # Vérifier la configuration Docker Compose
-docker-compose -f titouservice.yml config
+docker-compose config
 
 # Valider le fichier docker-compose
-docker-compose -f titouservice.yml config --quiet
+docker-compose config --quiet
 
 # Voir l'ordre de démarrage des services
-docker-compose -f titouservice.yml up -d --no-start
-docker-compose -f titouservice.yml start
+docker-compose up -d --no-start
+docker-compose start
 
 # Exécuter une commande one-shot
-docker-compose -f titouservice.yml run flask python manage.py migrate
+docker-compose run flask python manage.py migrate
 
 
 ## RACCOURCIS UTILES
 ================================================================================
 
 # Alias pour raccourcir (ajouter au .bashrc ou profile)
-alias dc='docker-compose -f titouservice.yml'
+alias dc='docker-compose'
 
 # Utilisation :
 dc up -d
@@ -212,19 +212,19 @@ dc down
 ================================================================================
 
 1. Toujours vérifier les logs avant de redémarrer
-   -> docker-compose -f titouservice.yml logs -f
+   -> docker-compose logs -f
 
 2. Accéder à Flask en développement
-   -> docker exec -it titouservice-flask /bin/bash
+   -> docker exec -it docker-compose-flask /bin/bash
 
 3. Forcer la reconstruction complète
-   -> docker-compose -f titouservice.yml down -v && docker-compose -f titouservice.yml up -d --build
+   -> docker-compose down -v && docker-compose up -d --build
 
 4. Tester la communication entre conteneurs
-   -> docker exec titouservice-web curl http://titouservice-flask:5000/
+   -> docker exec docker-compose-nginx curl http://docker-compose-flask:5000/
 
 5. Sauvegarder l'état des conteneurs
-   -> docker-compose -f titouservice.yml stop (sauvegarde tout)
+   -> docker-compose stop (sauvegarde tout)
 
 ================================================================================
 ================================================================================

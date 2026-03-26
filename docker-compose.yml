@@ -8,11 +8,11 @@ services:
       - "5000:5000"
 
     volumes:
-      - db-data:/app/Data   # uniquement la DB
+      - db-data:/app/Data/db
+      - ./secrets:/run/secrets
 
     networks:
       - titouservice-network
-
     secrets:
       - secret_key
       - email_app_password
