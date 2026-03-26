@@ -18,13 +18,21 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker image
+      - name: Build Docker image (titouservice-flask)
         run: |
-          docker build -t titou4n/titouservice:latest -f flask/Dockerfile ./flask
+          docker build -t titou4n/titouservice-flask:latest -f flask/Dockerfile ./flask
           # Tag avec le SHA du commit pour versionner
-          docker tag titou4n/titouservice:latest titou4n/titouservice:${{ github.sha }}
+          docker tag titou4n/titouservice-flask:latest titou4n/titouservice-flask:${{ github.sha }}
+
+      - name: Build Docker image (titouservice-nginx)
+        run: |
+          docker build -t titou4n/titouservice-nginx:latest -f nginx/Dockerfile ./nginx
+          # Tag avec le SHA du commit pour versionner
+          docker tag titou4n/titouservice:latest titou4n/titouservice-nginx:${{ github.sha }}
 
       - name: Push Docker image
         run: |
-          docker push titou4n/titouservice:latest
-          docker push titou4n/titouservice:${{ github.sha }}
+          docker push titou4n/titouservice-flask:latest
+          docker push titou4n/titouservice-flask:${{ github.sha }}
+          docker push titou4n/titouservice-nginx:latest
+          docker push titou4n/titouservice-nginx:${{ github.sha }}

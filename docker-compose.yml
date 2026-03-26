@@ -1,6 +1,6 @@
 services:
   flask:
-    image: TON_DOCKERHUB_USER/titouservice:latest
+    image: titou4n/titouservice-flask:latest
     container_name: titouservice-flask
     restart: unless-stopped
 
@@ -19,9 +19,9 @@ services:
       - omdb_api_key
       - twelvedata_api_key
 
-  web:
-    image: TON_DOCKERHUB_USER/titouservice-nginx:latest
-    container_name: titouservice-web
+  nginx:
+    image: titou4n/titouservice-nginx:latest
+    container_name: titouservice-nginx
     restart: unless-stopped
 
     ports:
