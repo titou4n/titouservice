@@ -10,8 +10,12 @@ class DatabaseManager():
             self.init_database()
             self.get_plan_database()
             return
-
-        #self.reset_all_table_except_account()
+        
+        if self.config.NEED_TO_RESET_ALL_DB:
+            self.reset_database()
+        
+        if self.config.NEED_TO_RESET_DB_EXCEPT_ACCOUNT:
+            self.reset_all_table_except_account()
 
     def init_database(self):
         self.create_table_account()
@@ -32,7 +36,7 @@ class DatabaseManager():
         self.create_table_movie_search()
 
         self.init_role_permissions()
-        print("-> Base de données initialisée avec succès.")
+        print("[TITOUSERVICE - INFO - DB] Base de données initialisée avec succès.")
 
     def init_role_permissions(self):
         conn = sqlite3.connect(self.db_path)
@@ -128,7 +132,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'account' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'account' created with success.")
 
     def create_table_roles(self):
 
@@ -147,7 +151,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'roles' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'roles' created with success.")
 
     def create_table_permissions(self):
 
@@ -166,7 +170,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'permissions' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'permissions' created with success.")
 
     def create_table_role_permissions(self):
 
@@ -188,7 +192,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'role_permissions' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'role_permissions' created with success.")
 
     def create_table_user_preferences(self):
 
@@ -211,7 +215,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'user_preferences' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'user_preferences' created with success.")
 
     def create_table_sessions(self):
 
@@ -240,7 +244,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'sessions' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'sessions' created with success.")
 
     def create_table_two_factor_codes(self):
 
@@ -268,7 +272,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'two_factor_codes' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'two_factor_codes' created with success.")
 
     def create_table_metadata(self):
 
@@ -294,7 +298,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'metadata' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'metadata' created with success.")
 
     def create_table_bank_transfers(self):
 
@@ -322,7 +326,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'bank_transfers' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'bank_transfers' created with success.")
 
     def create_table_stock_market_transfers(self):
 
@@ -351,7 +355,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'stock_market_transfers' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'stock_market_transfers' created with success.")
 
     def create_table_friends(self):
 
@@ -378,7 +382,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'friends' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'friends' created with success.")
 
     def create_table_messages(self):
 
@@ -406,7 +410,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'messages' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'messages' created with success.")
 
     def create_table_posts(self):
 
@@ -433,7 +437,7 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'posts' created with success.")
+        print("[TITOUSERVICE - INFO - DB] TABLE 'posts' created with success.")
 
     def create_table_movie_search(self):
 
@@ -459,14 +463,14 @@ class DatabaseManager():
         cursor.execute(query)
         conn.commit()
         conn.close()
-        print("-> TABLE 'movie_search' created with success.")
+        print("[TITOUSERVICE - INFO - DB] -> TABLE 'movie_search' created with success.")
 
     ########################################
     #________________OTHER_________________#
     ########################################
 
     def get_plan_database(self):
-        print("Get plan database....")
+        print("[TITOUSERVICE - INFO - DB] Get plan database....")
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -477,7 +481,7 @@ class DatabaseManager():
         conn.close()
 
     def reset_all_table_except_account(self):
-        print("_________Reset all table except account__________")
+        print("[TITOUSERVICE - INFO - DB] _________Reset all table except account__________")
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -492,7 +496,7 @@ class DatabaseManager():
 
         for (table_name,) in tables:
             cursor.execute(f'DROP TABLE "{table_name}"')
-            print(f"The {table_name} table has been successfully deleted.")
+            print(f"[TITOUSERVICE - INFO - DB] The {table_name} table has been successfully deleted.")
 
         conn.commit()
         conn.close()
@@ -505,6 +509,6 @@ class DatabaseManager():
         """
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
-            print("-> Ancienne base de données supprimée.")
+            print("[TITOUSERVICE - INFO - DB]-> Ancienne base de données supprimée.")
         
         self.init_database()

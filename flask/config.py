@@ -7,7 +7,7 @@ class Config:
     ENV_PROD = True
 
     # ===== Flask =====
-    FLASK_ENV = "production" if ENV_PROD else "development"
+    FLASK_ENV = "PRODUCTION" if ENV_PROD else "DEVELOPMENT"
     DEBUG = not ENV_PROD
 
     print(f"[TITOUSERVICE - INFO - ENV] : {FLASK_ENV}")
@@ -89,6 +89,9 @@ class Config:
     DATABASE_FOLDER = DATA_DIR / "db"
     DATABASE_FOLDER.mkdir(exist_ok=True)
     DATABASE_URL = os.path.join(DATABASE_FOLDER, "database.db")
+
+    NEED_TO_RESET_DB_EXCEPT_ACCOUNT = False
+    NEED_TO_RESET_ALL_DB = False
 
     # ===== Uploads =====
     

@@ -261,9 +261,6 @@ def two_factor_authentication():
     try:
         twofa_manager.verif_code(code, user_id)
         flash("Your two-factor authentication sucess.")
-
-        print(current_user.email)
-        print(current_user.email_verified)
         if current_user.email == config.EMAIL_ADDRESS:
             role_id = database_handler.get_role_id(role_name=config.ROLE_NAME_SUPER_ADMIN)
             database_handler.update_user_role(

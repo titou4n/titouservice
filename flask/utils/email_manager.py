@@ -48,10 +48,10 @@ class EmailManager:
                     message.as_string()
                 )
 
-            print(f"Email sent {receiver_email_address}")
+            print(f"[TITOUSERVICE - INFO] Email sent to {receiver_email_address}")
 
         except Exception as e:
-            print("Erreur send_email() :", e)
+            print("[TITOUSERVICE - ERROR] Error send_email() :", e)
 
     def send_email_with_html_content(self, user_id:int, subject:str, html_content:str):
         receiver_email_address = self.database_handler.get_email_from_id(id=user_id)
@@ -79,11 +79,11 @@ class EmailManager:
                     message.as_string()
                 )
 
-            print(f"Email sent {receiver_email_address}")
+            print(f"[TITOUSERVICE - INFO] Email sent to {receiver_email_address}")
             return True
 
         except Exception as e:
-            print("Erreur send_email_with_html_content() :", e)
+            print("[TITOUSERVICE - ERROR] Error send_email_with_html_content() :", e)
             return False
 
     def send_two_factor_authentication_code_with_html(self, user_id:int, code:int):

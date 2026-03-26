@@ -8,19 +8,19 @@ class PermissionsManager():
         self.config = Config()
         self.utils = Utils()
 
-    def get_dict(self):
-        permissions_dict = {}
+    def get_dict(self) -> dict[str, list[str]]:
+        permissions_dict: dict[str, list[str]] = {}
 
-        list_all_role = self.database_handler.get_all_role()
+        list_all_role: list[dict] = self.database_handler.get_all_role()
         for role in list_all_role:
-            role_name = role["name"]
+            role_name: str = role["name"]
             permissions_dict[role_name] = []
 
-        query = self.database_handler.get_all_couple_role_and_permissions_id()
+        query: list[tuple[int, int]] = self.database_handler.get_all_couple_role_and_permissions_id()
         for role_id, permission_id in query:
 
-            role_name = self.database_handler.get_role_name(role_id)
-            permission_name = self.database_handler.get_permission_name(permission_id)
+            role_name: str = self.database_handler.get_role_name(role_id)
+            permission_name: str = self.database_handler.get_permission_name(permission_id)
 
             if role_name in permissions_dict.keys():
                 permissions_dict[role_name].append(permission_name)

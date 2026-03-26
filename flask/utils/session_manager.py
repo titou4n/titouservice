@@ -47,7 +47,7 @@ class SessionManager():
         return request.remote_addr
 
     def get_ip_location(self, ip_adress:str) -> (str|None):
-        print(ip_adress)
+        print(f"[TITOUSERVICE - INFO] Get ip location : {ip_adress}")
         url = f"https://ipapi.co/{ip_adress}/json/"
         response = requests.get(url)
         data = response.json()
