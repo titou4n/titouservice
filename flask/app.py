@@ -75,11 +75,11 @@ def require_permission(permission_name: str):
     return decorator
 
 @app.route("/graph/connections-per-day")
-def get_graph_connection_per_day():
+def get_graph_user_connection_per_day():
     buffer = io.BytesIO()
 
     try:
-        view_data.get_graph_connection_per_day(
+        view_data.get_graph_user_connection_per_day(
             type_graph="stackplot",
             output_path=buffer
         )

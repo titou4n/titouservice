@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 class Config:
 
-    ENV_PROD = True
+    ENV_PROD = False
 
     # ===== Flask =====
     FLASK_ENV = "PRODUCTION" if ENV_PROD else "DEVELOPMENT"
