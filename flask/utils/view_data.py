@@ -3,6 +3,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
+from datetime import datetime, timedelta
+
 from Data.database_handler import DatabaseHandler
 from utils.utils import Utils
 
@@ -19,14 +21,16 @@ class ViewDataWithMatplolib():
         if not data:
             raise ValueError(f"No metadata found for id {id}")
 
+        #cutoff_date = datetime.now() - timedelta(days=30)
         connections_per_day: dict[str, int] = {}
         for record in data:
-            date = self.utils.format_date(record["date_connected"])
-            connections_per_day[date] = connections_per_day.get(date, 0) + 1
+            record_date = self.utils.format_date(record["date_connected"])
+            #if datetime.strptime(record_date, "%Y-%m-%d") >= cutoff_date:
+            connections_per_day[record_date] = connections_per_day.get(record_date, 0) + 1
 
         self.get_graph_bar_connection_per_day(connections_per_day=connections_per_day, output_path=output_path)
 
-    def get_graph_connection_per_day(self, output_path:str, type_graph:str = "bar") -> None:
+    def get_graph_user_connection_per_day(self, output_path:str, type_graph:str = "bar") -> None:
         data = self.database_handler.get_all_metadata()
 
         if not data:
