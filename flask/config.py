@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 class Config:
 
-    ENV_PROD = True
+    ENV_PROD = False
 
     # ===== Flask =====
     FLASK_ENV = "PRODUCTION" if ENV_PROD else "DEVELOPMENT"
@@ -89,6 +89,7 @@ class Config:
     DATABASE_FOLDER = DATA_DIR / "db"
     DATABASE_FOLDER.mkdir(exist_ok=True)
     DATABASE_URL = os.path.join(DATABASE_FOLDER, "database.db")
+    DATABASE_JOB_TRACKER_URL = os.path.join(DATABASE_FOLDER, "database_job_tracker.db")
 
     NEED_TO_RESET_DB_EXCEPT_ACCOUNT = False
     NEED_TO_RESET_ALL_DB = False

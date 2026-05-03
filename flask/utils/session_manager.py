@@ -9,11 +9,13 @@ import hashlib
 import requests
 
 class SessionManager():
-    def __init__(self, app_instance):
-        Session(app=app_instance)
+    def __init__(self):
         self.database_handler = DatabaseHandler()
         self.utils = Utils()
         self.config = Config()
+
+    def init_app(self, app_instance):
+        Session(app=app_instance)
 
     ############################################
     #__________________IP______________________#

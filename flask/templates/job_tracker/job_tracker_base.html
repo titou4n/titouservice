@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Job Tracker{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style_job_tracking.css') }}" />
+  <script src="{{ url_for('static', filename='js/job_tracker.js') }}"></script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <a href="{{ url_for('main.index') }}" class="logo">
+      JobTrack
+    </a>
+
+    <!--<nav>
+      <a href="{{ url_for('job_tracker.dashboard.dashboard') }}"   class="nav-link {% if active == 'dashboard' %}active{% endif %}">📊 Dashboard</a>
+      <a href="{{ url_for('job_tracker.candidatures.index') }}"    class="nav-link {% if active == 'candidatures' %}active{% endif %}">📋 Applications</a>
+      <a href="{{ url_for('job_tracker.entreprises.index') }}"     class="nav-link {% if active == 'entreprises' %}active{% endif %}">🏢 Companies</a>
+      <a href="{{ url_for('job_tracker.statistiques.index') }}"    class="nav-link {% if active == 'statistiques' %}active{% endif %}">📈 Statistics</a>
+    </nav>
+  -->
+    <nav>
+      <a href="{{ url_for('job_tracker.dashboard.dashboard') }}"   class="nav-link {% if active == 'dashboard' %}active{% endif %}">Dashboard</a>
+      <a href="{{ url_for('job_tracker.candidatures.index') }}"    class="nav-link {% if active == 'candidatures' %}active{% endif %}">Applications</a>
+      <a href="{{ url_for('job_tracker.entreprises.index') }}"     class="nav-link {% if active == 'entreprises' %}active{% endif %}">Companies</a>
+      <a href="{{ url_for('job_tracker.statistiques.index') }}"    class="nav-link {% if active == 'statistiques' %}active{% endif %}">Statistics</a>
+    </nav>
+
+    <footer class="sidebar-footer">JobTrack v1.0</footer>
+  </aside>
+
+  <!-- ── Main content ── -->
+  <div class="layout">
+
+    <!-- Page header -->
+    <header class="page-header">
+      <div>
+        <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+        <p class="subtitle">{% block page_subtitle %}{% endblock %}</p>
+      </div>
+      <div>{% block header_action %}{% endblock %}</div>
+    </header>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-list">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">
+              {% if category == 'success' %}✓{% elif category == 'error' %}✕{% else %}ℹ{% endif %}
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Page content -->
+    <main>{% block content %}{% endblock %}</main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<nav>
+    <ul>
+        <li><a class="active" href="{{ url_for('chatroom.chatroom') }}">Chatroom</a></li>
+        <li><a href="{{ url_for('chatroom.create_post') }}">Create New Post</a></li>
+        <li><a href="{{ url_for('main.home') }}">Back to Home</a></li>
+    </ul>
+</nav>
+
+<h2>Posts</h2>
+
+{% if posts %}
+
+    {% for post in posts|reverse %}
+
+        {% if post['user_id']==id %}
+        <div class="my_post">
+        {% else %}
+        <div class="post">
+        {% endif %}
+            <div class="post-header">
+                <div>
+                    <h3>{{ post['title'] }}</h3>
+                    <a href="{{ url_for('social_network.social_network_user_profile', id_account=post['user_id']) }}" class="profile-link">
+                        <img class="profile-pic" src="{{ url_for('settings.profile_picture', user_id=post['user_id']) }}" alt="Profile Picture">
+                    </a>
+                    <p class="post-meta">By <strong>{{ names[post['user_id']] }}</strong></p>
+                </div>
+                <span class="post-timestamp">{{ format_datetime(post['created']) }}</span>
+            </div>
+            <p>{{ post['content'] }}</p>
+
+            <!------------------For Edit---------------->
+            {% if post['user_id']==id %}
+                <div class="post-actions">
+                    <a href="{{ url_for('chatroom.edit_post', id_post=post['id_post']) }}">Edit</a>
+                </div>
+            {% endif %}
+            <!------------------------------------------>
+            
+        </div>
+    {% endfor %}
+
+{% else %}
+    <div class="post">
+        <p class="no-posts">No posts yet. <a href="{{ url_for('chatroom.create_post') }}">Create the first one!</a></p>
+    </div>
+{% endif %}
+{% endblock %}

@@ -18,8 +18,8 @@
     -->
     <div class="header-profile">
         {% if 'session_id' in session %}
-        <a href="{{ url_for('account_home') }}" class="profile-link">
-          <img class="profile-pic" src="{{ url_for('profile_picture', user_id=id) }}" alt="Profile Picture">
+        <a href="{{ url_for('settings.account_home') }}" class="profile-link">
+          <img class="profile-pic" src="{{ url_for('settings.profile_picture', user_id=id) }}" alt="Profile Picture">
         </a>
         {% endif %}
     </div>

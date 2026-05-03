@@ -1,0 +1,100 @@
+{% extends "job_tracker/job_tracker_base.html" %}
+
+{% block title %}Statistics — JobTrack{% endblock %}
+{% block page_title %}Statistics{% endblock %}
+{% block page_subtitle %}Analyse your application pipeline{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% set status_colors = {
+  "À postuler": "#6366f1",
+  "Postulé":    "#3b82f6",
+  "Relance":    "#f59e0b",
+  "Entretien":  "#8b5cf6",
+  "Accepté":    "#10b981",
+  "Refus":      "#ef4444"
+} %}
+
+{% block content %}
+
+<!-- ── Summary cards ── -->
+<section class="stats-grid">
+  <div class="stat-card" style="--accent: #6366f1">
+    <span class="stat-label">Total</span>
+    <strong class="stat-value">{{ total }}</strong>
+    <span class="stat-sub">applications</span>
+  </div>
+  {% for status in statuts %}
+  <div class="stat-card" style="--accent: {{ status_colors[status] }}">
+    <span class="stat-label">{{ status }}</span>
+    <strong class="stat-value">{{ by_status[status] }}</strong>
+    <span class="stat-sub">{% if total > 0 %}{{ ((by_status[status] / total) * 100) | round(1) }}%{% else %}0%{% endif %}</span>
+  </div>
+  {% endfor %}
+</section>
+
+<br>
+<br>
+
+<!-- ── Charts ── -->
+<section class="two-col">
+  <div class="card">
+    <div class="card-header"><h2>By status</h2></div>
+    <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>Top companies</h2></div>
+    {% if top_entreprises %}
+      <div class="chart-wrap"><canvas id="chart-companies"></canvas></div>
+    {% else %}
+      <p class="empty-state">Add applications linked to companies to see data here.</p>
+    {% endif %}
+  </div>
+</section>
+
+<br>
+<br>
+
+<!-- ── Detail table ── -->
+<section class="card">
+  <div class="card-header"><h2>Breakdown by status</h2></div>
+  <table class="data-table">
+    <thead>
+      <tr><th>Status</th><th>Count</th><th>Progress</th><th>%</th></tr>
+    </thead>
+    <tbody>
+      {% for status in statuts %}
+      {% set pct = ((by_status[status] / total * 100) | round(1)) if total > 0 else 0 %}
+      <tr>
+        <td><span class="badge" style="--color: {{ status_colors[status] }}">{{ status }}</span></td>
+        <td><strong>{{ by_status[status] }}</strong></td>
+        <td>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ pct }}%; background: {{ status_colors[status] }}"></div>
+          </div>
+        </td>
+        <td class="muted">{{ pct }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<script>
+  const STATUTS = {{ statuts | tojson }};
+  const BY_STATUS = {{ by_status | tojson }};
+  const STATUS_COLORS = {
+    {% for s, c in status_colors.items() %}"{{ s }}": "{{ c }}",{% endfor %}
+  };
+  const TOP_COMPANIES = {
+    labels: {{ top_entreprises | map(attribute=0) | list | tojson }},
+    data:   {{ top_entreprises | map(attribute=1) | list | tojson }},
+  };
+
+  // Charts are initialised in job_tracker.js
+  initStatsCharts(STATUTS, BY_STATUS, STATUS_COLORS, TOP_COMPANIES);
+</script>
+
+{% endblock %}
