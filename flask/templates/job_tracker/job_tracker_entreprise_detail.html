@@ -3,12 +3,10 @@
 {% block title %}{{ entreprise.name }} — JobTrack{% endblock %}
 {% block page_title %}{{ entreprise.name }}{% endblock %}
 {% block page_subtitle %}
-  {{ entreprise.secteur or '' }}{% if entreprise.localisation %} · {{ entreprise.localisation }}{% endif %}
+  {{ entreprise.secteur or '' }}
+  {% if entreprise.localisation %} · {{ entreprise.localisation }}{% endif %}
 {% endblock %}
 
-{% block header_action %}
-  <a href="{{ url_for('job_tracker.entreprises.index') }}" class="btn btn-secondary">← Back</a>
-{% endblock %}
 
 {% set status_colors = {
   "À postuler": "#6366f1",
@@ -19,45 +17,82 @@
   "Refus":      "#ef4444"
 } %}
 
+
+{% block header_action %}
+  <a href="{{ url_for('job_tracker.entreprises.index') }}" class="btn btn-secondary">← Back</a>
+{% endblock %}
+
+
 {% block content %}
+
 <div class="two-col">
 
-  <!-- Company info -->
+  <!-- ══════════════════════════════════════════
+       Company details
+  ══════════════════════════════════════════ -->
   <section class="card">
+
     <div class="card-header"><h2>Details</h2></div>
+
     <table class="info-table">
-      <tr><th>Sector</th>      <td>{{ entreprise.secteur or '—' }}</td></tr>
-      <tr><th>Location</th>    <td>{{ entreprise.localisation or '—' }}</td></tr>
-      <tr><th>Applications</th><td><strong>{{ entreprise.candidatures | length }}</strong></td></tr>
+      <tr>
+        <th>Sector</th>
+        <td>{{ entreprise.secteur or '—' }}</td>
+      </tr>
+      <tr>
+        <th>Location</th>
+        <td>{{ entreprise.localisation or '—' }}</td>
+      </tr>
+      <tr>
+        <th>Applications</th>
+        <td><strong>{{ entreprise.candidatures | length }}</strong></td>
+      </tr>
     </table>
+
     {% if entreprise.notes %}
     <div class="notes-block">
       <strong>Notes</strong>
       <p class="muted">{{ entreprise.notes }}</p>
     </div>
     {% endif %}
+
   </section>
 
-  <!-- Linked applications -->
+
+  <!-- ══════════════════════════════════════════
+       Linked applications
+  ══════════════════════════════════════════ -->
   <section class="card">
+
     <div class="card-header"><h2>Linked applications</h2></div>
+
     {% if entreprise.candidatures %}
       <ul class="item-list">
         {% for app in entreprise.candidatures %}
         <li class="item-row">
-          <span class="dot" style="background: {{ status_colors.get(app.status, '#64748b') }}"></span>
+
+          <span class="dot" style="--dot-color: {{ status_colors.get(app.status, '#64748b') }}"></span>
+
           <div class="item-info">
             <strong>{{ app.title }}</strong>
-            <span class="muted">{% if app.date_applied %}{{ app.date_applied }}{% endif %}</span>
+            <span class="muted">
+              {% if app.date_applied %}{{ app.date_applied }}{% endif %}
+            </span>
           </div>
-          <span class="badge" style="--color: {{ status_colors.get(app.status, '#64748b') }}">{{ app.status }}</span>
+
+          <span class="badge" style="--color: {{ status_colors.get(app.status, '#64748b') }}">
+            {{ app.status }}
+          </span>
+
         </li>
         {% endfor %}
       </ul>
     {% else %}
       <p class="empty-state">No applications linked to this company.</p>
     {% endif %}
+
   </section>
 
 </div>
+
 {% endblock %}

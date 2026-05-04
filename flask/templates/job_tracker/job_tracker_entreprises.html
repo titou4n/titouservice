@@ -2,26 +2,39 @@
 
 {% block title %}Companies — JobTrack{% endblock %}
 {% block page_title %}Companies{% endblock %}
-{% block page_subtitle %}{{ entreprises | length }} company{{ '' if entreprises | length == 1 else 's' }} tracked{% endblock %}
+{% block page_subtitle %}
+  {{ entreprises | length }} company{{ '' if entreprises | length == 1 else 's' }} tracked
+{% endblock %}
+
 
 {% block header_action %}
   <button class="btn btn-primary" onclick="openModal('modal-add')">+ Add company</button>
 {% endblock %}
 
+
 {% block content %}
 
-<!-- ── Search bar ── -->
+<!-- ══════════════════════════════════════════
+     Search bar
+══════════════════════════════════════════ -->
 <div class="filter-bar">
-  <!-- filterCompanies() is defined in main.js -->
-  <input id="search" placeholder="🔍  Search companies..." oninput="filterCompanies()" />
+  <input id="search"
+         placeholder="🔍  Search companies..."
+         oninput="filterCompanies()" />
 </div>
 
+
+<!-- ══════════════════════════════════════════
+     Company grid
+══════════════════════════════════════════ -->
 {% if entreprises %}
 <div class="company-grid" id="company-grid">
+
   {% for company in entreprises %}
   <article class="company-card">
 
     <header class="company-header">
+
       <div>
         <strong class="company-name">{{ company.name }}</strong>
         <p class="company-meta muted">
@@ -29,41 +42,61 @@
           {% if company.localisation %} · 📍 {{ company.localisation }}{% endif %}
         </p>
       </div>
+
       <div class="card-actions">
-        <!-- Edit: calls openCompanyEditModal() defined in main.js -->
+
         <button class="icon-btn"
                 title="Edit"
-                onclick="openCompanyEditModal({
-                  id: {{ company.id }},
-                  name: '{{ company.name | e }}',
-                  secteur: '{{ (company.secteur or '') | e }}',
-                  localisation: '{{ (company.localisation or '') | e }}',
-                  notes: '{{ (company.notes or '') | e }}'
-                })">Edit</button>
-        <!-- Delete: calls confirmDelete() defined in main.js -->
-        <button class="icon-btn danger" title="Delete" onclick="confirmDelete('del-{{ company.id }}')">🗑</button>
-        <form id="del-{{ company.id }}" method="POST" action="{{ url_for('job_tracker.entreprises.supprimer', id=company.id) }}" hidden>
+                data-id="{{ company.id }}"
+                data-name="{{ company.name | e }}"
+                data-secteur="{{ (company.secteur or '') | e }}"
+                data-localisation="{{ (company.localisation or '') | e }}"
+                data-notes="{{ (company.notes or '') | e }}"
+                onclick="openCompanyEditModal(this.dataset)">
+          Edit
+        </button>
+
+        <button class="icon-btn danger"
+                title="Delete"
+                onclick="confirmDelete('del-{{ company.id }}')">
+          Delete
+        </button>
+
+        <form id="del-{{ company.id }}"
+              method="POST"
+              action="{{ url_for('job_tracker.entreprises.supprimer', id=company.id) }}"
+              hidden>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         </form>
+
       </div>
+
     </header>
 
     {% if company.notes %}
-      <p class="company-notes muted">{{ company.notes[:120] }}{% if company.notes | length > 120 %}…{% endif %}</p>
+      <p class="company-notes muted">
+        {{ company.notes[:120] }}{% if company.notes | length > 120 %}…{% endif %}
+      </p>
     {% endif %}
 
     <footer class="company-footer">
-      <span class="muted">{{ company.candidatures | length }} application{{ 's' if company.candidatures | length != 1 }}</span>
-      <a href="{{ url_for('job_tracker.entreprises.detail', id=company.id) }}" class="btn btn-ghost">View →</a>
+      <span class="muted">
+        {{ company.candidatures | length }}
+        application{{ 's' if company.candidatures | length != 1 }}
+      </span>
+      <a href="{{ url_for('job_tracker.entreprises.detail', id=company.id) }}"
+         class="btn btn-ghost">
+        View →
+      </a>
     </footer>
 
   </article>
   {% endfor %}
+
 </div>
 
 {% else %}
 <div class="card empty-state">
-  <p>🏢</p>
   <h3>No companies yet</h3>
   <p>Add companies to organise your applications.</p>
   <br>
@@ -71,30 +104,34 @@
 </div>
 {% endif %}
 
-<!-- ── Modal: Add company ── -->
+
+<!-- ══════════════════════════════════════════
+     Modal — Add company
+══════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-add">
   <div class="modal">
+
     <header class="modal-header">
       <h3>New company</h3>
       <button onclick="closeModal('modal-add')" aria-label="Close">✕</button>
     </header>
-    <form method="POST" action="{{ url_for('job_tracker.entreprises.ajouter') }}">
 
+    <form method="POST" action="{{ url_for('job_tracker.entreprises.ajouter') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="field">
         <label>Name *</label>
-        <input name="name" placeholder="e.g. Accenture" required />
+        <input name="name" placeholder="Name Company" required />
       </div>
 
       <div class="field">
         <label>Sector</label>
-        <input name="secteur" placeholder="e.g. Tech, Finance..." />
+        <input name="secteur" placeholder="Sector" />
       </div>
 
       <div class="field">
         <label>Location</label>
-        <input name="localisation" placeholder="e.g. Paris, London..." />
+        <input name="localisation" placeholder="Location" />
       </div>
 
       <div class="field">
@@ -108,18 +145,25 @@
       </div>
 
     </form>
+
   </div>
 </div>
 
-<!-- ── Modal: Edit company ── -->
-<!-- data-base-action is used by openCompanyEditModal() in main.js to build the correct URL -->
+
+<!-- ══════════════════════════════════════════
+     Modal — Edit company
+══════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-edit">
   <div class="modal">
+
     <header class="modal-header">
       <h3>Edit company</h3>
       <button onclick="closeModal('modal-edit')" aria-label="Close">✕</button>
     </header>
-    <form method="POST" action="" data-base-action="{{ url_for('job_tracker.entreprises.modifier', id=0) }}">
+
+    <form method="POST"
+          action=""
+          data-base-action="{{ url_for('job_tracker.entreprises.modifier', id=0) }}">
 
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -147,7 +191,9 @@
         <button type="button" class="btn btn-secondary" onclick="closeModal('modal-edit')">Cancel</button>
         <button type="submit" class="btn btn-primary">Save</button>
       </div>
+
     </form>
+
   </div>
 </div>
 

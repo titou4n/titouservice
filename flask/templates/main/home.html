@@ -52,6 +52,7 @@
 </section>
 
 <section id="first-row" class="mid">
+
   <div class="finz">
     <h4>Friends</h4>
     <p>If you don't have any friends, come to titouservice and meet new people. Or just add your friends</p>
@@ -59,6 +60,7 @@
       <button class="button" type="submit">Add friend</button>
     </form>
   </div>
+
   <div class="finz">
     <h4>Chat with your friends</h4>
     <p>Since there is no existing platform for discussion, I have decided to recreate Instagram.</p>
@@ -66,9 +68,11 @@
       <button class="button" type="submit">Start to discuss</button>
     </form>
   </div>
+
 </section>
 
 <section id="first-row" class="mid">
+
   <div class="finz">
     <h4>API Documentation</h4>
     <p>An API (Application Programming Interface) allows your applications to connect with our services and exchange data securely. Explore our API documentation and start integrating today.</p>
@@ -76,6 +80,16 @@
       <button class="button" type="submit">API Docs</button>
     </form>
   </div>
+
+  <div class="finz">
+    <h4>Job Tracker</h4>
+    <p>Helps you stay organized when looking for an internship, a job, or an apprenticeship.
+    <br>You can track all your applications in real time in one place</p>
+    <form action="{{ url_for('job_tracker.dashboard.dashboard') }}" method="get">
+      <button class="button" type="submit">See JobTrack</button>
+    </form>
+  </div>
+
 </section>
 
 <section id="first-row" class="mid">
@@ -83,16 +97,6 @@
       <h4>Contact Us</h4>
       <p>Found a bug? Have a feature request? We'd love to hear from you. Contact us to report issues, suggest improvements, or ask questions.</p>
       <form action="{{ url_for('chatroom.chatroom') }}" method="get">
-        <button class="button" type="submit">Contact</button>
-      </form>
-    </div>
-</section>
-
-<section id="first-row" class="mid">
-  <div class="finz">
-      <h4>Job Tracker</h4>
-      <p>Found an Internship</p>
-      <form action="{{ url_for('job_tracker.dashboard.dashboard') }}" method="get">
         <button class="button" type="submit">Contact</button>
       </form>
     </div>

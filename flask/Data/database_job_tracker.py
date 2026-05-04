@@ -189,15 +189,23 @@ class DatabaseJobTracker:
     # Entreprises
     # ------------------------------------------------------------------
 
-    def get_all_entreprises(self, user_id) -> list[dict]:
+    def get_all_entreprises(self, user_id: int = None) -> list[dict]:
         with self._connection() as conn:
-            query = "SELECT * FROM entreprises WHERE user_id = ? ORDER BY name"
-            companies = conn.execute(query, (user_id,)).fetchall()
-            result = []
+            if user_id is not None:
+                companies = conn.execute(
+                    "SELECT * FROM entreprises WHERE user_id=? ORDER BY name", (user_id,)
+                ).fetchall()
+            else:
+                companies = conn.execute(
+                    "SELECT * FROM entreprises ORDER BY name"
+                ).fetchall()
 
-            for companie in companies:
-                d = dict(companie)
-                cands = conn.execute("SELECT * FROM candidatures WHERE company_id=?", (d["id"],)).fetchall()
+            result = []
+            for c in companies:
+                d = dict(c)
+                cands = conn.execute(
+                    "SELECT * FROM candidatures WHERE company_id=?", (d["id"],)
+                ).fetchall()
                 d["candidatures"] = [dict(ca) for ca in cands]
                 result.append(d)
         return result

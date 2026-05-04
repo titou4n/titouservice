@@ -6,26 +6,22 @@
 
 /* ── Modal helpers ─────────────────────────────────────────── */
 
-/** Open a modal by id */
 function openModal(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('open');
 }
 
-/** Close a modal by id */
 function closeModal(id) {
   const el = document.getElementById(id);
   if (el) el.classList.remove('open');
 }
 
-/** Close modal when clicking the dark overlay */
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('modal-overlay')) {
     e.target.classList.remove('open');
   }
 });
 
-/** Close modal on Escape key */
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     document.querySelectorAll('.modal-overlay.open').forEach(el => el.classList.remove('open'));
@@ -35,10 +31,6 @@ document.addEventListener('keydown', (e) => {
 
 /* ── Delete confirmation ────────────────────────────────────── */
 
-/**
- * Ask for confirmation before submitting a hidden delete form.
- * @param {string} formId - The id of the hidden <form> element
- */
 function confirmDelete(formId) {
   if (window.confirm('Are you sure you want to delete this item?')) {
     document.getElementById(formId)?.submit();
@@ -48,62 +40,40 @@ function confirmDelete(formId) {
 
 /* ── Edit modal helpers ─────────────────────────────────────── */
 
-/**
- * Populate and open the application edit modal.
- * Replaces /0/ in the form action with the real record id.
- * Called inline from kanban card edit buttons.
- *
- * @param {Object} data - { id, title, company_id, status, date_applied, notes }
- */
-function openApplicationEditModal(data) {
+function openApplicationEditModal(dataset) {
   const modal = document.getElementById('modal-edit');
-  if (!modal) return;
+  const form  = modal.querySelector('form');
 
-  // Fill each named field with the matching value
-  Object.entries(data).forEach(([key, val]) => {
-    const el = modal.querySelector(`[name="${key}"]`);
-    if (el) el.value = val ?? '';
-  });
+  const baseAction = form.dataset.baseAction;
+  form.action = baseAction.replace('/0', '/' + dataset.id);
 
-  // Patch the form action URL: swap placeholder id 0 with real id
-  const form = modal.querySelector('form');
-  if (form && data.id) {
-    form.action = form.dataset.baseAction.replace('/0/', `/${data.id}/`);
-  }
+  form.querySelector('[name="title"]').value        = dataset.title       || '';
+  form.querySelector('[name="company_id"]').value   = dataset.companyId   || '';
+  form.querySelector('[name="status"]').value       = dataset.status      || '';
+  form.querySelector('[name="date_applied"]').value = dataset.dateApplied || '';
+  form.querySelector('[name="notes"]').value        = dataset.notes       || '';
 
-  openModal('modal-edit');
+  modal.classList.add('open');
 }
 
-/**
- * Populate and open the company edit modal.
- * Called inline from company card edit buttons.
- *
- * @param {Object} data - { id, name, secteur, localisation, notes }
- */
-function openCompanyEditModal(data) {
+function openCompanyEditModal(dataset) {
   const modal = document.getElementById('modal-edit');
-  if (!modal) return;
+  const form  = modal.querySelector('form');
 
-  ['name', 'secteur', 'localisation', 'notes'].forEach(key => {
-    const el = modal.querySelector(`[name="${key}"]`);
-    if (el) el.value = data[key] ?? '';
-  });
+  const baseAction = form.dataset.baseAction;
+  form.action = baseAction.replace('/0', '/' + dataset.id);
 
-  const form = modal.querySelector('form');
-  if (form) {
-    form.action = form.dataset.baseAction.replace('/0/', `/${data.id}/`);
-  }
+  form.querySelector('[name="name"]').value         = dataset.name         || '';
+  form.querySelector('[name="secteur"]').value      = dataset.secteur      || '';
+  form.querySelector('[name="localisation"]').value = dataset.localisation || '';
+  form.querySelector('[name="notes"]').value        = dataset.notes        || '';
 
-  openModal('modal-edit');
+  modal.classList.add('open');
 }
 
 
 /* ── Company search filter ──────────────────────────────────── */
 
-/**
- * Filter company cards in real time by matching text content.
- * Attached to the search input via oninput in entreprises.html.
- */
 function filterCompanies() {
   const query = document.getElementById('search')?.value.toLowerCase() ?? '';
   document.querySelectorAll('#company-grid .company-card').forEach(card => {
@@ -114,11 +84,62 @@ function filterCompanies() {
 
 /* ── Statistics charts (Chart.js) ───────────────────────────── */
 
-/**
- * Initialise Chart.js charts on the statistics page.
- * Reads data injected into window.STATS_DATA by the template.
- * Called at the bottom of statistiques.html via a small inline script.
- */
+function initStats() {
+  const el = document.getElementById('stats-data');
+  
+  console.log('initStats called');
+  console.log('stats-data element:', el);
+
+  if (!el) {
+    console.warn('stats-data introuvable — on est pas sur la page stats');
+    return;
+  }
+
+  console.log('raw statuts:', el.dataset.statuts);
+  console.log('raw byStatus:', el.dataset.byStatus);
+  console.log('raw statusColors:', el.dataset.statusColors);
+  console.log('raw topLabels:', el.dataset.topLabels);
+  console.log('raw topData:', el.dataset.topData);
+
+  try {
+    const statuts      = JSON.parse(el.dataset.statuts);
+    const byStatus     = JSON.parse(el.dataset.byStatus);
+    const statusColors = JSON.parse(el.dataset.statusColors);
+    const topCompanies = {
+      labels: JSON.parse(el.dataset.topLabels),
+      data:   JSON.parse(el.dataset.topData),
+    };
+
+    console.log('parsed statuts:', statuts);
+    console.log('parsed byStatus:', byStatus);
+    console.log('parsed topCompanies:', topCompanies);
+    console.log('Chart disponible ?', typeof Chart);
+    console.log('canvas chart-status:', document.getElementById('chart-status'));
+    console.log('canvas chart-companies:', document.getElementById('chart-companies'));
+
+    initStatsCharts(statuts, byStatus, statusColors, topCompanies);
+
+  } catch(err) {
+    console.error('Erreur dans initStats:', err);
+  }
+}
+
+
+/*function initStats() {
+  const el = document.getElementById('stats-data');
+  if (!el) return;  // page sans stats → on sort silencieusement
+
+  const statuts      = JSON.parse(el.dataset.statuts);
+  const byStatus     = JSON.parse(el.dataset.byStatus);
+  const statusColors = JSON.parse(el.dataset.statusColors);
+  const topCompanies = {
+    labels: JSON.parse(el.dataset.topLabels),
+    data:   JSON.parse(el.dataset.topData),
+  };
+
+  initStatsCharts(statuts, byStatus, statusColors, topCompanies);
+}*/
+
 function initStatsCharts(statuts, byStatus, statusColors, topCompanies) {
 
   // Doughnut chart — breakdown by status
@@ -179,3 +200,6 @@ function initStatsCharts(statuts, byStatus, statusColors, topCompanies) {
     });
   }
 }
+
+// FIX : appelé après les déclarations, au niveau global
+document.addEventListener('DOMContentLoaded', initStats);

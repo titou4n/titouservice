@@ -4,9 +4,6 @@
 {% block page_title %}Dashboard{% endblock %}
 {% block page_subtitle %}Overview of your job search{% endblock %}
 
-{% block header_action %}
-  <button class="btn btn-primary" onclick="openModal('modal-add')">+ New application</button>
-{% endblock %}
 
 {% set status_colors = {
   "À postuler": "#6366f1",
@@ -17,15 +14,25 @@
   "Refus":      "#ef4444"
 } %}
 
+
+{% block header_action %}
+  <button class="btn btn-primary" onclick="openModal('modal-add')">+ New application</button>
+{% endblock %}
+
+
 {% block content %}
 
-<!-- ── Summary cards ── -->
+<!-- ══════════════════════════════════════════
+     Summary cards
+══════════════════════════════════════════ -->
 <section class="stats-grid">
+
   <div class="stat-card" style="--accent: #6366f1">
     <span class="stat-label">Total</span>
     <strong class="stat-value">{{ total }}</strong>
     <span class="stat-sub">applications</span>
   </div>
+
   {% for status in statuts %}
   <div class="stat-card" style="--accent: {{ status_colors[status] }}">
     <span class="stat-label">{{ status }}</span>
@@ -33,46 +40,65 @@
     <span class="stat-sub">application{{ 's' if by_status[status] != 1 }}</span>
   </div>
   {% endfor %}
+
   <div class="stat-card" style="--accent: #10b981">
     <span class="stat-label">Companies</span>
     <strong class="stat-value">{{ nb_entreprises }}</strong>
     <span class="stat-sub">tracked</span>
   </div>
+
 </section>
 
 <br>
 <br>
 
-<!-- ── Two-column section ── -->
+<!-- ══════════════════════════════════════════
+     Two-column section
+══════════════════════════════════════════ -->
 <section class="two-col">
 
   <!-- Recent applications -->
   <div class="card">
+
     <div class="card-header">
       <h2>Recent applications</h2>
       <a href="{{ url_for('job_tracker.candidatures.index') }}" class="btn btn-ghost">View all →</a>
     </div>
+
     {% if recentes %}
       <ul class="item-list">
         {% for app in recentes %}
         <li class="item-row">
-          <span class="dot" style="background: {{ status_colors.get(app.status, '#64748b') }}"></span>
+
+          <span class="dot" style="--dot-color: {{ status_colors.get(app.status, '#64748b') }}"></span>
+
           <div class="item-info">
             <strong>{{ app.title }}</strong>
-            <span class="muted">{{ app.company_name }}{% if app.date_applied %} · {{ app.date_applied }}{% endif %}</span>
+            <span class="muted">
+              {{ app.company_name }}
+              {% if app.date_applied %} · {{ app.date_applied }}{% endif %}
+            </span>
           </div>
-          <span class="badge" style="--color: {{ status_colors.get(app.status, '#64748b') }}">{{ app.status }}</span>
+
+          <span class="badge" style="--color: {{ status_colors.get(app.status, '#64748b') }}">
+            {{ app.status }}
+          </span>
+
         </li>
         {% endfor %}
       </ul>
     {% else %}
       <p class="empty-state">No applications yet — add one to get started.</p>
     {% endif %}
+
   </div>
+
 
   <!-- Pipeline progress bars -->
   <div class="card">
+
     <div class="card-header"><h2>Pipeline</h2></div>
+
     {% for status in statuts %}
     {% set pct = ((by_status[status] / total * 100) | int) if total > 0 else 0 %}
     <div class="pipeline-row">
@@ -81,22 +107,28 @@
         <span>{{ by_status[status] }}</span>
       </div>
       <div class="progress-bar">
-        <div class="progress-fill" style="width: {{ pct }}%; background: {{ status_colors[status] }};"></div>
+        <div class="progress-fill"
+             style="--fill-width: {{ pct }}%; --fill-color: {{ status_colors[status] }};">
+        </div>
       </div>
     </div>
     {% endfor %}
+
     {% if total == 0 %}
       <p class="empty-state">No data yet.</p>
     {% endif %}
+
   </div>
 
 </section>
 
-<!-- ── Modal: Add application ── -->
-<!-- openModal() / closeModal() are defined in job_tracker.js -->
-<script src="{{ url_for('static', filename='js/job_tracker.js') }}"></script>
+
+<!-- ══════════════════════════════════════════
+     Modal — Add application
+══════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-add">
   <div class="modal">
+
     <header class="modal-header">
       <h3>New application</h3>
       <button onclick="closeModal('modal-add')" aria-label="Close">✕</button>
@@ -115,7 +147,7 @@
         <select name="company_id">
           <option value="">— Select —</option>
           {% for company in entreprises %}
-          <option value="{{ company.id }}">{{ company.name }}</option>
+            <option value="{{ company.id }}">{{ company.name }}</option>
           {% endfor %}
         </select>
       </div>
@@ -123,7 +155,9 @@
       <div class="field">
         <label>Status</label>
         <select name="status">
-          {% for s in statuts %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+          {% for s in statuts %}
+            <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
         </select>
       </div>
 
@@ -143,6 +177,7 @@
       </div>
 
     </form>
+
   </div>
 </div>
 

@@ -4,9 +4,6 @@
 {% block page_title %}Applications{% endblock %}
 {% block page_subtitle %}Manage your application pipeline{% endblock %}
 
-{% block header_action %}
-  <button class="btn btn-primary" onclick="openModal('modal-add')">+ New application</button>
-{% endblock %}
 
 {% set status_colors = {
   "À postuler": "#6366f1",
@@ -17,17 +14,28 @@
   "Refus":      "#ef4444"
 } %}
 
+
+{% block header_action %}
+  <button class="btn btn-primary" onclick="openModal('modal-add')">+ New application</button>
+{% endblock %}
+
+
 {% block content %}
 
-<!-- ── Kanban board ── -->
+<!-- ══════════════════════════════════════════
+     Kanban board
+══════════════════════════════════════════ -->
 <div class="kanban" id="kanban">
+
   {% for status in statuts %}
   {% set cards = kanban[status] %}
+
   <div class="kanban-col" data-status="{{ status }}">
 
+    <!-- Column header -->
     <div class="col-header">
       <div class="col-title">
-        <span class="dot" style="background: {{ status_colors[status] }}"></span>
+        <span class="dot" style="--dot-color: {{ status_colors[status] }}"></span>
         {{ status }}
       </div>
       <span class="col-count">{{ cards | length }}</span>
@@ -35,37 +43,59 @@
 
     <br>
 
+    <!-- Cards -->
     <div class="col-cards">
+
       {% for card in cards %}
-      <article class="kanban-card" data-id="{{ card.id }}" style="--accent: {{ status_colors.get(card.status, '#e8eaf0') }}">
+      <article class="kanban-card"
+               data-id="{{ card.id }}"
+               style="--accent: {{ status_colors.get(card.status, '#e8eaf0') }}">
 
         <strong class="card-title">{{ card.title }}</strong>
+
         <p class="card-company">
-          {% if card.entreprise %}🏢 {{ card.entreprise.name }}{% else %}<span class="muted">No company</span>{% endif %}
+          {% if card.entreprise %}
+            🏢 {{ card.entreprise.name }}
+          {% else %}
+            <span class="muted">No company</span>
+          {% endif %}
         </p>
 
         <footer class="card-footer">
+
           <time class="muted">
             {% if card.date_applied %}{{ card.date_applied }}{% endif %}
           </time>
+
           <div class="card-actions">
-            <!-- Edit: calls openApplicationEditModal() defined in main.js -->
+
             <button class="icon-btn"
                     title="Edit"
-                    onclick="openApplicationEditModal({
-                      id: {{ card.id }},
-                      title: '{{ card.title | e }}',
-                      company_id: '{{ card.company_id or '' }}',
-                      status: '{{ card.status }}',
-                      date_applied: '{{ card.date_applied if card.date_applied else '' }}',
-                      notes: '{{ (card.notes or '') | e }}'
-                    })">✏</button>
-            <!-- Delete: calls confirmDelete() defined in main.js -->
-            <button class="icon-btn danger" title="Delete" onclick="confirmDelete('del-{{ card.id }}')">🗑</button>
-            <form id="del-{{ card.id }}" method="POST" action="{{ url_for('job_tracker.candidatures.supprimer', id=card.id) }}" hidden>
+                    data-id="{{ card.id }}"
+                    data-title="{{ card.title | e }}"
+                    data-company-id="{{ card.company_id or '' }}"
+                    data-status="{{ card.status }}"
+                    data-date-applied="{{ card.date_applied or '' }}"
+                    data-notes="{{ (card.notes or '') | e }}"
+                    onclick="openApplicationEditModal(this.dataset)">
+              Edit
+            </button>
+
+            <button class="icon-btn danger"
+                    title="Delete"
+                    onclick="confirmDelete('del-{{ card.id }}')">
+              Delete
+            </button>
+
+            <form id="del-{{ card.id }}"
+                  method="POST"
+                  action="{{ url_for('job_tracker.candidatures.supprimer', id=card.id) }}"
+                  hidden>
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             </form>
+
           </div>
+
         </footer>
 
       </article>
@@ -74,15 +104,21 @@
       {% if cards | length == 0 %}
         <p class="col-empty">No applications</p>
       {% endif %}
+
     </div>
 
   </div>
   {% endfor %}
+
 </div>
 
-<!-- ── Modal: Add application ── -->
+
+<!-- ══════════════════════════════════════════
+     Modal — Add application
+══════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-add">
   <div class="modal">
+
     <header class="modal-header">
       <h3>New application</h3>
       <button onclick="closeModal('modal-add')" aria-label="Close">✕</button>
@@ -101,7 +137,7 @@
         <select name="company_id">
           <option value="">— Select —</option>
           {% for company in entreprises %}
-          <option value="{{ company.id }}">{{ company.name }}</option>
+            <option value="{{ company.id }}">{{ company.name }}</option>
           {% endfor %}
         </select>
       </div>
@@ -109,7 +145,9 @@
       <div class="field">
         <label>Status</label>
         <select name="status">
-          {% for s in statuts %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+          {% for s in statuts %}
+            <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
         </select>
       </div>
 
@@ -129,18 +167,25 @@
       </div>
 
     </form>
+
   </div>
 </div>
 
-<!-- ── Modal: Edit application ── -->
-<!-- data-base-action is used by openApplicationEditModal() in main.js to build the correct URL -->
+
+<!-- ══════════════════════════════════════════
+     Modal — Edit application
+══════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-edit">
   <div class="modal">
+
     <header class="modal-header">
       <h3>Edit application</h3>
       <button onclick="closeModal('modal-edit')" aria-label="Close">✕</button>
     </header>
-    <form method="POST" action="" data-base-action="{{ url_for('job_tracker.candidatures.modifier', id=0) }}">
+
+    <form method="POST"
+          action=""
+          data-base-action="{{ url_for('job_tracker.candidatures.modifier', id=0) }}">
 
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -148,34 +193,43 @@
         <label>Job title *</label>
         <input name="title" required />
       </div>
+
       <div class="field">
         <label>Company</label>
         <select name="company_id">
           <option value="">— Select —</option>
           {% for company in entreprises %}
-          <option value="{{ company.id }}">{{ company.name }}</option>
+            <option value="{{ company.id }}">{{ company.name }}</option>
           {% endfor %}
         </select>
       </div>
+
       <div class="field">
         <label>Status</label>
         <select name="status">
-          {% for s in statuts %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+          {% for s in statuts %}
+            <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
         </select>
       </div>
+
       <div class="field">
         <label>Date applied</label>
         <input name="date_applied" type="date" />
       </div>
+
       <div class="field">
         <label>Notes</label>
         <textarea name="notes"></textarea>
       </div>
+
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="closeModal('modal-edit')">Cancel</button>
         <button type="submit" class="btn btn-primary">Save</button>
       </div>
+
     </form>
+
   </div>
 </div>
 
