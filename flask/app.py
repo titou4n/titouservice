@@ -48,9 +48,6 @@ def create_app(config_object=Config):
     return app
 
 
-if __name__ == '__main__':
+if __name__ == '__main__' and not ext.config.ENV_PROD:
     app = create_app()
-    if  not ext.config.ENV_PROD:
-        app.run(debug=True, host="0.0.0.0", port=5000, use_reloader=False)
-    else:
-        app.run()
+    app.run(debug=True, host="0.0.0.0", port=5000, use_reloader=False)
