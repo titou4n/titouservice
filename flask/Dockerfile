@@ -22,4 +22,4 @@ RUN chmod +x entrypoint.sh
 EXPOSE 5000
 
 # PRODUCTION SERVER
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:create_app()"]
