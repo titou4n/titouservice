@@ -2,230 +2,222 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+
 class Config:
+    """
+    Application configuration.
 
-    ENV_PROD = False
+    Secrets are read from Docker secrets in production and from
+    environment variables (via .env) in development.
+    """
 
-    # ===== Flask =====
-    FLASK_ENV = "PRODUCTION" if ENV_PROD else "DEVELOPMENT"
-    DEBUG = not ENV_PROD
+    # ─────────────────────────── Environment ────────────────────────────── #
 
-    print(f"[TITOUSERVICE - INFO - ENV] : {FLASK_ENV}")
-    debug_on_off = "ON" if DEBUG else "OFF"
-    print(f"[TITOUSERVICE - INFO - DEBUG IS {debug_on_off}]")
+    ENV_PROD: bool = True
+
+    FLASK_ENV: str = "production" if ENV_PROD else "development"
+    DEBUG: bool = not ENV_PROD
 
     if not ENV_PROD:
         load_dotenv()
 
-    #_______________________KEY_________________________#
+    # ──────────────────────────── Helpers ───────────────────────────────── #
 
-    def read_secret(name):
+    @staticmethod
+    def _read_secret(name: str) -> str | None:
+        """Read a Docker secret from /run/secrets/<name>."""
         try:
-            with open(f"/run/secrets/{name}") as f:
-                return f.read().strip()
+            return Path(f"/run/secrets/{name}").read_text().strip()
         except FileNotFoundError:
             return None
 
-    SECRET_KEY = read_secret("secret_key") if ENV_PROD else os.getenv("SECRET_KEY")
-    if not SECRET_KEY:
-        raise RuntimeError("SECRET_KEY manquante")
-    
-    TWELVEDATA_API_KEY = read_secret("twelvedata_api_key") if ENV_PROD else os.getenv("TWELVEDATA_API_KEY")
-    if not TWELVEDATA_API_KEY:
-        raise RuntimeError("TWELVEDATA_API_KEY manquante")
+    @classmethod
+    def _get(cls, name: str) -> str:
+        """Return a secret (prod) or env var (dev); raise if missing."""
+        value = cls._read_secret(name) if cls.ENV_PROD else os.getenv(name)
+        if not value:
+            raise RuntimeError(f"Missing required secret / env var: {name!r}")
+        return value
 
-    OMDB_API_KEY = read_secret("omdb_api_key") if ENV_PROD else os.getenv("OMDB_API_KEY")
-    if not OMDB_API_KEY:
-        raise RuntimeError("OMDB_API_KEY manquante")
-    
-    EMAIL_ADDRESS = "titouservice.mail@gmail.com"
-    EMAIL_APP_PASSWORD = read_secret("email_app_password") if ENV_PROD else os.getenv("EMAIL_APP_PASSWORD")
-    if not EMAIL_APP_PASSWORD:
-        raise RuntimeError("EMAIL_APP_PASSWORD manquante")
+    # ─────────────────────────── Secret keys ────────────────────────────── #
 
-    
-    #___________________________________________________#
+    SECRET_KEY: str           = _get.__func__(None, "SECRET_KEY")
+    TWELVEDATA_API_KEY: str   = _get.__func__(None, "TWELVEDATA_API_KEY")
+    OMDB_API_KEY: str         = _get.__func__(None, "OMDB_API_KEY")
+    EMAIL_ADDRESS: str        = "titouservice.mail@gmail.com"
+    EMAIL_APP_PASSWORD: str   = _get.__func__(None, "EMAIL_APP_PASSWORD")
 
-    # ===== Base directory =====
-    BASE_DIR = Path(__file__).parent.resolve()
+    # ──────────────────────────── Paths ─────────────────────────────────── #
 
-    # ===== Flask-Session configuration =====
-    SESSION_TYPE = "filesystem"                     # backend session
-    SESSION_FILE_DIR = BASE_DIR / "flask_session"   # dossier temporaire pour stocker les sessions
-    SESSION_PERMANENT = False                       # sessions non permanentes
-    SESSION_USE_SIGNER = True                       # sécurise le cookie de session
-    
-    '''
-    SESSION_COOKIE_NAME
-    Le nom du cookie de session. Peut être modifié dans le cas où vous avez déjà un cookie avec le même nom.
-    Valeur par défaut : session
-    '''
-    SESSION_COOKIE_NAME = "cookie_Titouservice"
-    SESSION_COOKIE_DOMAIN = None
-    SESSION_COOKIE_PATH = None
-    '''
-    SESSION_COOKIE_HTTPONLY
-    Pour des raisons de sécurité, les navigateurs ne permettent pas à JavaScript d’accéder aux cookies marqués « HTTP uniquement ».
-    '''
-    SESSION_COOKIE_HTTPONLY = True          # -> cookie inaccessible en JS
-    '''
-    SESSION_COOKIE_SECURE
-    Les navigateurs n’enverront des cookies avec les demandes sur HTTPS que si le cookie est marqué « secure ».
-    L’application doit être servie via HTTPS pour que cela ait un sens.
-    Valeur par défaut : False
-    '''
-    SESSION_COOKIE_SECURE = ENV_PROD
-    SESSION_COOKIE_SAMESITE="Lax"
+    BASE_DIR: Path = Path(__file__).parent.resolve()
+    DATA_DIR: Path = BASE_DIR / "Data"
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    SESSION_COOKIE_TIME_DAYS = 0
-    SESSION_COOKIE_TIME_HOURS = 1
-    SESSION_COOKIE_TIME_MINUTES = 0
+    DATABASE_FOLDER: Path = DATA_DIR / "db"
+    DATABASE_FOLDER.mkdir(parents=True, exist_ok=True)
+    DATABASE_URL: str             = str(DATABASE_FOLDER / "database.db")
+    DATABASE_JOB_TRACKER_URL: str = str(DATABASE_FOLDER / "database_job_tracker.db")
 
-    TWOFA_TIMELAPS_MINUTES = 15
+    UPLOAD_FOLDER: Path = BASE_DIR / "static" / "uploads"
+    UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 
-    # ===== Database =====
-    DATA_DIR = BASE_DIR / "Data"
-    DATA_DIR.mkdir(exist_ok=True)
-    DATABASE_FOLDER = DATA_DIR / "db"
-    DATABASE_FOLDER.mkdir(exist_ok=True)
-    DATABASE_URL = os.path.join(DATABASE_FOLDER, "database.db")
-    DATABASE_JOB_TRACKER_URL = os.path.join(DATABASE_FOLDER, "database_job_tracker.db")
+    UPLOAD_PROFILE_PICTURE_FOLDER: Path = UPLOAD_FOLDER / "profile_pictures"
+    UPLOAD_PROFILE_PICTURE_FOLDER.mkdir(parents=True, exist_ok=True)
 
-    NEED_TO_RESET_DB_EXCEPT_ACCOUNT = False
-    NEED_TO_RESET_ALL_DB = False
-    NEED_TO_RESET_ROLES_PERMISSIONS_TABLES = True
+    PATH_DEFAULT_PROFILE_PICTURE: Path = BASE_DIR / "static" / "img" / "profile-default.png"
 
-    # ===== Uploads =====
-    
-    UPLOAD_FOLDER = BASE_DIR / "static" / "uploads"
-    UPLOAD_FOLDER.mkdir(exist_ok=True)
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
+    # ──────────────────────────── Uploads ───────────────────────────────── #
 
-    UPLOAD_PROFILE_PICTURE_FOLDER = UPLOAD_FOLDER / "profile_pictures"
-    UPLOAD_PROFILE_PICTURE_FOLDER.mkdir(exist_ok=True)
-    ALLOWED_EXTENSIONS_PROFILE_PICTURE = {'png', 'jpg', 'jpeg'}
+    MAX_CONTENT_LENGTH: int             = 16 * 1024 * 1024   # 16 MB
+    ALLOWED_EXTENSIONS_PROFILE_PICTURE: set[str] = {"png", "jpg", "jpeg"}
 
-    # ===== DEFAULT =====
-    PATH_DEFAULT_PROFILE_PICTURE = BASE_DIR / "static" / "img" / "profile-default.png"
+    # ──────────────────────── Flask-Session ─────────────────────────────── #
 
-    # ===== SUPER_ADMIN =====
-    USERNAME_SUPER_ADMIN = "super_admin"
-    ROLE_NAME_SUPER_ADMIN = "super_admin"
-    NAME_SUPER_ADMIN = "Super Admin"
+    SESSION_TYPE: str            = "filesystem"
+    SESSION_FILE_DIR: Path       = BASE_DIR / "flask_session"
+    SESSION_PERMANENT: bool      = False
+    SESSION_USE_SIGNER: bool     = True
 
-    ROLE_NAME_ADMIN = "admin"
+    SESSION_COOKIE_NAME: str     = "cookie_Titouservice"
+    SESSION_COOKIE_DOMAIN        = None
+    SESSION_COOKIE_PATH          = None
+    SESSION_COOKIE_HTTPONLY: bool = True          # Blocks JS access to the cookie
+    SESSION_COOKIE_SECURE: bool  = ENV_PROD       # Requires HTTPS in production
+    SESSION_COOKIE_SAMESITE: str = "Lax"
 
-    # ===== Visitor =====
-    USERNAME_VISITOR = "UsernameVisitor"
-    PASSWORD_VISITOR = "PasswordVisitor"
-    ROLE_NAME_VISITOR = "visitor"
-    NAME_VISITOR = "Visitor"
+    # Session lifetime
+    SESSION_COOKIE_TIME_DAYS: int    = 0
+    SESSION_COOKIE_TIME_HOURS: int   = 1
+    SESSION_COOKIE_TIME_MINUTES: int = 0
 
-    # ===== DEBUG USER =====
-    USERNAME_DEBUG = str(11)
-    PASSWORD_DEBUG = str(11)
-    ROLE_NAME_DEBUG = ROLE_NAME_SUPER_ADMIN
+    # 2FA code validity window
+    TWOFA_TIMELAPS_MINUTES: int = 15
 
-    # ===== BANK =====
-    BANK_DEFAULT_PAY = 1000000
-    STOCK_MARKET_COEFFICIENT = 1
+    # ─────────────────────── Database reset flags ───────────────────────── #
 
-    # ===== PERMISSIONS/ROLES =====
-    LIST_DEFAULT_ROLES = ["super_admin", "admin", "moderator","user", "visitor"]
+    NEED_TO_RESET_DB_EXCEPT_ACCOUNT: bool        = False
+    NEED_TO_RESET_ALL_DB: bool                   = False
+    NEED_TO_RESET_ROLES_PERMISSIONS_TABLES: bool = True
 
-    LIST_PERMISSIONS_USER = [
-        # Permission User
+    # ──────────────────────── Built-in accounts ─────────────────────────── #
+
+    USERNAME_SUPER_ADMIN: str = "super_admin"
+    ROLE_NAME_SUPER_ADMIN: str = "super_admin"
+    NAME_SUPER_ADMIN: str = "Super Admin"
+
+    ROLE_NAME_ADMIN: str = "admin"
+
+    USERNAME_VISITOR: str = "UsernameVisitor"
+    PASSWORD_VISITOR: str = "PasswordVisitor"
+    ROLE_NAME_VISITOR: str = "visitor"
+    NAME_VISITOR: str = "Visitor"
+
+    # Debug user (development only)
+    USERNAME_DEBUG: str    = "11"
+    PASSWORD_DEBUG: str    = "11"
+    ROLE_NAME_DEBUG: str   = ROLE_NAME_SUPER_ADMIN
+
+    # ─────────────────────────── Bank / Game ────────────────────────────── #
+
+    BANK_DEFAULT_PAY: int         = 1_000_000
+    STOCK_MARKET_COEFFICIENT: int = 1
+
+    # ──────────────────────── Roles & permissions ───────────────────────── #
+
+    LIST_DEFAULT_ROLES: list[str] = ["super_admin", "admin", "moderator", "user", "visitor"]
+
+    # -- Permission groups --------------------------------------------------
+
+    LIST_PERMISSIONS_USER: list[str] = [
         "view_own_profile",
         "edit_own_profile",
         "delete_own_account",
         "change_own_password",
         "export_own_data",
-
         "view_other_profile",
         "follow_profile",
-        ]
-    
-    LIST_PERMISSIONS_USER_CONTENT = [
-        # Permission content
+    ]
+
+    LIST_PERMISSIONS_USER_CONTENT: list[str] = [
         "view_content",
         "create_content",
         "edit_own_content",
         "delete_own_content",
-
         "view_messages",
         "create_messages",
         "edit_own_messages",
         "delete_own_messages",
-        ]
-    
-    LIST_PERMISSIONS_MANAGE_CONTENT = (LIST_PERMISSIONS_USER_CONTENT + ["edit_all_content", "delete_all_content",])
+    ]
 
-    LIST_PERMISSIONS_MANAGE_USERS = [
-        # Permission - manage users
+    LIST_PERMISSIONS_MANAGE_CONTENT: list[str] = LIST_PERMISSIONS_USER_CONTENT + [
+        "edit_all_content",
+        "delete_all_content",
+    ]
+
+    LIST_PERMISSIONS_MANAGE_USERS: list[str] = [
         "view_users",
         "create_user",
         "edit_user",
         "delete_user",
         "ban_user",
         "assign_role",
-        ]
+    ]
 
-    LIST_PERMISSIONS_MANAGE_ROLE = [
-        # Permission - manage role
+    LIST_PERMISSIONS_MANAGE_ROLE: list[str] = [
         "view_roles",
         "create_role",
         "edit_role",
         "delete_role",
         "manage_permissions",
-        ]
-    
-    LIST_PERMISSIONS_SYSTEM = [
-        # Permission - SYSTEM
+    ]
+
+    LIST_PERMISSIONS_SYSTEM: list[str] = [
         "access_admin_panel",
         "view_logs",
         "manage_settings",
         "backup_database",
         "restore_database",
-
         "export_data",
         "import_data",
         "access_statistics",
         "moderate_comments",
         "view_sensitive_data",
-        ]
-    
-    LIST_ACCESS_SERVICES = [
+    ]
+
+    LIST_ACCESS_SERVICES: list[str] = [
         "job_tracker_access",
-        ]
-    
-    LIST_ALL_PERMISSIONS = (  LIST_PERMISSIONS_USER
-                            + LIST_PERMISSIONS_MANAGE_CONTENT
-                            + LIST_PERMISSIONS_MANAGE_USERS
-                            + LIST_PERMISSIONS_MANAGE_ROLE
-                            + LIST_PERMISSIONS_SYSTEM
-                            + LIST_ACCESS_SERVICES)
-    
-    LIST_VISITOR_PERMS =["view_content",
-                         "view_own_profile",]
-    
-    LIST_USER_PERMS = LIST_PERMISSIONS_USER + LIST_PERMISSIONS_USER_CONTENT + LIST_ACCESS_SERVICES
-    
-    LIST_MODERATOR_PERMS = LIST_USER_PERMS + ["edit_all_content", "delete_all_content"]
+    ]
 
-    LIST_ADMIN_PERMS = LIST_ALL_PERMISSIONS
+    LIST_ALL_PERMISSIONS: list[str] = (
+        LIST_PERMISSIONS_USER
+        + LIST_PERMISSIONS_MANAGE_CONTENT
+        + LIST_PERMISSIONS_MANAGE_USERS
+        + LIST_PERMISSIONS_MANAGE_ROLE
+        + LIST_PERMISSIONS_SYSTEM
+        + LIST_ACCESS_SERVICES
+    )
 
-    DICT_PERMISSIONS_BY_TYPE = {
-        "LIST_PERMISSIONS_USER":LIST_PERMISSIONS_USER,
-        "LIST_PERMISSIONS_MANAGE_CONTENT":LIST_PERMISSIONS_MANAGE_CONTENT,
-        "LIST_PERMISSIONS_MANAGE_USERS":LIST_PERMISSIONS_MANAGE_USERS,
-        "LIST_PERMISSIONS_MANAGE_ROLE":LIST_PERMISSIONS_MANAGE_ROLE,
-        "LIST_PERMISSIONS_SYSTEM":LIST_PERMISSIONS_SYSTEM,
+    # -- Per-role permission sets ------------------------------------------
+
+    LIST_VISITOR_PERMS: list[str]   = ["view_content", "view_own_profile"]
+    LIST_USER_PERMS: list[str]      = LIST_PERMISSIONS_USER + LIST_PERMISSIONS_USER_CONTENT + LIST_ACCESS_SERVICES
+    LIST_MODERATOR_PERMS: list[str] = LIST_USER_PERMS + ["edit_all_content", "delete_all_content"]
+    LIST_ADMIN_PERMS: list[str]     = LIST_ALL_PERMISSIONS
+
+    # -- Lookup helpers ----------------------------------------------------
+
+    DICT_PERMISSIONS_BY_TYPE: dict[str, list[str]] = {
+        "user":           LIST_PERMISSIONS_USER,
+        "manage_content": LIST_PERMISSIONS_MANAGE_CONTENT,
+        "manage_users":   LIST_PERMISSIONS_MANAGE_USERS,
+        "manage_role":    LIST_PERMISSIONS_MANAGE_ROLE,
+        "system":         LIST_PERMISSIONS_SYSTEM,
     }
 
-    DICT_ROLE_PERMISSION = {
-        "super_admin":LIST_ALL_PERMISSIONS,
-        "admin":LIST_ADMIN_PERMS,
-        "moderator":LIST_MODERATOR_PERMS,
-        "user":LIST_USER_PERMS,
-        "visitor":LIST_VISITOR_PERMS
-        }
+    DICT_ROLE_PERMISSION: dict[str, list[str]] = {
+        "super_admin": LIST_ALL_PERMISSIONS,
+        "admin":       LIST_ADMIN_PERMS,
+        "moderator":   LIST_MODERATOR_PERMS,
+        "user":        LIST_USER_PERMS,
+        "visitor":     LIST_VISITOR_PERMS,
+    }
