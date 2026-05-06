@@ -1,5 +1,5 @@
 # utils/decorators.py
-# Décorateurs réutilisables par tous les blueprints.
+# Decorators that can be reused by all blueprints.
 
 from functools import wraps
 from flask import flash, redirect, url_for
@@ -7,7 +7,7 @@ from flask_login import current_user
 
 
 def require_permission(permission_name: str):
-    """Vérifie qu'un utilisateur connecté possède la permission demandée."""
+    """Check that a logged-in user has the requested permission."""
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(*args, **kwargs):

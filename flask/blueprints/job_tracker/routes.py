@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from datetime import date, datetime
 import extensions as ext
 
+from utils.decorators import require_permission
 from models.candidature import STATUTS, STATUT_COLORS
 from blueprints.job_tracker import bp
 
@@ -21,8 +22,10 @@ bp.register_blueprint(statistiques_bp, url_prefix="/statistiques")
 # Candidatures
 # ==============================================================================
 
+@candidatures_bp.route("")
 @candidatures_bp.route("/")
 @login_required
+@require_permission("job_tracker_access")
 def index():
     candidatures = ext.database_job_tracker.get_all_candidatures(user_id=current_user.id)
     entreprises  = ext.database_job_tracker.get_all_entreprises(user_id=current_user.id)
@@ -44,6 +47,7 @@ def index():
 
 @candidatures_bp.route("/ajouter", methods=["POST"])
 @login_required
+@require_permission("job_tracker_access")
 def ajouter():
     title            = request.form.get("title", "").strip()
     company_id       = request.form.get("company_id") or None
@@ -76,6 +80,7 @@ def ajouter():
 
 @candidatures_bp.route("/<int:id>/modifier", methods=["POST"])
 @login_required
+@require_permission("job_tracker_access")
 def modifier(id):
     c = ext.database_job_tracker.get_candidature(id)
     if c is None:
@@ -109,6 +114,7 @@ def modifier(id):
 
 @candidatures_bp.route("/<int:id>/supprimer", methods=["POST"])
 @login_required
+@require_permission("job_tracker_access")
 def supprimer(id):
     c = ext.database_job_tracker.get_candidature(id)
     if c is None:
@@ -122,6 +128,7 @@ def supprimer(id):
 
 @candidatures_bp.route("/<int:id>/statut", methods=["POST"])
 @login_required
+@require_permission("job_tracker_access")
 def changer_statut(id):
     """Endpoint AJAX pour drag & drop kanban."""
     data       = request.get_json()
@@ -139,6 +146,7 @@ def changer_statut(id):
 
 @candidatures_bp.route("/api/all")
 @login_required
+@require_permission("job_tracker_access")
 def api_all():
     candidatures = ext.database_job_tracker.get_all_candidatures(user_id=current_user.id)
     return jsonify(candidatures)
@@ -150,6 +158,7 @@ def api_all():
 
 @dashboard_bp.route("/")
 @login_required
+@require_permission("job_tracker_access")
 def dashboard():
     uid = current_user.id
 
@@ -188,6 +197,7 @@ def dashboard():
 
 @entreprises_bp.route("/")
 @login_required
+@require_permission("job_tracker_access")
 def index():
     entreprises = ext.database_job_tracker.get_all_entreprises(user_id=current_user.id)
     return render_template(
@@ -200,6 +210,7 @@ def index():
 
 @entreprises_bp.route("/ajouter", methods=["POST"])
 @login_required
+@require_permission("job_tracker_access")
 def ajouter():
     name = request.form.get("name", "").strip()
 
@@ -220,6 +231,7 @@ def ajouter():
 
 @entreprises_bp.route("/<int:id>/modifier", methods=["POST"])
 @login_required
+@require_permission("job_tracker_access")
 def modifier(id):
     e = ext.database_job_tracker.get_entreprise(id)
     if e is None:
@@ -239,6 +251,7 @@ def modifier(id):
 
 @entreprises_bp.route("/<int:id>/supprimer", methods=["POST"])
 @login_required
+@require_permission("job_tracker_access")
 def supprimer(id):
     e = ext.database_job_tracker.get_entreprise(id)
     if e is None:
@@ -252,6 +265,7 @@ def supprimer(id):
 
 @entreprises_bp.route("/<int:id>")
 @login_required
+@require_permission("job_tracker_access")
 def detail(id):
     e = ext.database_job_tracker.get_entreprise(id)
     if e is None:
@@ -271,6 +285,7 @@ def detail(id):
 
 @statistiques_bp.route("/")
 @login_required
+@require_permission("job_tracker_access")
 def index():
     uid = current_user.id
 
@@ -298,6 +313,7 @@ def index():
 
 @statistiques_bp.route("/api/data")
 @login_required
+@require_permission("job_tracker_access")
 def api_data():
     """JSON pour Chart.js."""
     uid = current_user.id

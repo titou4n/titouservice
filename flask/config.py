@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 class Config:
 
-    ENV_PROD = True
+    ENV_PROD = False
 
     # ===== Flask =====
     FLASK_ENV = "PRODUCTION" if ENV_PROD else "DEVELOPMENT"
@@ -93,6 +93,7 @@ class Config:
 
     NEED_TO_RESET_DB_EXCEPT_ACCOUNT = False
     NEED_TO_RESET_ALL_DB = False
+    NEED_TO_RESET_ROLES_PERMISSIONS_TABLES = True
 
     # ===== Uploads =====
     
@@ -193,16 +194,21 @@ class Config:
         "view_sensitive_data",
         ]
     
+    LIST_ACCESS_SERVICES = [
+        "job_tracker_access",
+        ]
+    
     LIST_ALL_PERMISSIONS = (  LIST_PERMISSIONS_USER
                             + LIST_PERMISSIONS_MANAGE_CONTENT
                             + LIST_PERMISSIONS_MANAGE_USERS
                             + LIST_PERMISSIONS_MANAGE_ROLE
-                            + LIST_PERMISSIONS_SYSTEM)
+                            + LIST_PERMISSIONS_SYSTEM
+                            + LIST_ACCESS_SERVICES)
     
     LIST_VISITOR_PERMS =["view_content",
                          "view_own_profile",]
     
-    LIST_USER_PERMS = LIST_PERMISSIONS_USER + LIST_PERMISSIONS_USER_CONTENT
+    LIST_USER_PERMS = LIST_PERMISSIONS_USER + LIST_PERMISSIONS_USER_CONTENT + LIST_ACCESS_SERVICES
     
     LIST_MODERATOR_PERMS = LIST_USER_PERMS + ["edit_all_content", "delete_all_content"]
 

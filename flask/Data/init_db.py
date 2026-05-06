@@ -16,6 +16,9 @@ class DatabaseManager():
         
         if self.config.NEED_TO_RESET_DB_EXCEPT_ACCOUNT:
             self.reset_all_table_except_account()
+        
+        if self.config.NEED_TO_RESET_ROLES_PERMISSIONS_TABLES:
+            self.reset_roles_permissions_tables()
 
     def init_database(self):
         self.create_table_account()
@@ -502,6 +505,35 @@ class DatabaseManager():
         conn.close()
 
         self.init_database()
+
+    def reset_roles_permissions_tables(self):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("PRAGMA foreign_keys = OFF;")
+
+            cursor.execute("DROP TABLE IF EXISTS role_permissions;")
+            cursor.execute("DROP TABLE IF EXISTS roles;")
+            cursor.execute("DROP TABLE IF EXISTS permissions;")
+
+            print("[TITOUSERVICE - INFO - DB] Tables dropped successfully.")
+
+            cursor.execute("PRAGMA foreign_keys = ON;")
+
+            conn.commit()
+            conn.close()
+
+            self.create_table_roles()
+            self.create_table_permissions()
+            self.create_table_role_permissions()
+
+            print("[TITOUSERVICE - INFO - DB] Tables reset successfully.")
+
+        except Exception as e:
+            conn.rollback()
+            conn.close()
+            print(f"[TITOUSERVICE - ERROR - DB] Reset failed: {e}")
 
     def reset_database(self):
         """
