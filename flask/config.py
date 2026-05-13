@@ -13,7 +13,7 @@ class Config:
 
     # ─────────────────────────── Environment ────────────────────────────── #
 
-    ENV_PROD: bool = True
+    ENV_PROD: bool = False
 
     FLASK_ENV: str = "production" if ENV_PROD else "development"
     DEBUG: bool = not ENV_PROD
@@ -38,14 +38,14 @@ class Config:
         if not value:
             raise RuntimeError(f"Missing required secret / env var: {name!r}")
         return value
-
+    
     # ─────────────────────────── Secret keys ────────────────────────────── #
-
-    SECRET_KEY: str           = _get.__func__(None, "SECRET_KEY")
-    TWELVEDATA_API_KEY: str   = _get.__func__(None, "TWELVEDATA_API_KEY")
-    OMDB_API_KEY: str         = _get.__func__(None, "OMDB_API_KEY")
+    # Resolved after class definition (see bottom of file)
+    SECRET_KEY: str
+    TWELVEDATA_API_KEY: str
+    OMDB_API_KEY: str
     EMAIL_ADDRESS: str        = "titouservice.mail@gmail.com"
-    EMAIL_APP_PASSWORD: str   = _get.__func__(None, "EMAIL_APP_PASSWORD")
+    EMAIL_APP_PASSWORD: str
 
     # ──────────────────────────── Paths ─────────────────────────────────── #
 
@@ -96,7 +96,7 @@ class Config:
     # ─────────────────────── Database reset flags ───────────────────────── #
 
     NEED_TO_RESET_DB_EXCEPT_ACCOUNT: bool        = False
-    NEED_TO_RESET_ALL_DB: bool                   = False
+    NEED_TO_RESET_ALL_DB: bool                   = True
     NEED_TO_RESET_ROLES_PERMISSIONS_TABLES: bool = True
 
     # ──────────────────────── Built-in accounts ─────────────────────────── #
@@ -116,6 +116,7 @@ class Config:
     USERNAME_DEBUG: str    = "11"
     PASSWORD_DEBUG: str    = "11"
     ROLE_NAME_DEBUG: str   = ROLE_NAME_SUPER_ADMIN
+    NAME_DEBUG : str       = "DEBUG"
 
     # ─────────────────────────── Bank / Game ────────────────────────────── #
 
@@ -221,3 +222,12 @@ class Config:
         "user":        LIST_USER_PERMS,
         "visitor":     LIST_VISITOR_PERMS,
     }
+
+
+
+
+# Resolve secrets now that the class is fully built and _get works correctly
+Config.SECRET_KEY          = Config._get("SECRET_KEY")
+Config.TWELVEDATA_API_KEY  = Config._get("TWELVEDATA_API_KEY")
+Config.OMDB_API_KEY        = Config._get("OMDB_API_KEY")
+Config.EMAIL_APP_PASSWORD  = Config._get("EMAIL_APP_PASSWORD")

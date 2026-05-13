@@ -289,7 +289,6 @@ def detail(id):
 def index():
     uid = current_user.id
 
-    # FIX #7 : passage du user_id
     by_status       = ext.database_job_tracker.count_by_status(user_id=uid)
     top_entreprises = ext.database_job_tracker.top_entreprises(user_id=uid, limit=5)
     total           = ext.database_job_tracker.count_total(user_id=uid)

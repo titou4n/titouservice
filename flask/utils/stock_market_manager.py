@@ -1,13 +1,12 @@
-from Data.database_handler import DatabaseHandler
-from utils.bank_manager import BankManager
+import extensions as ext
 from utils.utils import Utils
 from utils.twelvedata_manager import TwelveDataManager
 
 class StockMarketManager():
     def __init__(self):
+        self.db_bank = ext.db_bank_repository
+        self.bank_manager = ext.bank_manager
         self.twelvedata_manager = TwelveDataManager()
-        self.database_handler = DatabaseHandler()
-        self.bank_manager = BankManager()
         self.utils = Utils()
 
     def sell(self, user_id:int, symbol:str, stock_number:float):
@@ -30,11 +29,11 @@ class StockMarketManager():
 
         current_price = float(current_price_data["price"])
 
-        pay = self.database_handler.get_pay(user_id)
+        pay = self.db_bank.get_pay(user_id)
         new_pay = pay + (stock_number * current_price)
 
-        self.database_handler.update_pay(user_id, new_pay)
-        self.database_handler.insert_stock_market_transfers(
+        self.db_bank.update_pay(user_id, new_pay)
+        self.db_bank.insert_stock_market_transfers(
             user_id=user_id,
             type="sell",
             symbol=symbol,
@@ -54,15 +53,15 @@ class StockMarketManager():
         current_price = float(current_price_data["price"])
 
         total_cost = stock_number * current_price
-        pay = self.database_handler.get_pay(user_id)
+        pay = self.db_bank.get_pay(user_id)
         if total_cost > pay:
             raise NotEnoughMoneyError("Not enough money.")
 
-        pay = self.database_handler.get_pay(user_id)
+        pay = self.db_bank.get_pay(user_id)
         new_pay = pay - total_cost
 
-        self.database_handler.update_pay(user_id, new_pay)
-        self.database_handler.insert_stock_market_transfers(
+        self.db_bank.update_pay(user_id, new_pay)
+        self.db_bank.insert_stock_market_transfers(
             user_id=user_id,
             type="buy",
             symbol=symbol,

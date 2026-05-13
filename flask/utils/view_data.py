@@ -2,19 +2,18 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-
-from Data.database_handler import DatabaseHandler
 from utils.utils import Utils
+import extensions as ext
 
 class ViewDataWithMatplolib():
-    def __init__(self, utils:Utils, database_handler:DatabaseHandler):
-        self.utils = utils
-        self.database_handler=database_handler
+    def __init__(self):
+        self.utils = Utils()
+        self.db_account = ext.db_account_repository
         self.color = "#9B7ED8"
         self.path = "connections_per_day.png"
 
     def get_graph_connection_per_day_by_user(self, id: int, output_path:str) -> None:
-        data = self.database_handler.get_metadata(id)
+        data = self.db_account.get_metadata_by_user_id(user_id=id)
 
         if not data:
             raise ValueError(f"No metadata found for id {id}")
@@ -27,7 +26,7 @@ class ViewDataWithMatplolib():
         self.get_graph_bar_connection_per_day(connections_per_day=connections_per_day, output_path=output_path)
 
     def get_graph_connection_per_day(self, output_path:str, type_graph:str = "bar") -> None:
-        data = self.database_handler.get_all_metadata()
+        data = self.db_account.get_all_metadata()
 
         if not data:
             raise ValueError(f"No metadata found")

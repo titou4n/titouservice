@@ -25,8 +25,8 @@ def titoubank():
     user_id = ext.session_manager.get_current_user_id()
     return render_template('bank/titoubank_home.html',
         id=user_id,
-        pay=round(ext.database_handler.get_pay(user_id), 2),
-        all_transfer_history=ext.database_handler.get_all_bank_transfer(user_id),
+        pay=round(ext.db_account_repository.get_pay_by_id(user_id), 2),
+        all_transfer_history=ext.db_bank_repository.get_transfers_by_account_id(user_id),
     )
 
 
@@ -58,7 +58,7 @@ def transfer():
     if request.method == 'GET':
         return render_template('bank/titoubank_transfer.html',
             id=user_id,
-            all_transfer_history=ext.database_handler.get_all_bank_transfer(user_id),
+            all_transfer_history=ext.db_bank_repository.get_transfers_by_account_id(user_id),
         )
 
     amount      = int(request.form['transfer_value'])

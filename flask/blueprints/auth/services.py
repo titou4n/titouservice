@@ -12,17 +12,22 @@ def authenticate_user(username: str, raw_password: str):
     Retourne (user_id, error_message).
     error_message est None si succès.
     """
-    password = ext.hash_manager.generate_password_hash(raw_password)
-
     if not username:
         return None, "Username is required."
 
-    user_id = ext.database_handler.get_id_from_username(username)
+    user_id = ext.db_account_repository.get_id_by_username(username)
     if user_id is None:
         return None, "Username is not correct."
 
-    if password != ext.database_handler.get_password(user_id):
+    stored_hash = ext.db_account_repository.get_password_hash(user_id)
+    if not ext.hash_manager.check_password(raw_password, stored_hash):
         return None, "Password is not correct."
+    
+    ext.db_account_repository.insert_metadata(
+        user_id=user_id,
+        date_connected=ext.utils.get_datetime_isoformat(),
+        ipv4="0.0.0.0"
+    )
 
     return user_id, None
 
@@ -32,28 +37,32 @@ def register_user(username: str, raw_password: str, raw_verif: str, name: str):
     Crée un compte.
     Retourne (user_id, error_message).
     """
-    password = ext.hash_manager.generate_password_hash(raw_password)
-    verif    = ext.hash_manager.generate_password_hash(raw_verif)
-
-    if ext.database_handler.verif_username_exists(username):
+    if ext.db_account_repository.exists_by_username(username):
         return None, "Username is already used."
 
-    if ext.database_handler.verif_name_exists(name):
+    if ext.db_account_repository.exists_by_name(name):
         return None, "Name is already used."
 
-    if password != verif:
+    if raw_password != raw_verif:
         return None, "Passwords must be identical."
 
-    role_id = ext.database_handler.get_role_id(role_name="user")
-    ext.database_handler.create_account(username, password, name, role_id)
-    user_id = ext.database_handler.get_id_from_username(username)
+    password_hash = ext.hash_manager.generate_password_hash(raw_password)
+    role_id       = ext.db_role_repository.get_role_id(role_name="user")
+    ext.db_account_repository.create(username, password_hash, name, role_id)
+
+    user_id = ext.db_account_repository.get_id_by_username(username)
 
     ext.session_manager.send_session(user_id=user_id)
-    ext.database_handler.insert_user_preferences(user_id=user_id)
+    ext.db_account_repository.create_preferences(user_id=user_id)
 
     user = User(user_id)
     login_user(user)
-    ext.session_manager.insert_metadata()
+
+    ext.db_account_repository.insert_metadata(
+        user_id=user_id,
+        date_connected=ext.utils.get_datetime_isoformat(),
+        ipv4="0.0.0.0"
+    )
 
     return user_id, None
 
@@ -64,16 +73,23 @@ def login_as_visitor():
     Retourne (user_id, error_message).
     """
     username = ext.config.USERNAME_VISITOR
-    password = ext.hash_manager.generate_password_hash(ext.config.PASSWORD_VISITOR)
 
-    user_id = ext.database_handler.get_id_from_username(username)
+    user_id = ext.db_account_repository.get_id_by_username(username)
     if user_id is None:
         return None, "Visitor account not found."
 
-    if password != ext.database_handler.get_password(user_id):
+    stored_hash = ext.db_account_repository.get_password_hash(user_id)
+    if not ext.hash_manager.check_password(ext.config.PASSWORD_VISITOR, stored_hash):
         return None, "Visitor account misconfigured."
 
     ext.session_manager.send_session(user_id=user_id)
     user = User(user_id)
     login_user(user)
+
+    ext.db_account_repository.insert_metadata(
+        user_id=user_id,
+        date_connected=ext.utils.get_datetime_isoformat(),
+        ipv4="0.0.0.0"
+    )
+
     return user_id, None

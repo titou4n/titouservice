@@ -1,18 +1,15 @@
-from Data.database_handler import DatabaseHandler
-from utils.utils import Utils
-from utils.hash_manager import HashManager
-from utils.email_manager import EmailManager
-from config import Config
+import extensions as ext
 import datetime
-
 import random
+from utils.utils import Utils
 
 class TwofaManager():
     def __init__(self):
-        self.database_handler = DatabaseHandler()
-        self.email_manager = EmailManager()
-        self.hash_manager = HashManager()
-        self.config = Config()
+        self.db_twofa = ext.db_twofa_repository
+        self.db_account = ext.db_account_repository
+        self.email_manager = ext.email_manager
+        self.hash_manager = ext.hash_manager
+        self.config = ext.config
         self.utils = Utils()
 
     def generate_code(self) -> int:
@@ -21,12 +18,13 @@ class TwofaManager():
     def send_code(self, user_id:int) -> None:
         random_code = self.generate_code()
         self.email_manager.send_two_factor_authentication_code_with_html(user_id, random_code)
-        self.database_handler.insert_two_factor_codes(user_id=user_id,
-                                                      code_hash=self.hash_manager.generate_password_hash(str(random_code)),
-                                                      created_at=self.utils.get_datetime_isoformat())
+        self.db_twofa.insert(
+            user_id=user_id,
+            code_hash=self.hash_manager.generate_password_hash(str(random_code)),
+            created_at=self.utils.get_datetime_isoformat())
 
     def verif_need_to_sent_new_code(self, user_id:int) -> bool:
-        code_hash = self.database_handler.get_code_hash_from_user_id(user_id=user_id)
+        code_hash = self.db_twofa.get_latest_valid(user_id=user_id)
         if code_hash is None:
             #raise TwoFactorCodeNotFoundError("No 2FA code found for this user.")
             return True
@@ -48,35 +46,35 @@ class TwofaManager():
 
     def verif_code(self, code:int, user_id:int) -> bool:
 
-        code_hash = self.database_handler.get_code_hash_from_user_id(user_id=user_id)
+        code_hash = self.db_twofa.get_latest_valid(user_id=user_id)
         if code_hash is None:
-            self.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
+            self.db_twofa.delete_by_user_id(user_id=user_id)
             raise TwoFactorCodeNotFoundError("No 2FA code found for this user.")
         
         if code_hash["used"]:
-            self.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
+            self.db_twofa.delete_by_user_id(user_id=user_id)
             raise TwoFactorCodeAlreadyUsedError("This 2FA code has already been used.")
         
         if code_hash["attempts"] >= 3:
-            self.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
+            self.db_twofa.delete_by_user_id(user_id=user_id)
             raise TwoFactorTooManyAttemptsError("Too many invalid attempts.")
         
         created_at = datetime.datetime.fromisoformat(code_hash["created_at"])
         if self.utils.datetime_is_expired_minutes(created_at, self.config.TWOFA_TIMELAPS_MINUTES):
-            self.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
+            self.db_twofa.delete_by_user_id(user_id=user_id)
             raise TwoFactorCodeExpiredError("The 2FA code has expired.")
         
-        if self.hash_manager.generate_password_hash(code) != code_hash["code_hash"]:
-            self.database_handler.add_attempts_two_factor_codes(id_two_factor_codes=code_hash["id_two_factor_codes"])
+        if not self.hash_manager.check_password(str(code), code_hash["code_hash"]):
+            self.db_twofa.increment_attempts(id_two_factor_codes=code_hash["id_two_factor_codes"])
             raise TwoFactorInvalidCodeError("Invalid 2FA code.")
         
-        self.database_handler.update_twofa_code_to_used(id_two_factor_codes=code_hash["id_two_factor_codes"])
-        self.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
-        self.database_handler.update_email_verified_from_id(user_id, True)
+        self.db_twofa.mark_as_used(id_two_factor_codes=code_hash["id_two_factor_codes"])
+        self.db_twofa.delete_by_user_id(user_id=user_id)
+        self.db_account.update_email_verified(user_id, True)
         return True
     
     def delete_old_code_hash(self, user_id):
-        self.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
+        self.db_twofa.delete_by_user_id(user_id=user_id)
 
 
 class TwoFactorAuthError(Exception):

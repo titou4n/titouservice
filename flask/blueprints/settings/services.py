@@ -14,11 +14,11 @@ def build_data_export(user_id: int) -> BytesIO:
     content  = "=== PERSONALE DATA EXPORT ===\n"
     content += f"Date       : {ext.utils.format_datetime(ext.utils.get_datetime_isoformat())}\n"
     content += f"ID         : {user_id}\n"
-    content += f"Username   : {ext.database_handler.get_username_from_user_id(user_id)}\n"
-    content += f"Name       : {ext.database_handler.get_name_from_id(user_id)}\n"
-    content += f"Pay        : {ext.database_handler.get_pay(user_id)} TC\n\n"
+    content += f"Username   : {ext.db_account_repository.get_username_by_id(user_id)}\n"
+    content += f"Name       : {ext.db_account_repository.get_name_by_id(user_id)}\n"
+    content += f"Pay        : {ext.db_account_repository.get_pay_by_id(user_id)} TC\n\n"
 
-    metadata  = ext.database_handler.get_metadata(user_id)
+    metadata  = ext.db_account_repository.get_metadata_by_user_id(user_id)
     content  += "=== MÉTADONNÉES ===\n\n"
     for meta in metadata:
         content += f"{ext.utils.format_datetime(meta['date_connected'])} - IP: {meta['ipv4']}\n"
@@ -42,16 +42,16 @@ def save_profile_picture(user_id: int, file) -> bool:
     if not allowed_profile_picture(file.filename):
         return False
 
-    filename  = secure_filename(file.filename)
-    extension = filename.rsplit('.', 1)[1].lower()
+    filename     = secure_filename(file.filename)
+    extension    = filename.rsplit('.', 1)[1].lower()
     new_filename = f"user_{user_id}.{extension}"
-    folder    = current_app.config['UPLOAD_PROFILE_PICTURE_FOLDER']
-    filepath  = os.path.join(folder, new_filename)
+    folder       = current_app.config['UPLOAD_PROFILE_PICTURE_FOLDER']
+    filepath     = os.path.join(folder, new_filename)
 
-    old_path = ext.database_handler.get_profile_picture_path_from_id(user_id)
+    old_path = ext.db_account_repository.get_profile_picture_path(user_id)
     if old_path and os.path.exists(old_path):
         os.remove(old_path)
 
     file.save(filepath)
-    ext.database_handler.update_profile_picture_path_from_id(user_id, filepath)
+    ext.db_account_repository.update_profile_picture_path(user_id, filepath)
     return True

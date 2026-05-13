@@ -1,9 +1,9 @@
 import requests
-from config import Config
+import extensions as ext
 
 class TwelveDataManager():
     def __init__(self):
-        self.config = Config()
+        self.config = ext.config
         self.twelvedata_api_key = self.config.TWELVEDATA_API_KEY
 
     def get_prices(self, symbol:str):

@@ -26,7 +26,7 @@ def api_search_movie():
     user_id = ext.session_manager.get_current_user_id()
 
     if request.method == 'GET':
-        all_movie_search = ext.database_handler.get_movie_search(user_id)
+        all_movie_search = ext.db_movie_repository.get_searches_by_user_id(user_id)
         return render_template('api/api_search_movie.html',
                                id=user_id,
                                all_movie_search=all_movie_search)
@@ -56,8 +56,8 @@ def api_infos_movie(movie_title: str):
 
     # Sauvegarde de l'historique de recherche (dédupliqué)
     clean_title = data["Title"]
-    if not ext.database_handler.movie_already_search(user_id, movie_title=clean_title):
-        ext.database_handler.insert_movie_search(user_id, clean_title, ext.utils.get_datetime_isoformat())
+    if not ext.db_movie_repository.has_already_searched(user_id, movie_title=clean_title):
+        ext.db_movie_repository.insert_search(user_id, clean_title, ext.utils.get_datetime_isoformat())
 
     return render_template(
         'api/api_infosmovie.html',

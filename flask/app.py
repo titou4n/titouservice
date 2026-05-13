@@ -12,6 +12,10 @@ def create_app(config_object=Config):
     ext.login_manager.login_view = "auth.login"
     ext.session_manager.init_app(app)
 
+    ext._db_manager.init_database()
+    ext._roles_permissions_seeders.run()
+    ext._accounts_seeder.run()
+
     # ── User loader ─────────────────────────────────────────────────────
     from models.user import User
 
@@ -50,4 +54,4 @@ def create_app(config_object=Config):
 
 if __name__ == '__main__' and not ext.config.ENV_PROD:
     app = create_app()
-    app.run(debug=True, host="0.0.0.0", port=5000, use_reloader=False)
+    app.run(debug=True, host="127.0.0.1", port=8080, use_reloader=False)
