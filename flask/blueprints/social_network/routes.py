@@ -13,18 +13,18 @@ import extensions as ext
 
 def _resolve_followeds(user_id: int) -> list[tuple]:
     """Retourne la liste [(id_followed, name), ...] des abonnements."""
-    rows = ext.database_handler.get_all_followeds_from_id(user_id)
+    rows = ext.db_social_repository.get_followings(user_id)
     return [
-        (row["id_followed"], ext.database_handler.get_name_from_id(row["id_followed"]))
+        (row["followed_id"], ext.db_account_repository.get_name_by_id(row["followed_id"]))
         for row in rows
     ]
 
 
 def _resolve_followers(user_id: int) -> list[tuple]:
     """Retourne la liste [(id_follower, name), ...] des abonnés."""
-    rows = ext.database_handler.get_all_followers_from_id(user_id)
+    rows = ext.db_social_repository.get_followers(user_id)
     return [
-        (row["id_follower"], ext.database_handler.get_name_from_id(row["id_follower"]))
+        (row["follower_id"], ext.db_account_repository.get_name_by_id(row["follower_id"]))
         for row in rows
     ]
 
@@ -60,11 +60,11 @@ def social_network_friends():
         flash("Name is required.")
         return redirect(url_for('social_network.social_network_friends'))
 
-    if not ext.database_handler.verif_name_exists(friend_name):
+    if not ext.db_account_repository.exists_by_name(friend_name):
         flash("This name doesn't exist.")
         return redirect(url_for('social_network.social_network_friends'))
 
-    id_followed = ext.database_handler.get_id_from_name(friend_name)
+    id_followed = ext.db_account_repository.get_id_by_name(friend_name)
     return redirect(url_for('social_network.social_network_user_profile', id_account=id_followed))
 
 
@@ -79,12 +79,12 @@ def social_network_user_profile(id_account: int):
     if user_id == id_account:
         return redirect(url_for('settings.account_home'))
 
-    id1_follow_id2 = ext.database_handler.verif_id1_follow_id2(user_id, id_account)
+    id1_follow_id2 = ext.db_social_repository.is_following(user_id, id_account)
     return render_template('social_network/social_network_user_profile.html',
         id=user_id,
         id1_follow_id2=id1_follow_id2,
         user_profile_id=id_account,
-        name=ext.database_handler.get_name_from_id(id_account),
+        name=ext.db_account_repository.get_name_by_id(id_account),
     )
 
 
@@ -98,11 +98,11 @@ def social_network_follow_action(id_followed: int):
         flash("You cannot follow yourself.")
         return redirect(url_for('social_network.social_network_friends'))
 
-    if ext.database_handler.verif_id1_follow_id2(user_id, id_followed):
+    if ext.db_social_repository.is_following(user_id, id_followed):
         flash("You are already following this person.")
         return redirect(url_for('social_network.social_network_friends'))
 
-    ext.database_handler.create_link_social_network(user_id, id_followed, ext.utils.get_datetime_isoformat())
+    ext.db_social_repository.follow(user_id, id_followed, ext.utils.get_datetime_isoformat())
     return redirect(url_for('social_network.social_network_friends'))
 
 
@@ -116,7 +116,7 @@ def social_network_unfollow_action(id_unfollowed: int):
         flash("You cannot unfollow yourself.")
         return redirect(url_for('social_network.social_network_friends'))
 
-    ext.database_handler.delete_link_social_network_id1_id2(user_id, id_unfollowed)
+    ext.db_social_repository.unfollow(user_id, id_unfollowed)
     flash("You are no longer following this person.")
     return redirect(url_for('social_network.social_network_friends'))
 
@@ -127,7 +127,7 @@ def social_network_unfollow_action(id_unfollowed: int):
 @bp.route('/chat/', methods=['GET', 'POST'])
 @login_required
 def social_network_chat():
-    user_id      = ext.session_manager.get_current_user_id()
+    user_id       = ext.session_manager.get_current_user_id()
     all_followeds = _resolve_followeds(user_id)
     return render_template('social_network/social_network_chat.html', id=user_id, all_followeds=all_followeds)
 
@@ -138,7 +138,7 @@ def social_network_chat():
 def social_network_chat_selected(id_receiver: int):
     user_id       = ext.session_manager.get_current_user_id()
     all_followeds = _resolve_followeds(user_id)
-    messages      = ext.database_handler.get_all_messages_between_id_sender_and_receiver(user_id, id_receiver)
+    messages      = ext.db_social_repository.get_messages_between(user_id, id_receiver)
 
     return render_template('social_network/social_network_chat.html',
         id=user_id,
@@ -157,7 +157,7 @@ def social_network_send_message(id_receiver: int):
 
     if request.method == 'GET':
         all_followeds = _resolve_followeds(user_id)
-        messages      = ext.database_handler.get_all_messages_between_id_sender_and_receiver(user_id, id_receiver)
+        messages      = ext.db_social_repository.get_messages_between(user_id, id_receiver)
         return render_template('social_network/social_network_chat.html',
             id=user_id,
             all_followeds=all_followeds,
@@ -170,5 +170,5 @@ def social_network_send_message(id_receiver: int):
         flash('Message is required.')
         return redirect(url_for('social_network.social_network_chat'))
 
-    ext.database_handler.insert_message(user_id, id_receiver, message, ext.utils.get_datetime_isoformat())
+    ext.db_social_repository.send_message(user_id, id_receiver, message, ext.utils.get_datetime_isoformat())
     return redirect(url_for('social_network.social_network_chat_selected', id_receiver=id_receiver))

@@ -19,7 +19,7 @@ def settings_home():
     user_id = ext.session_manager.get_current_user_id()
     return render_template('settings/settings_home.html',
                            id=user_id,
-                           name=ext.database_handler.get_name_from_id(user_id))
+                           name=ext.db_account_repository.get_name_by_id(user_id))
 
 
 # ── Compte ──────────────────────────────────────────────────────────────────
@@ -56,8 +56,8 @@ def account_change_email():
         flash('Email is required !')
         return redirect(url_for('settings.account_change_email'))
 
-    ext.database_handler.update_email_from_id(current_user.id, email)
-    ext.database_handler.update_email_verified_from_id(current_user.id, False)
+    ext.db_account_repository.update_email(current_user.id, email)
+    ext.db_account_repository.update_email_verified(current_user.id, False)
     flash('Your email has been updated')
     return redirect(url_for('settings.account_home'))
 
@@ -71,18 +71,18 @@ def account_change_username():
     if request.method == 'GET':
         return render_template('settings/account_change_username.html',
                                id=user_id,
-                               username=ext.database_handler.get_username_from_user_id(user_id))
+                               username=ext.db_account_repository.get_username_by_id(user_id))
 
     new_username = str(request.form['new_username'])
     if not new_username:
         flash('Username is required !')
         return redirect(url_for('settings.account_change_username'))
 
-    if ext.database_handler.verif_username_exists(new_username):
+    if ext.db_account_repository.exists_by_username(new_username):
         flash('This username is already taken !')
         return redirect(url_for('settings.account_change_username'))
 
-    ext.database_handler.update_username(user_id, new_username)
+    ext.db_account_repository.update_username(user_id, new_username)
     flash('Your username has been updated')
     return redirect(url_for('settings.account_home'))
 
@@ -96,11 +96,12 @@ def account_change_password():
     if request.method == 'GET':
         return render_template('settings/account_change_password.html', id=user_id)
 
-    actual_password    = ext.hash_manager.generate_password_hash(request.form['actual_password'])
-    new_password       = ext.hash_manager.generate_password_hash(request.form['new_password'])
-    verif_new_password = ext.hash_manager.generate_password_hash(request.form['verif_new_password'])
+    actual_password    = str(request.form['actual_password'])
+    new_password       = str(request.form['new_password'])
+    verif_new_password = str(request.form['verif_new_password'])
 
-    if actual_password != ext.database_handler.get_password(user_id):
+    stored_hash = ext.db_account_repository.get_password_hash(user_id)
+    if not ext.hash_manager.check_password(actual_password, stored_hash):
         flash('Password is not correct.')
         return redirect(url_for('settings.account_change_password'))
 
@@ -108,7 +109,7 @@ def account_change_password():
         flash("Passwords must be identical.")
         return redirect(url_for('settings.account_change_password'))
 
-    ext.database_handler.update_password(user_id, new_password)
+    ext.db_account_repository.update_password(user_id, ext.hash_manager.generate_password_hash(new_password))
     flash('Your password has been updated')
     return redirect(url_for('settings.account_home'))
 
@@ -122,18 +123,18 @@ def account_change_name():
     if request.method == 'GET':
         return render_template('settings/account_change_name.html',
                                id=user_id,
-                               name=ext.database_handler.get_name_from_id(user_id))
+                               name=ext.db_account_repository.get_name_by_id(user_id))
 
     new_name = str(request.form['new_name'])
     if not new_name:
         flash('Name is required !')
         return redirect(url_for('settings.account_change_name'))
 
-    if ext.database_handler.verif_name_exists(new_name):
+    if ext.db_account_repository.exists_by_name(new_name):
         flash('This name is already taken !')
         return redirect(url_for('settings.account_change_name'))
 
-    ext.database_handler.update_name(user_id, new_name)
+    ext.db_account_repository.update_name(user_id, new_name)
     flash('Your name has been updated')
     return redirect(url_for('settings.account_home'))
 
@@ -147,8 +148,8 @@ def delete_account():
         return redirect(url_for('settings.account_home'))
 
     user_id = ext.session_manager.get_current_user_id()
-    ext.database_handler.delete_all_post_from_id(user_id)
-    ext.database_handler.delete_account(user_id)
+    ext.db_post_repository.delete_all_by_user_id(user_id)
+    ext.db_account_repository.delete(user_id)
     ext.session_manager.logout()
     flash('Your account was successfully deleted!')
     return redirect('/')
@@ -171,7 +172,7 @@ def upload_profile_picture():
 @bp.route('/profile_picture/<int:user_id>')
 @login_required
 def profile_picture(user_id: int):
-    path = ext.database_handler.get_profile_picture_path_from_id(user_id)
+    path = ext.db_account_repository.get_profile_picture_path(user_id)
     if not path or not __import__('os').path.isfile(path):
         path = ext.config.PATH_DEFAULT_PROFILE_PICTURE
     return send_file(path)
@@ -183,19 +184,19 @@ def profile_picture(user_id: int):
 @bp.route('/security/', methods=['GET', 'POST'])
 @login_required
 def security_home():
-    user_id = ext.session_manager.get_current_user_id()
-    email   = ext.database_handler.get_email_from_id(user_id)
-    sessions = ext.database_handler.get_all_sessions_from_user_id(user_id=user_id)
+    user_id  = ext.session_manager.get_current_user_id()
+    email    = ext.db_account_repository.get_email_by_id(user_id)
+    sessions = ext.db_session_repository.get_all_by_user_id(user_id=user_id)
 
     return render_template('settings/security_home.html',
                            id=user_id,
-                           username=ext.database_handler.get_username_from_user_id(user_id=user_id),
-                           name=ext.database_handler.get_name_from_id(user_id),
-                           pay=ext.database_handler.get_pay(user_id),
+                           username=ext.db_account_repository.get_username_by_id(user_id=user_id),
+                           name=ext.db_account_repository.get_name_by_id(user_id),
+                           pay=ext.db_account_repository.get_pay_by_id(user_id),
                            user_has_email=email is not None,
                            email=email,
-                           email_verified=ext.database_handler.get_email_verified_from_id(user_id),
-                           twofa_enabled=ext.database_handler.get_user_preferences_2fa(user_id=user_id),
+                           email_verified=ext.db_account_repository.get_email_verified_by_id(user_id),
+                           twofa_enabled=ext.db_account_repository.get_twofa_enabled(user_id=user_id),
                            session_id_hash=ext.session_manager.get_current_session_id_hash(),
                            session_location=ext.session_manager.get_location(),
                            ip_address=ext.session_manager.get_ip_session(),
@@ -212,15 +213,15 @@ def settings_switch_2fa():
 
     user_id = ext.session_manager.get_current_user_id()
 
-    if ext.database_handler.get_email_from_id(user_id) is None:
+    if ext.db_account_repository.get_email_by_id(user_id) is None:
         flash("Please add an email address first.")
         return redirect(url_for('settings.account_change_email'))
 
-    if not ext.database_handler.get_email_verified_from_id(user_id):
+    if not ext.db_account_repository.get_email_verified_by_id(user_id):
         flash("Please verify your email address first - Click on 'Verify-it' link.")
         return redirect(url_for('settings.security_home'))
 
-    ext.database_handler.switch_user_preferences_2fa(user_id=user_id)
+    ext.db_account_repository.toggle_twofa(user_id=user_id)
     flash('Your preferences has been updated')
     return redirect(url_for('settings.security_home'))
 

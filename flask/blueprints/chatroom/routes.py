@@ -15,11 +15,11 @@ import extensions as ext
 @require_permission("view_content")
 def chatroom():
     user_id = ext.session_manager.get_current_user_id()
-    posts   = ext.database_handler.get_posts()
+    posts   = ext.db_post_repository.get_all()
 
     # Résolution des noms : { user_id: name }
     names = {
-        post["user_id"]: ext.database_handler.get_name_from_id(post["user_id"])
+        post["user_id"]: ext.db_account_repository.get_name_by_id(post["user_id"])
         for post in posts
     }
 
@@ -43,7 +43,7 @@ def create_post():
         flash('Error: Title and Content are required.')
         return redirect(url_for('chatroom.create_post'))
 
-    ext.database_handler.create_post(user_id, title, content)
+    ext.db_post_repository.create(user_id, title, content)
     return redirect(url_for('chatroom.chatroom'))
 
 
@@ -55,12 +55,12 @@ def edit_post(id_post: int):
     user_id = ext.session_manager.get_current_user_id()
 
     # Vérification de propriété
-    if user_id != ext.database_handler.get_id_from_id_post(id_post):
+    if user_id != ext.db_post_repository.get_user_id_by_post_id(id_post):
         flash("You cannot edit this post.")
         return redirect(url_for('chatroom.chatroom'))
 
     if request.method == 'GET':
-        post = ext.database_handler.get_post_from_id(id_post)
+        post = ext.db_post_repository.get_by_id(id_post)
         return render_template('chatroom/chatroom_edit_post.html', id=user_id, post=post)
 
     title   = str(request.form['title'])
@@ -70,7 +70,7 @@ def edit_post(id_post: int):
         flash('Error: Title and Content are required.')
         return redirect(url_for('chatroom.edit_post', id_post=id_post))
 
-    ext.database_handler.update_post(id_post, title, content)
+    ext.db_post_repository.update(id_post, title, content)
     return redirect(url_for('chatroom.chatroom'))
 
 
@@ -79,7 +79,7 @@ def edit_post(id_post: int):
 @login_required
 @require_permission("delete_own_content")
 def delete_post(id_post: int):
-    post = ext.database_handler.get_post_from_id(id_post)
-    ext.database_handler.delete_post(id_post)
+    post = ext.db_post_repository.get_by_id(id_post)
+    ext.db_post_repository.delete(id_post)
     flash(f'"{post["title"]}" was successfully deleted!')
     return redirect(url_for('chatroom.chatroom'))

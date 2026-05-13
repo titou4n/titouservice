@@ -19,7 +19,8 @@ def get_graph_connection_per_day():
         buffer.seek(0)
         return send_file(buffer, mimetype="image/png")
     except Exception as e:
-        print(f"[TITOUSERVICE - ERROR] Graph : {e}")
+        import logging
+        logging.getLogger(__name__).error("Graph error: %s", e)
         return "", 204
 
 
@@ -27,7 +28,6 @@ def get_graph_connection_per_day():
 def index():
     if ext.session_manager.get_current_user_id() is None:
         return render_template('main/index.html')
-    ext.session_manager.insert_metadata()
     return redirect('/home/')
 
 
@@ -37,7 +37,7 @@ def index():
 def home():
     return render_template('main/home.html',
         id=current_user.id,
-        name=ext.database_handler.get_name_from_id(current_user.id),
+        name=ext.db_account_repository.get_name_by_id(current_user.id),
         access_admin_panel=current_user.has_permission("access_admin_panel")
     )
 

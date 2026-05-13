@@ -51,7 +51,7 @@ def assign_role():
         flash("Please select an account ID.", "warning")
         return redirect(url_for("admin.role_permission_manager"))
 
-    if not ext.database_handler.verif_id_exists(id=account_id):
+    if not ext.db_account_repository.exists_by_id(id=account_id):
         flash("ID doesn't exist", "warning")
         return redirect(url_for("admin.assign_role"))
 
@@ -63,16 +63,20 @@ def assign_role():
         flash("You cannot change your own role.", "warning")
         return redirect(url_for("admin.assign_role"))
 
-    if ext.database_handler.get_user(account_id)["role_id"] == ext.database_handler.get_role_id(ext.config.ROLE_NAME_SUPER_ADMIN):
+    account = ext.db_account_repository.get_by_id(account_id)
+    super_admin_role_id = ext.db_role_repository.get_role_id(ext.config.ROLE_NAME_SUPER_ADMIN)
+    admin_role_id       = ext.db_role_repository.get_role_id(ext.config.ROLE_NAME_ADMIN)
+
+    if account["role_id"] == super_admin_role_id:
         flash("You cannot change the role of a Super Admin.", "warning")
         return redirect(url_for("admin.assign_role"))
 
-    if ext.database_handler.get_user(account_id)["role_id"] == ext.database_handler.get_role_id(ext.config.ROLE_NAME_ADMIN):
+    if account["role_id"] == admin_role_id:
         flash("You cannot change the role of an Admin.", "warning")
         return redirect(url_for("admin.assign_role"))
 
-    role_id = ext.database_handler.get_role_id(role_name=selected_role)
-    ext.database_handler.update_user_role(user_id=account_id, role_id=role_id)
+    role_id = ext.db_role_repository.get_role_id(role_name=selected_role)
+    ext.db_account_repository.update_role(user_id=account_id, role_id=role_id)
     flash("Role assigned successfully.", "success")
     return redirect(url_for("admin.admin_panel"))
 
@@ -88,14 +92,14 @@ def create_role():
                                id=current_user.id,
                                dict_permissions=ext.config.DICT_PERMISSIONS_BY_TYPE)
 
-    role_name            = str(request.form.get("role_name"))
+    role_name             = str(request.form.get("role_name"))
     list_permissions_name = request.form.getlist("permissions")
 
     if not role_name:
         flash("Please enter role name.", "warning")
         return redirect(url_for("admin.create_role"))
 
-    if ext.database_handler.role_exists(role_name):
+    if ext.db_role_repository.role_exists(role_name):
         flash("This role already exists.", "error")
         return redirect(url_for("admin.create_role"))
 
@@ -120,17 +124,17 @@ def edit_role(role_name: str):
                                current_role_name=role_name)
 
     new_role_name         = str(request.form.get("role_name"))
-    list_permissions_name  = request.form.getlist("permissions")
+    list_permissions_name = request.form.getlist("permissions")
 
     if not new_role_name:
         flash("Please enter role name.", "warning")
         return redirect(url_for("admin.create_role"))
 
-    if ext.database_handler.role_exists(new_role_name):
+    if ext.db_role_repository.role_exists(new_role_name):
         flash("This role already exists.", "error")
         return redirect(url_for("admin.create_role"))
 
-    role_id = ext.database_handler.get_role_id(role_name=role_name)
+    role_id = ext.db_role_repository.get_role_id(role_name=role_name)
     try:
         ext.permission_manager.edit_role(role_id=role_id,
                                          new_role_name=new_role_name,
@@ -152,7 +156,7 @@ def delete_role(role_name: str):
         flash(f"You cannot delete this role - It is a default role", "warning")
         return redirect(url_for("admin.role_permission_manager"))
 
-    role_id = ext.database_handler.get_role_id(role_name=role_name)
+    role_id = ext.db_role_repository.get_role_id(role_name=role_name)
     ext.permission_manager.delete_role(role_id=role_id)
     flash(f"Role '{role_name}' deleted successfully.", "success")
     return redirect(url_for("admin.role_permission_manager"))

@@ -1,74 +1,50 @@
 from flask_login import UserMixin
-from Data.database_handler import DatabaseHandler
-from utils.utils import Utils
-from config import Config
+import extensions as ext
+
 
 class User(UserMixin):
-    def __init__(self, user_id:int):
-        # init object
-        self.database_handler = DatabaseHandler()
-        self.config = Config()
-        self.utils = Utils()
+    def __init__(self, user_id: int):
+        self._db_account = ext.db_account_repository
+        self._db_role    = ext.db_role_repository
 
-        # init parameters
-        user = self.database_handler.get_user(user_id=user_id)
-        if user is None:
-            raise ValueError(f"User with id {user_id} not found")
-        
         self.id = user_id
-        self.username = user["username"]
-        self.name = user["name"]
-        self.email = user["email"]
-        self.email_verified = user["email_verified"]
-        self.pay = user["pay"]
-        self.role_id = user["role_id"]
+        self._load_from_db()
 
-        self.role_name = self.database_handler.get_role_name(role_id=self.role_id)
-        self._permissions = None
+    # ── Flask-Login ──────────────────────────────────────────────── #
 
-    ###############################
-    #_________Flask-Login_________#
-    ###############################
-
-    # is_authenticated()
-    # is_anonymous()
-    # is_active()
-
-    def get_id(self):
+    def get_id(self) -> str:
         return str(self.id)
-    
 
-    def reload_data(self):
-        user = self.database_handler.get_user(user_id=self.id)
-        
-        self.username = user["username"]
-        self.name = user["name"]
-        self.email = user["email"]
+    # ── Data loading ─────────────────────────────────────────────── #
+
+    def _load_from_db(self) -> None:
+        """Fetch all user fields in ONE query."""
+        user = self._db_account.get_by_id(self.id)   # ← une seule requête
+        if user is None:
+            raise ValueError(f"User with id {self.id} not found")
+
+        self.username       = user["username"]
+        self.name           = user["name"]
+        self.email          = user["email"]
         self.email_verified = user["email_verified"]
-        self.pay = user["pay"]
-        self.role_id = user["role_id"]
+        self.pay            = user["pay"]
+        self.role_id        = user["role_id"]
+        self.role_name      = self._db_role.get_role_name(role_id=self.role_id)
+        self._permissions: list[str] | None = None
 
-        self.role_name = self.database_handler.get_role_name(role_id=self.role_id)
-        self.load_permissions()
-    
-    ################################
-    #________Permissions___________#
-    ################################
+    def reload_data(self) -> None:
+        self._load_from_db()
 
-    def load_permissions(self):
-        self.role_name = self.database_handler.get_role_name(role_id=self.role_id)
-        list_permission_id = self.database_handler.get_list_permission_id(self.role_id)
-        print(list_permission_id)
-        self._permissions = []
-        for permission_id in list_permission_id:
-            permission_name = self.database_handler.get_permission_name(permission_id=permission_id)
-            self._permissions.append(permission_name)
+    # ── Permissions ──────────────────────────────────────────────── #
+
+    def load_permissions(self) -> None:
+        permission_ids = self._db_role.get_permission_ids_for_role(self.role_id)
+        self._permissions = [
+            self._db_role.get_permission_name(permission_id=pid)
+            for pid in permission_ids
+        ]
 
     def has_permission(self, permission_name: str) -> bool:
-        self.reload_data()
         if self._permissions is None:
             self.load_permissions()
-
-        print("User permissions:", self._permissions)
-        print("Checking:", permission_name)
         return permission_name in self._permissions

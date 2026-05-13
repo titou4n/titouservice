@@ -67,11 +67,11 @@ def get_stock_market_data(user_id: int) -> tuple[dict | None, str | None]:
 
     data = {
         "prices":                     prices_data["values"],
-        "pay_of_account":             round(ext.database_handler.get_pay(user_id), 2),
+        "pay_of_account":             round(ext.db_account_repository.get_pay_by_id(user_id), 2),
         "sum_stock_number":           ext.bank_manager.get_sum_transfers_from_id_symbol(user_id, SYMBOL),
         "current_price":              round(current_price, 2),
         "coefficient":                ext.config.STOCK_MARKET_COEFFICIENT,
-        "all_stock_market_transfers": ext.database_handler.get_all_stock_market_transfers_from_id_symbol(user_id, SYMBOL),
+        "all_stock_market_transfers": ext.db_bank_repository.get_stock_transfers_by_account_and_symbol(user_id, SYMBOL),
     }
     return data, None
 

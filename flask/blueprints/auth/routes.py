@@ -21,7 +21,7 @@ def login():
     if request.method == 'GET':
         return render_template('auth/login.html')
 
-    username = str(request.form['username'])
+    username     = str(request.form['username'])
     raw_password = str(request.form['password'])
 
     user_id, error = authenticate_user(username, raw_password)
@@ -31,12 +31,11 @@ def login():
 
     ext.session_manager.send_session(user_id=user_id)
 
-    if ext.database_handler.get_user_preferences_2fa(user_id=user_id):
+    if ext.db_account_repository.get_twofa_enabled(user_id=user_id):
         return redirect('/two_factor_authentication/')
 
     user = User(user_id)
     login_user(user)
-    ext.session_manager.insert_metadata()
     return redirect('/home/')
 
 
@@ -73,7 +72,6 @@ def continue_as_a_visitor():
 @bp.route('/forgot_password/', methods=['GET', 'POST'])
 def forgot_password():
     if ext.session_manager.get_current_user_id() is not None:
-        ext.session_manager.insert_metadata()
         return redirect('/home/')
 
     if request.method == 'GET':
@@ -84,24 +82,24 @@ def forgot_password():
         flash('Username is required.')
         return render_template('auth/login.html')
 
-    user_id = ext.database_handler.get_id_from_username(username)
+    user_id = ext.db_account_repository.get_id_by_username(username=username)
     if user_id is None:
         flash("Username doesn't exist.")
         return render_template('auth/login.html')
 
-    user_email = ext.database_handler.get_email_from_id(user_id)
+    user_email = ext.db_account_repository.get_email_by_id(user_id)
     if user_email is None:
         flash("No email has been added.")
         return render_template('auth/login.html')
 
-    if not ext.database_handler.get_email_verified_from_id(user_id):
+    if not ext.db_account_repository.get_email_verified_by_id(user_id=user_id):
         flash("No email has been verified.")
         return render_template('auth/login.html')
 
     new_password = ext.utils.generate_password(size=20)
-    ext.database_handler.update_password(
-        user_id,
-        new_password=ext.hash_manager.generate_password_hash(new_password)
+    ext.db_account_repository.update_password(
+        user_id=user_id,
+        new_password_hash=ext.hash_manager.generate_password_hash(new_password)
     )
     ext.email_manager.send_new_password_code_with_html(user_id=user_id, new_password=new_password)
     flash(f"An email containing a new password has been sent to "
@@ -114,11 +112,11 @@ def forgot_password():
 @login_required
 def two_factor_authentication():
     user_id = ext.session_manager.get_current_user_id()
-    ext.database_handler.delete_old_code_hash()
+    ext.db_twofa_repository.delete_expired()
 
     if request.method == 'GET':
         if ext.twofa_manager.verif_need_to_sent_new_code(user_id=user_id):
-            ext.database_handler.delete_old_code_hash_from_user_id(user_id=user_id)
+            ext.db_twofa_repository.delete_by_user_id(user_id=user_id)
             ext.twofa_manager.send_code(user_id=user_id)
         flash(f"An email containing a two-factor authentication code has been sent to: "
               f"{ext.email_manager.get_hide_email(user_id=user_id)}")
@@ -130,8 +128,8 @@ def two_factor_authentication():
         flash("Your two-factor authentication sucess.")
 
         if current_user.email == ext.config.EMAIL_ADDRESS:
-            role_id = ext.database_handler.get_role_id(role_name=ext.config.ROLE_NAME_SUPER_ADMIN)
-            ext.database_handler.update_user_role(user_id=current_user.id, role_id=role_id)
+            role_id = ext.db_role_repository.get_role_id(role_name=ext.config.ROLE_NAME_SUPER_ADMIN)
+            ext.db_account_repository.update_role(user_id=user_id, role_id=role_id)
             flash("You are now a super administrator.")
             return redirect(url_for("admin.admin_panel"))
 
