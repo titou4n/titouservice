@@ -20,32 +20,33 @@ class Config:
 
     if not ENV_PROD:
         load_dotenv()
-
-    # ──────────────────────────── Helpers ───────────────────────────────── #
+    
+    #_______________________KEY_________________________#
 
     @staticmethod
-    def _read_secret(name: str) -> str | None:
-        """Read a Docker secret from /run/secrets/<name>."""
+    def read_secret(name):
         try:
-            return Path(f"/run/secrets/{name}").read_text().strip()
+            with open(f"/run/secrets/{name}") as f:
+                return f.read().strip()
         except FileNotFoundError:
             return None
 
-    @classmethod
-    def _get(cls, name: str) -> str:
-        """Return a secret (prod) or env var (dev); raise if missing."""
-        value = cls._read_secret(name) if cls.ENV_PROD else os.getenv(name)
-        if not value:
-            raise RuntimeError(f"Missing required secret / env var: {name!r}")
-        return value
+    SECRET_KEY = read_secret("secret_key") if ENV_PROD else os.getenv("SECRET_KEY")
+    if not SECRET_KEY:
+        raise RuntimeError("SECRET_KEY manquante")
     
-    # ─────────────────────────── Secret keys ────────────────────────────── #
-    # Resolved after class definition (see bottom of file)
-    SECRET_KEY: str
-    TWELVEDATA_API_KEY: str
-    OMDB_API_KEY: str
-    EMAIL_ADDRESS: str        = "titouservice.mail@gmail.com"
-    EMAIL_APP_PASSWORD: str
+    TWELVEDATA_API_KEY = read_secret("twelvedata_api_key") if ENV_PROD else os.getenv("TWELVEDATA_API_KEY")
+    if not TWELVEDATA_API_KEY:
+        raise RuntimeError("TWELVEDATA_API_KEY manquante")
+
+    OMDB_API_KEY = read_secret("omdb_api_key") if ENV_PROD else os.getenv("OMDB_API_KEY")
+    if not OMDB_API_KEY:
+        raise RuntimeError("OMDB_API_KEY manquante")
+    
+    EMAIL_ADDRESS = "titouservice.mail@gmail.com"
+    EMAIL_APP_PASSWORD = read_secret("email_app_password") if ENV_PROD else os.getenv("EMAIL_APP_PASSWORD")
+    if not EMAIL_APP_PASSWORD:
+        raise RuntimeError("EMAIL_APP_PASSWORD manquante")
 
     # ──────────────────────────── Paths ─────────────────────────────────── #
 
@@ -222,12 +223,3 @@ class Config:
         "user":        LIST_USER_PERMS,
         "visitor":     LIST_VISITOR_PERMS,
     }
-
-
-
-
-# Resolve secrets now that the class is fully built and _get works correctly
-Config.SECRET_KEY          = Config._get("SECRET_KEY")
-Config.TWELVEDATA_API_KEY  = Config._get("TWELVEDATA_API_KEY")
-Config.OMDB_API_KEY        = Config._get("OMDB_API_KEY")
-Config.EMAIL_APP_PASSWORD  = Config._get("EMAIL_APP_PASSWORD")
