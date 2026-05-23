@@ -124,7 +124,6 @@ def public_view(token: str):
         abort(404)
     return render_template(
         'emergency_information/public_view.html',
-        id=current_user.id,
         record=record,
     )
 
