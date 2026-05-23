@@ -2,8 +2,8 @@
 {% block content %}
 <nav>
     <ul>
-        <li><a href="{{ url_for('api.api_home') }}">API</a></li>
-        <li><a class="active" href="{{ url_for('api.api_search_movie') }}">Movie Database</a></li>
+        <li><a href="{{ url_for('movie_information.movie_information_home') }}">Movie Information Home</a></li>
+        <li><a href="{{ url_for('movie_information.search_movie') }}">Movie Database</a></li>
         <li><a href="{{ url_for('main.home') }}">Back to Home</a></li>
     </ul>
 </nav>
@@ -68,7 +68,7 @@
             <h4>{{ movie_search['movie_title'] }}</h4>
             <form method="post">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <a href="{{ url_for('api.api_infos_movie', movie_title=movie_search['movie_title']) }}" type="submit">View Details →</a>
+                <a href="{{ url_for('movie_information.infos_movie', movie_title=movie_search['movie_title']) }}" type="submit">View Details →</a>
             </form>
         </div>
     </div>

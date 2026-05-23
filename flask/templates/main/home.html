@@ -74,19 +74,30 @@
 <section id="first-row" class="mid">
 
   <div class="finz">
-    <h4>API Documentation</h4>
-    <p>An API (Application Programming Interface) allows your applications to connect with our services and exchange data securely. Explore our API documentation and start integrating today.</p>
-    <form action="{{ url_for('api.api_home') }}" method="get">
-      <button class="button" type="submit">API Docs</button>
+    <h4>Movie Information</h4>
+    <p>Movie Information is a module designed for viewing and exploring detailed information about movies, such as synopses, cast, directors, and ratings.</p>
+    <form action="{{ url_for('movie_information.movie_information_home') }}" method="get">
+      <button class="button" type="submit">Movie information</button>
     </form>
   </div>
 
+</section>
+
+<section id="first-row" class="mid">
+
   <div class="finz">
     <h4>Job Tracker</h4>
-    <p>Helps you stay organized when looking for an internship, a job, or an apprenticeship.
-    <br>You can track all your applications in real time in one place</p>
+    <p>Job Tracker is a module designed to centralize, track, and efficiently manage job applications, opportunities, and other aspects of the job search process.</p>
     <form action="{{ url_for('job_tracker.dashboard.dashboard') }}" method="get">
       <button class="button" type="submit">See JobTrack</button>
+    </form>
+  </div>
+  
+  <div class="finz">
+    <h4>Emergency Information</h4>
+    <p>Emergency Information is a centralized module that allows you to quickly view, manage, and update essential information in the event of an emergency.</p>
+    <form action="{{ url_for('emergency_information.dashboard') }}" method="get">
+      <button class="button" type="submit">See module</button>
     </form>
   </div>
 

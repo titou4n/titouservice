@@ -5,7 +5,7 @@ import requests
 from flask import current_app
 
 
-def search_movie(title: str) -> tuple[dict | None, str | None]:
+def search_movie_by_title(title: str) -> tuple[dict | None, str | None]:
     """
     Interroge OMDB pour un titre de film.
     Retourne (movie_data: dict, error: str|None).

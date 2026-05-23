@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class RolesPermissionsSeeder:
     def __init__(self) -> None:
         self._db     = ext.db_connection
-        self._config = ext.config
+        self._permissions = ext.permissions
 
     def run(self) -> None:
         self._seed_roles()
@@ -21,7 +21,7 @@ class RolesPermissionsSeeder:
 
     def _seed_roles(self) -> None:
         with self._db.connect() as conn:
-            for role_name in self._config.LIST_DEFAULT_ROLES:
+            for role_name in self._permissions.LIST_DEFAULT_ROLES:
                 conn.execute(
                     """
                     INSERT OR IGNORE INTO roles (name)
@@ -33,7 +33,7 @@ class RolesPermissionsSeeder:
 
     def _seed_permissions(self) -> None:
         with self._db.connect() as conn:
-            for permission_name in self._config.LIST_ALL_PERMISSIONS:
+            for permission_name in self._permissions.LIST_ALL_PERMISSIONS:
                 conn.execute(
                     """
                     INSERT OR IGNORE INTO permissions (name)
@@ -57,7 +57,7 @@ class RolesPermissionsSeeder:
             for row in rows_permissions: 
                 permissions[row["name"]] = row["id"]
 
-            for role_name, permission_names in self._config.DICT_ROLE_PERMISSION.items():
+            for role_name, permission_names in self._permissions.DICT_ROLE_PERMISSION.items():
 
                 role_id = roles.get(role_name)
 
