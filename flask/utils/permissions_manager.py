@@ -1,5 +1,6 @@
 import extensions as ext
 from utils.utils import Utils
+from flask_login import current_user
 
 class PermissionsManager():
     def __init__(self):
@@ -7,6 +8,35 @@ class PermissionsManager():
         self.db_role = ext.db_role_repository
         self.config = ext.config
         self.utils = Utils()
+
+    def _has_role(self, role: str) -> bool:
+        """Return True if the authenticated user has the given role."""
+        if not current_user or not current_user.is_authenticated:
+            return False
+        # Adapt .roles to your project's User model attribute
+        user_roles = getattr(current_user, 'roles', [])
+        if isinstance(user_roles, str):
+            user_roles = [user_roles]
+        return role in user_roles
+
+    def is_user(self) -> bool:
+        return current_user.is_authenticated
+
+    def is_admin(self) -> bool:
+        """
+        Check if the given account has admin or super_admin role.
+        """
+
+        role_id = self.db_account.get_role_id_by_id(current_user.id)
+
+        admin_role_id = self.db_role.get_role_id(role_name="admin")
+        super_admin_role_id = self.db_role.get_role_id(role_name="super_admin")
+
+        return role_id in (admin_role_id, super_admin_role_id)
+    
+
+
+    
 
     def get_dict(self) -> dict[str, list[str]]:
         permissions_dict: dict[str, list[str]] = {}

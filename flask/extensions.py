@@ -10,14 +10,15 @@ from Data.connection import DatabaseConnection
 from Data.seeders.roles_permissions import RolesPermissionsSeeder
 from Data.seeders.accounts_seeder   import AccountsSeeder
 
-from Data.repositories.account_repository   import AccountRepository
-from Data.repositories.bank_repository      import BankRepository
-from Data.repositories.movie_repository     import MovieRepository
-from Data.repositories.post_repository      import PostRepository
-from Data.repositories.role_repository      import RoleRepository
-from Data.repositories.session_repository   import SessionRepository
-from Data.repositories.social_repository    import SocialRepository
-from Data.repositories.twofa_repository     import TwoFARepository
+from Data.repositories.account_repository           import AccountRepository
+from Data.repositories.bank_repository              import BankRepository
+from Data.repositories.movie_repository             import MovieRepository
+from Data.repositories.post_repository              import PostRepository
+from Data.repositories.role_repository              import RoleRepository
+from Data.repositories.session_repository           import SessionRepository
+from Data.repositories.social_repository            import SocialRepository
+from Data.repositories.twofa_repository             import TwoFARepository
+from Data.repositories.emergency_information_repository import EmergencyInformationRepository
 
 from config import Config
 from utils.utils import Utils
@@ -30,6 +31,9 @@ from utils.twofa_manager import TwofaManager
 from utils.twelvedata_manager import TwelveDataManager
 from utils.stock_market_manager import StockMarketManager
 from utils.view_data import ViewDataWithMatplolib
+from utils.decorators import *
+
+from permissions import Permissions
 
 # Flask Extensions
 login_manager = LoginManager()
@@ -37,6 +41,7 @@ csrf = CSRFProtect()
 
 # Config
 config = Config()
+permissions = Permissions()
 
 # Data
 #database_handler = DatabaseHandler()
@@ -68,8 +73,17 @@ db_bank_repository: BankRepository = BankRepository(db_connection)
 db_social_repository: SocialRepository = SocialRepository(db_connection)
 db_post_repository: PostRepository = PostRepository(db_connection)
 db_movie_repository: MovieRepository = MovieRepository(db_connection)
+db_emergency_information_repository: EmergencyInformationRepository = EmergencyInformationRepository(db_connection)
 
 database_job_tracker = DatabaseJobTracker()
+
+# ------------------------------------------------------------------ #
+# Service singletons
+# ------------------------------------------------------------------ #
+
+from blueprints.emergency_information.service import EmergencyInformationService
+
+emergency_information_service: EmergencyInformationService = EmergencyInformationService(db_emergency_information_repository)
 
 # Manager
 session_manager = SessionManager()
@@ -84,7 +98,6 @@ twelve_data_manager = TwelveDataManager()
 # Utils/Tools
 utils = Utils()
 view_data = ViewDataWithMatplolib()
-
 
 # Initialise seeders
 _roles_permissions_seeders = RolesPermissionsSeeder()

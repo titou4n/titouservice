@@ -2,7 +2,7 @@
 # Préfixe : /social_network  (défini dans create_app)
 
 from flask import render_template, redirect, request, flash, url_for
-from flask_login import login_required
+from flask_login import login_required, current_user
 
 from blueprints.social_network import bp
 from utils.decorators import require_permission
@@ -36,7 +36,7 @@ def _resolve_followers(user_id: int) -> list[tuple]:
 @login_required
 def social_network_home():
     return render_template('social_network/social_network_home.html',
-                           id=ext.session_manager.get_current_user_id())
+                           id=current_user.id)
 
 
 # ── Amis / Abonnements ───────────────────────────────────────────────────────
@@ -45,13 +45,11 @@ def social_network_home():
 @bp.route('/friends/', methods=['GET', 'POST'])
 @login_required
 def social_network_friends():
-    user_id = ext.session_manager.get_current_user_id()
-
     if request.method == 'GET':
         return render_template('social_network/social_network_friends.html',
-            id=user_id,
-            all_followers=_resolve_followers(user_id),
-            all_followeds=_resolve_followeds(user_id),
+            id=current_user.id,
+            all_followers=_resolve_followers(current_user.id),
+            all_followeds=_resolve_followeds(current_user.id),
         )
 
     # POST : recherche d'un ami par nom
@@ -73,15 +71,13 @@ def social_network_friends():
 @login_required
 @require_permission("view_other_profile")
 def social_network_user_profile(id_account: int):
-    user_id = ext.session_manager.get_current_user_id()
-
     # Redirection vers son propre profil si c'est soi-même
-    if user_id == id_account:
+    if current_user.id == id_account:
         return redirect(url_for('settings.account_home'))
 
-    id1_follow_id2 = ext.db_social_repository.is_following(user_id, id_account)
+    id1_follow_id2 = ext.db_social_repository.is_following(current_user.id, id_account)
     return render_template('social_network/social_network_user_profile.html',
-        id=user_id,
+        id=current_user.id,
         id1_follow_id2=id1_follow_id2,
         user_profile_id=id_account,
         name=ext.db_account_repository.get_name_by_id(id_account),
@@ -92,17 +88,15 @@ def social_network_user_profile(id_account: int):
 @login_required
 @require_permission("follow_profile")
 def social_network_follow_action(id_followed: int):
-    user_id = ext.session_manager.get_current_user_id()
-
-    if id_followed == user_id:
+    if id_followed == current_user.id:
         flash("You cannot follow yourself.")
         return redirect(url_for('social_network.social_network_friends'))
 
-    if ext.db_social_repository.is_following(user_id, id_followed):
+    if ext.db_social_repository.is_following(current_user.id, id_followed):
         flash("You are already following this person.")
         return redirect(url_for('social_network.social_network_friends'))
 
-    ext.db_social_repository.follow(user_id, id_followed, ext.utils.get_datetime_isoformat())
+    ext.db_social_repository.follow(current_user.id, id_followed, ext.utils.get_datetime_isoformat())
     return redirect(url_for('social_network.social_network_friends'))
 
 
@@ -110,13 +104,11 @@ def social_network_follow_action(id_followed: int):
 @login_required
 @require_permission("follow_profile")
 def social_network_unfollow_action(id_unfollowed: int):
-    user_id = ext.session_manager.get_current_user_id()
-
-    if id_unfollowed == user_id:
+    if id_unfollowed == current_user.id:
         flash("You cannot unfollow yourself.")
         return redirect(url_for('social_network.social_network_friends'))
 
-    ext.db_social_repository.unfollow(user_id, id_unfollowed)
+    ext.db_social_repository.unfollow(current_user.id, id_unfollowed)
     flash("You are no longer following this person.")
     return redirect(url_for('social_network.social_network_friends'))
 
@@ -127,21 +119,19 @@ def social_network_unfollow_action(id_unfollowed: int):
 @bp.route('/chat/', methods=['GET', 'POST'])
 @login_required
 def social_network_chat():
-    user_id       = ext.session_manager.get_current_user_id()
-    all_followeds = _resolve_followeds(user_id)
-    return render_template('social_network/social_network_chat.html', id=user_id, all_followeds=all_followeds)
+    all_followeds = _resolve_followeds(current_user.id)
+    return render_template('social_network/social_network_chat.html', id=current_user.id, all_followeds=all_followeds)
 
 
 @bp.route('/chat/<int:id_receiver>', methods=['GET', 'POST'])
 @bp.route('/chat/<int:id_receiver>/', methods=['GET', 'POST'])
 @login_required
 def social_network_chat_selected(id_receiver: int):
-    user_id       = ext.session_manager.get_current_user_id()
-    all_followeds = _resolve_followeds(user_id)
-    messages      = ext.db_social_repository.get_messages_between(user_id, id_receiver)
+    all_followeds = _resolve_followeds(current_user.id)
+    messages      = ext.db_social_repository.get_messages_between(current_user.id, id_receiver)
 
     return render_template('social_network/social_network_chat.html',
-        id=user_id,
+        id=current_user.id,
         all_followeds=all_followeds,
         id_receiver=id_receiver,
         messages=messages,
@@ -153,13 +143,11 @@ def social_network_chat_selected(id_receiver: int):
 @login_required
 @require_permission("create_own_messages")
 def social_network_send_message(id_receiver: int):
-    user_id = ext.session_manager.get_current_user_id()
-
     if request.method == 'GET':
-        all_followeds = _resolve_followeds(user_id)
-        messages      = ext.db_social_repository.get_messages_between(user_id, id_receiver)
+        all_followeds = _resolve_followeds(current_user.id)
+        messages      = ext.db_social_repository.get_messages_between(current_user.id, id_receiver)
         return render_template('social_network/social_network_chat.html',
-            id=user_id,
+            id=current_user.id,
             all_followeds=all_followeds,
             id_receiver=id_receiver,
             messages=messages,
@@ -170,5 +158,5 @@ def social_network_send_message(id_receiver: int):
         flash('Message is required.')
         return redirect(url_for('social_network.social_network_chat'))
 
-    ext.db_social_repository.send_message(user_id, id_receiver, message, ext.utils.get_datetime_isoformat())
+    ext.db_social_repository.send_message(current_user.id, id_receiver, message, ext.utils.get_datetime_isoformat())
     return redirect(url_for('social_network.social_network_chat_selected', id_receiver=id_receiver))

@@ -42,7 +42,7 @@ class BankManager():
         self.db_bank.insert_transfer(sender_id, receiver_id, transfer_value, self.utils.get_datetime_isoformat())
 
     def get_sum_transfers_from_id_symbol(self, user_id, symbol):
-        stock_market_transfers_from_symbol = self.db_bank.get_stock_transfers_by_account_and_symbol(id=user_id, symbol=symbol)
+        stock_market_transfers_from_symbol = self.db_bank.get_stock_transfers_by_account_and_symbol(account_id=user_id, symbol=symbol)
         sum = 0
         for transfer in stock_market_transfers_from_symbol:
             if transfer["type"] == "buy":

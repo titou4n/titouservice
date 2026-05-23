@@ -1,4 +1,4 @@
 # blueprints/api/__init__.py
 from flask import Blueprint
 
-bp = Blueprint('api', __name__)
+bp = Blueprint('movie_information', __name__)

@@ -10,7 +10,7 @@ Responsible for:
 import logging
 import extensions as ext
 from Data.connection import DatabaseConnection
-from Data.schema import accounts, auth, finance, roles, social
+from Data.schema import accounts, auth, finance, roles, social, emergency_information
 from Data.seeders.roles_permissions import RolesPermissionsSeeder
 import sqlite3
 
@@ -55,6 +55,7 @@ class DatabaseManager:
             auth,
             finance,
             social,
+            emergency_information,
         ]
         total = 0
         for module in all_ddl_modules:

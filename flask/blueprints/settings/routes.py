@@ -16,10 +16,9 @@ import extensions as ext
 @bp.route('/', methods=['GET', 'POST'])
 @login_required
 def settings_home():
-    user_id = ext.session_manager.get_current_user_id()
     return render_template('settings/settings_home.html',
-                           id=user_id,
-                           name=ext.db_account_repository.get_name_by_id(user_id))
+                           id=current_user.id,
+                           name=ext.db_account_repository.get_name_by_id(current_user.id))
 
 
 # ── Compte ──────────────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 # Préfixe : /chatroom  (défini dans create_app)
 
 from flask import render_template, redirect, request, flash, url_for
-from flask_login import login_required
+from flask_login import login_required, current_user
 
 from blueprints.chatroom import bp
 from utils.decorators import require_permission
@@ -14,16 +14,14 @@ import extensions as ext
 @login_required
 @require_permission("view_content")
 def chatroom():
-    user_id = ext.session_manager.get_current_user_id()
-    posts   = ext.db_post_repository.get_all()
 
-    # Résolution des noms : { user_id: name }
+    posts   = ext.db_post_repository.get_all()
     names = {
         post["user_id"]: ext.db_account_repository.get_name_by_id(post["user_id"])
         for post in posts
     }
 
-    return render_template('chatroom/chatroom_home.html', id=user_id, posts=posts, names=names)
+    return render_template('chatroom/chatroom_home.html', id=current_user.id, posts=posts, names=names)
 
 
 @bp.route('/create_post', methods=['GET', 'POST'])
@@ -31,10 +29,9 @@ def chatroom():
 @login_required
 @require_permission("create_content")
 def create_post():
-    user_id = ext.session_manager.get_current_user_id()
 
     if request.method == 'GET':
-        return render_template('chatroom/chatroom_create_post.html', id=user_id)
+        return render_template('chatroom/chatroom_create_post.html', id=current_user.id)
 
     title   = str(request.form['title'])
     content = str(request.form['content'])
@@ -43,7 +40,7 @@ def create_post():
         flash('Error: Title and Content are required.')
         return redirect(url_for('chatroom.create_post'))
 
-    ext.db_post_repository.create(user_id, title, content)
+    ext.db_post_repository.create(current_user.id, title, content)
     return redirect(url_for('chatroom.chatroom'))
 
 
