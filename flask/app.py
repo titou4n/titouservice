@@ -61,4 +61,9 @@ def create_app(config_object=Config):
 
 if __name__ == '__main__' and not ext.config.ENV_PROD:
     app = create_app()
-    app.run(debug=True, host="127.0.0.1", port=8080, use_reloader=False)
+    app.run(
+        debug=bool(app.config.get("DEBUG", False)),
+        host="127.0.0.1",
+        port=8080,
+        use_reloader=False
+    )
