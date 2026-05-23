@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS emergency_information (
     id                           INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id                      INTEGER NOT NULL UNIQUE,
 
-    first_name                   TEXT    NOT NULL,
-    last_name                    TEXT    NOT NULL,
+    first_name                   TEXT,
+    last_name                    TEXT,
     age                          INTEGER,
     date_of_birth                TEXT,
     gender                       TEXT,

@@ -25,7 +25,7 @@ def validate_date_of_birth(value: str):
 
 
 def validate_blood_type(value: str):
-    if not value:
+    if not value or value == "Unknown":
         return None, None
     value = value.strip().upper()
     if value not in ext.config.BLOOD_TYPES:
