@@ -21,7 +21,10 @@ def create_app(config_object=Config):
 
     @ext.login_manager.user_loader
     def load_user(user_id):
-        return User(int(user_id))
+        try:
+            return User(int(user_id))
+        except Exception:
+            return None
 
     # ── Context processor global ─────────────────────────────────────────
     @app.context_processor
