@@ -6,7 +6,7 @@ def owns_record(record:EmergencyInformation) -> bool:
     """Return True if the current user owns the emergency information record."""
     if not current_user.is_authenticated:
         return False
-    return record['user_id'] == current_user.id
+    return record.user_id == current_user.id
 
 
 def can_view_record(record:EmergencyInformation) -> bool:
