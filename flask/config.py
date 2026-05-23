@@ -12,7 +12,7 @@ class Config:
 
     # ─────────────────────────── Environment ────────────────────────────── #
 
-    ENV_PROD: bool = False
+    ENV_PROD: bool = True
 
     FLASK_ENV: str = "production" if ENV_PROD else "development"
     DEBUG: bool = not ENV_PROD
@@ -95,7 +95,7 @@ class Config:
 
     # ─────────────────────── Database reset flags ───────────────────────── #
 
-    NEED_TO_RESET_DB_EXCEPT_ACCOUNT: bool        = False
+    NEED_TO_RESET_DB_EXCEPT_ACCOUNT: bool        = True
     NEED_TO_RESET_ALL_DB: bool                   = False
     NEED_TO_RESET_ROLES_PERMISSIONS_TABLES: bool = True
 
