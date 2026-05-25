@@ -111,7 +111,7 @@ class Config:
 
     NEED_TO_RESET_DB_EXCEPT_ACCOUNT: bool        = False
     NEED_TO_RESET_ALL_DB: bool                   = True
-    NEED_TO_RESET_ROLES_PERMISSIONS_TABLES: bool = False
+    NEED_TO_RESET_ROLES_PERMISSIONS_TABLES: bool = True
 
     # Built-in accounts - SECURITY: disabled by default
     CREATE_SEEDED_ACCOUNTS: bool = False
