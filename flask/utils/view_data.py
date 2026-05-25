@@ -2,12 +2,10 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-from utils.utils import Utils
 import extensions as ext
 
 class ViewDataWithMatplolib():
     def __init__(self):
-        self.utils = Utils()
         self.db_account = ext.db_account_repository
         self.color = "#9B7ED8"
         self.path = "connections_per_day.png"
@@ -20,7 +18,7 @@ class ViewDataWithMatplolib():
 
         connections_per_day: dict[str, int] = {}
         for record in data:
-            date = self.utils.format_date(record["date_connected"])
+            date = ext.utils.format_date(record["date_connected"])
             connections_per_day[date] = connections_per_day.get(date, 0) + 1
 
         self.get_graph_bar_connection_per_day(connections_per_day=connections_per_day, output_path=output_path)
@@ -33,7 +31,7 @@ class ViewDataWithMatplolib():
 
         connections_per_day: dict[str, int] = {}
         for record in data:
-            date = self.utils.format_date(record["date_connected"])
+            date = ext.utils.format_date(record["date_connected"])
             connections_per_day[date] = connections_per_day.get(date, 0) + 1
 
         match type_graph:

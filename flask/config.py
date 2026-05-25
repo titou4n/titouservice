@@ -12,7 +12,7 @@ class Config:
 
     # ─────────────────────────── Environment ────────────────────────────── #
 
-    ENV_PROD: bool = True
+    ENV_PROD: bool = False
 
     FLASK_ENV: str = "production" if ENV_PROD else "development"
     DEBUG: bool = not ENV_PROD
@@ -93,11 +93,17 @@ class Config:
     # 2FA code validity window
     TWOFA_TIMELAPS_MINUTES: int = 15
 
+    # Password generation
+    PASSWORD_GENERATION_LENGTH: int = 20
+
     # ─────────────────────── Database reset flags ───────────────────────── #
 
     NEED_TO_RESET_DB_EXCEPT_ACCOUNT: bool        = True
     NEED_TO_RESET_ALL_DB: bool                   = False
     NEED_TO_RESET_ROLES_PERMISSIONS_TABLES: bool = True
+
+    # Built-in accounts - SECURITY: disabled by default
+    CREATE_SEEDED_ACCOUNTS: bool = False
 
     # ──────────────────────── Built-in accounts ─────────────────────────── #
 
@@ -113,8 +119,8 @@ class Config:
     NAME_VISITOR: str = "Visitor"
 
     # Debug user (development only)
-    USERNAME_DEBUG: str    = "11"
-    PASSWORD_DEBUG: str    = "11"
+    USERNAME_DEBUG: str    = ""
+    PASSWORD_DEBUG: str    = ""
     ROLE_NAME_DEBUG: str   = ROLE_NAME_SUPER_ADMIN
     NAME_DEBUG : str       = "DEBUG"
 

@@ -1,11 +1,9 @@
-from utils.utils import Utils
 import extensions as ext
 
 class BankManager():
     def __init__(self):
         self.db_account = ext.db_account_repository
         self.db_bank    = ext.db_bank_repository
-        self.utils      = Utils()
 
     def withdrawl(self, user_id:int, amount:float):
         if amount <= 0:
@@ -39,7 +37,7 @@ class BankManager():
 
         self.db_account.update_pay(sender_id, new_pay_senders)
         self.db_account.update_pay(receiver_id, new_pay_receiver)
-        self.db_bank.insert_transfer(sender_id, receiver_id, transfer_value, self.utils.get_datetime_isoformat())
+        self.db_bank.insert_transfer(sender_id, receiver_id, transfer_value, ext.utils.get_datetime_isoformat())
 
     def get_sum_transfers_from_id_symbol(self, user_id, symbol):
         stock_market_transfers_from_symbol = self.db_bank.get_stock_transfers_by_account_and_symbol(account_id=user_id, symbol=symbol)

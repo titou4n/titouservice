@@ -4,16 +4,16 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Dépendances système
+# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Dépendances Python
+# Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Code
+# Copy application code
 COPY . .
 
 # Permissions
@@ -21,5 +21,5 @@ RUN chmod +x entrypoint.sh
 
 EXPOSE 5000
 
-# PRODUCTION SERVER
+# Production server
 CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:create_app()"]
