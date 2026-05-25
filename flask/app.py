@@ -2,6 +2,7 @@ import logging
 from flask import Flask
 from config import Config
 import extensions as ext
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 logging.basicConfig(
     level=logging.INFO,
@@ -13,6 +14,8 @@ logger = logging.getLogger(__name__)
 def create_app(config_object=Config):
     app = Flask(__name__, template_folder='templates', static_folder='static')
     app.config.from_object(config_object)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
 
     # ── Extensions Flask ────────────────────────────────────────────────
     ext.csrf.init_app(app)
