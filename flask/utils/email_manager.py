@@ -1,7 +1,12 @@
-import extensions as ext
+import logging
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from markupsafe import escape
+import extensions as ext
+
+logger = logging.getLogger(__name__)
+
 
 class EmailManager:
     def __init__(self):
@@ -12,61 +17,40 @@ class EmailManager:
         self.sender_email_address = self.config.EMAIL_ADDRESS
         self.sender_email_password = self.config.EMAIL_APP_PASSWORD
 
-    def get_hide_email(self, user_id:int) -> (str|None):
-        receiver_email_address = self.db_account.get_email_by_id(user_id=user_id)
-        if receiver_email_address is None:
-            return None
-        
-        email = str(receiver_email_address)
-        at_index = email.index('@')
-
-        number_char_visible = 3
-        visible = email[:number_char_visible]
-        domain = email[at_index:]
-
-        hidden_length = max(at_index - number_char_visible, 0)
-        hidden = '*' * hidden_length
-
-        return visible + hidden + domain
-
-    def send_email(self, receiver_email_address:str, subject:str, text:str):
-        message = MIMEText(text, "plain")
-        message["Subject"] = subject
-        message["From"] = self.sender_email_address
-        message["To"] = receiver_email_address
-
+    def get_hide_email(self, user_id: int) -> str | None:
         try:
-            with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10) as server:
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                server.login(self.sender_email_address, self.sender_email_password)
-                server.sendmail(
-                    self.sender_email_address,
-                    receiver_email_address,
-                    message.as_string()
-                )
+            receiver_email_address = self.db_account.get_email_by_id(user_id=user_id)
+            if not receiver_email_address:
+                return None
 
-            print(f"[TITOUSERVICE - INFO] Email sent to {receiver_email_address}")
+            email = str(receiver_email_address).strip()
+            if '@' not in email:
+                logger.warning("Invalid email format for user %s", user_id)
+                return None
 
+            at_index = email.index('@')
+            number_char_visible = 3
+            visible = email[:number_char_visible]
+            domain = email[at_index:]
+            hidden_length = max(at_index - number_char_visible, 0)
+            hidden = '*' * hidden_length
+
+            return visible + hidden + domain
         except Exception as e:
-            print("[TITOUSERVICE - ERROR] Error send_email() :", e)
+            logger.error("Error hiding email for user %s: %s", user_id, str(e))
+            return None
 
-    def send_email_with_html_content(self, user_id:int, subject:str, html_content:str):
-        receiver_email_address = self.db_account.get_email_by_id(user_id=user_id)
-
-        if receiver_email_address is None:
-            return False
-        
-        message = MIMEMultipart()
-        message["Subject"] = subject
-        message["From"] = self.sender_email_address
-        message["To"] = receiver_email_address
-
-        # Attach the HTML part
-        message.attach(MIMEText(html_content, "html"))
-
+    def send_email(self, receiver_email_address: str, subject: str, text: str) -> bool:
         try:
+            if not receiver_email_address or not subject or not text:
+                logger.warning("Missing required email parameters")
+                return False
+
+            message = MIMEText(text, "plain")
+            message["Subject"] = subject
+            message["From"] = self.sender_email_address
+            message["To"] = receiver_email_address
+
             with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10) as server:
                 server.ehlo()
                 server.starttls()
@@ -78,22 +62,68 @@ class EmailManager:
                     message.as_string()
                 )
 
-            print(f"[TITOUSERVICE - INFO] Email sent to {receiver_email_address}")
+            logger.info("Email sent successfully to %s", receiver_email_address)
             return True
 
+        except smtplib.SMTPException as e:
+            logger.error("SMTP error sending email to %s: %s", receiver_email_address, str(e))
+            return False
         except Exception as e:
-            print("[TITOUSERVICE - ERROR] Error send_email_with_html_content() :", e)
+            logger.error("Unexpected error sending email to %s: %s", receiver_email_address, str(e))
             return False
 
-    def send_two_factor_authentication_code_with_html(self, user_id:int, code:int):
-        name = self.db_account.get_name_by_id(user_id=user_id)
-        receiver_email_address = self.db_account.get_email_by_id(user_id=user_id)
+    def send_email_with_html_content(self, user_id: int, subject: str, html_content: str) -> bool:
+        try:
+            receiver_email_address = self.db_account.get_email_by_id(user_id=user_id)
 
-        if receiver_email_address is None:
+            if not receiver_email_address:
+                logger.warning("No email found for user %s", user_id)
+                return False
+
+            if not subject or not html_content:
+                logger.warning("Missing email subject or content for user %s", user_id)
+                return False
+
+            message = MIMEMultipart()
+            message["Subject"] = subject
+            message["From"] = self.sender_email_address
+            message["To"] = receiver_email_address
+            message.attach(MIMEText(html_content, "html"))
+
+            with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(self.sender_email_address, self.sender_email_password)
+                server.sendmail(
+                    self.sender_email_address,
+                    receiver_email_address,
+                    message.as_string()
+                )
+
+            logger.info("HTML email sent successfully to user %s", user_id)
+            return True
+
+        except smtplib.SMTPException as e:
+            logger.error("SMTP error sending HTML email to user %s: %s", user_id, str(e))
+            return False
+        except Exception as e:
+            logger.error("Unexpected error sending HTML email to user %s: %s", user_id, str(e))
             return False
 
-        subject = "Two-factor authentication code"
-        html_content = f"""
+    def send_two_factor_authentication_code_with_html(self, user_id: int, code: int) -> bool:
+        try:
+            name = self.db_account.get_name_by_id(user_id=user_id)
+            receiver_email_address = self.db_account.get_email_by_id(user_id=user_id)
+
+            if not receiver_email_address:
+                logger.warning("No email found for 2FA code for user %s", user_id)
+                return False
+
+            name = escape(name or "User")
+
+            subject = "Two-factor authentication code"
+            html_content = f"""
         <!DOCTYPE html>
         <html lang="en">
         <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#FAFAF8;">
@@ -119,7 +149,7 @@ class EmailManager:
                     color:#9B7ED8;
                     margin:20px 0;
                 ">
-                    {code}
+                    {escape(str(code))}
                 </p>
 
                 <p style="font-size:14px; color:#555;">
@@ -135,17 +165,27 @@ class EmailManager:
         </body>
         </html>
         """
-        return self.send_email_with_html_content(user_id=user_id, subject=subject, html_content=html_content)
-        
-    def send_new_password_code_with_html(self, user_id:int, new_password:int):
-        name = self.db_account.get_name_by_id(user_id=user_id)
-        receiver_email_address = self.db_account.get_email_by_id(user_id=user_id)
-
-        if receiver_email_address is None:
+            result = self.send_email_with_html_content(user_id=user_id, subject=subject, html_content=html_content)
+            if result:
+                logger.info("2FA code email sent to user %s", user_id)
+            return result
+        except Exception as e:
+            logger.error("Error sending 2FA email to user %s: %s", user_id, str(e))
             return False
-        
-        subject = "New Password"
-        html_content = f"""
+
+    def send_new_password_code_with_html(self, user_id: int, new_password: str) -> bool:
+        try:
+            name = self.db_account.get_name_by_id(user_id=user_id)
+            receiver_email_address = self.db_account.get_email_by_id(user_id=user_id)
+
+            if not receiver_email_address:
+                logger.warning("No email found for password reset for user %s", user_id)
+                return False
+
+            name = escape(name or "User")
+
+            subject = "New Password"
+            html_content = f"""
         <!DOCTYPE html>
         <html lang="en">
         <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#FAFAF8;">
@@ -161,7 +201,7 @@ class EmailManager:
                 <h1 style="color:#9B7ED8;">Hello {name}</h1>
 
                 <p style="font-size:16px; color:#333;">
-                    Here your new password :
+                    Here is your new password:
                 </p>
 
                 <p style="
@@ -170,16 +210,14 @@ class EmailManager:
                     color:#9B7ED8;
                     margin:20px 0;
                 ">
-                    {new_password}
+                    {escape(new_password)}
                 </p>
 
                 <p style="font-size:16px; color:#333;">
-                    You can log in on the login page. Remember to change your password afterwards. 
+                    You can log in on the login page. Remember to change your password afterwards.
                 </p>
 
                 <p style="font-size:14px; color:#555;">
-                    You recently tried to log in from a new device, browser, or location.
-                    <br><br>
                     If this wasn't you, please change your password immediately.
                 </p>
 
@@ -190,4 +228,10 @@ class EmailManager:
         </body>
         </html>
         """
-        return self.send_email_with_html_content(user_id=user_id, subject=subject, html_content=html_content)
+            result = self.send_email_with_html_content(user_id=user_id, subject=subject, html_content=html_content)
+            if result:
+                logger.info("Password reset email sent to user %s", user_id)
+            return result
+        except Exception as e:
+            logger.error("Error sending password reset email to user %s: %s", user_id, str(e))
+            return False

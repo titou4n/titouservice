@@ -66,11 +66,10 @@ def account_change_email():
 @login_required
 @require_permission("edit_own_profile")
 def account_change_username():
-    user_id = ext.session_manager.get_current_user_id()
     if request.method == 'GET':
         return render_template('settings/account_change_username.html',
-                               id=user_id,
-                               username=ext.db_account_repository.get_username_by_id(user_id))
+                               id=current_user.id,
+                               username=ext.db_account_repository.get_username_by_id(current_user.id))
 
     new_username = str(request.form['new_username'])
     if not new_username:
@@ -81,7 +80,7 @@ def account_change_username():
         flash('This username is already taken !')
         return redirect(url_for('settings.account_change_username'))
 
-    ext.db_account_repository.update_username(user_id, new_username)
+    ext.db_account_repository.update_username(current_user.id, new_username)
     flash('Your username has been updated')
     return redirect(url_for('settings.account_home'))
 
@@ -91,15 +90,14 @@ def account_change_username():
 @login_required
 @require_permission("change_own_password")
 def account_change_password():
-    user_id = ext.session_manager.get_current_user_id()
     if request.method == 'GET':
-        return render_template('settings/account_change_password.html', id=user_id)
+        return render_template('settings/account_change_password.html', id=current_user.id)
 
     actual_password    = str(request.form['actual_password'])
     new_password       = str(request.form['new_password'])
     verif_new_password = str(request.form['verif_new_password'])
 
-    stored_hash = ext.db_account_repository.get_password_hash(user_id)
+    stored_hash = ext.db_account_repository.get_password_hash(current_user.id)
     if not ext.hash_manager.check_password(actual_password, stored_hash):
         flash('Password is not correct.')
         return redirect(url_for('settings.account_change_password'))
@@ -108,7 +106,7 @@ def account_change_password():
         flash("Passwords must be identical.")
         return redirect(url_for('settings.account_change_password'))
 
-    ext.db_account_repository.update_password(user_id, ext.hash_manager.generate_password_hash(new_password))
+    ext.db_account_repository.update_password(current_user.id, ext.hash_manager.generate_password_hash(new_password))
     flash('Your password has been updated')
     return redirect(url_for('settings.account_home'))
 
@@ -118,11 +116,10 @@ def account_change_password():
 @login_required
 @require_permission("edit_own_profile")
 def account_change_name():
-    user_id = ext.session_manager.get_current_user_id()
     if request.method == 'GET':
         return render_template('settings/account_change_name.html',
-                               id=user_id,
-                               name=ext.db_account_repository.get_name_by_id(user_id))
+                               id=current_user.id,
+                               name=ext.db_account_repository.get_name_by_id(current_user.id))
 
     new_name = str(request.form['new_name'])
     if not new_name:
@@ -133,7 +130,7 @@ def account_change_name():
         flash('This name is already taken !')
         return redirect(url_for('settings.account_change_name'))
 
-    ext.db_account_repository.update_name(user_id, new_name)
+    ext.db_account_repository.update_name(current_user.id, new_name)
     flash('Your name has been updated')
     return redirect(url_for('settings.account_home'))
 
@@ -146,9 +143,8 @@ def delete_account():
     if request.method == 'GET':
         return redirect(url_for('settings.account_home'))
 
-    user_id = ext.session_manager.get_current_user_id()
-    ext.db_post_repository.delete_all_by_user_id(user_id)
-    ext.db_account_repository.delete(user_id)
+    ext.db_post_repository.delete_all_by_user_id(current_user.id)
+    ext.db_account_repository.delete(current_user.id)
     ext.session_manager.logout()
     flash('Your account was successfully deleted!')
     return redirect('/')
@@ -162,9 +158,8 @@ def upload_profile_picture():
     if request.method == 'GET':
         return redirect(url_for('settings.account_home'))
 
-    user_id = ext.session_manager.get_current_user_id()
     file = request.files.get('profile_picture')
-    save_profile_picture(user_id, file)
+    save_profile_picture(current_user.id, file)
     return redirect(url_for('settings.account_home'))
 
 
@@ -183,19 +178,18 @@ def profile_picture(user_id: int):
 @bp.route('/security/', methods=['GET', 'POST'])
 @login_required
 def security_home():
-    user_id  = ext.session_manager.get_current_user_id()
-    email    = ext.db_account_repository.get_email_by_id(user_id)
-    sessions = ext.db_session_repository.get_all_by_user_id(user_id=user_id)
+    email    = ext.db_account_repository.get_email_by_id(current_user.id)
+    sessions = ext.db_session_repository.get_all_by_user_id(user_id=current_user.id)
 
     return render_template('settings/security_home.html',
-                           id=user_id,
-                           username=ext.db_account_repository.get_username_by_id(user_id=user_id),
-                           name=ext.db_account_repository.get_name_by_id(user_id),
-                           pay=ext.db_account_repository.get_pay_by_id(user_id),
+                           id=current_user.id,
+                           username=ext.db_account_repository.get_username_by_id(user_id=current_user.id),
+                           name=ext.db_account_repository.get_name_by_id(current_user.id),
+                           pay=ext.db_account_repository.get_pay_by_id(current_user.id),
                            user_has_email=email is not None,
                            email=email,
-                           email_verified=ext.db_account_repository.get_email_verified_by_id(user_id),
-                           twofa_enabled=ext.db_account_repository.get_twofa_enabled(user_id=user_id),
+                           email_verified=ext.db_account_repository.get_email_verified_by_id(current_user.id),
+                           twofa_enabled=ext.db_account_repository.get_twofa_enabled(user_id=current_user.id),
                            session_id_hash=ext.session_manager.get_current_session_id_hash(),
                            session_location=ext.session_manager.get_location(),
                            ip_address=ext.session_manager.get_ip_session(),
@@ -210,17 +204,15 @@ def settings_switch_2fa():
     if request.method == 'GET':
         return redirect(url_for('settings.security_home'))
 
-    user_id = ext.session_manager.get_current_user_id()
-
-    if ext.db_account_repository.get_email_by_id(user_id) is None:
+    if ext.db_account_repository.get_email_by_id(current_user.id) is None:
         flash("Please add an email address first.")
         return redirect(url_for('settings.account_change_email'))
 
-    if not ext.db_account_repository.get_email_verified_by_id(user_id):
+    if not ext.db_account_repository.get_email_verified_by_id(current_user.id):
         flash("Please verify your email address first - Click on 'Verify-it' link.")
         return redirect(url_for('settings.security_home'))
 
-    ext.db_account_repository.toggle_twofa(user_id=user_id)
+    ext.db_account_repository.toggle_twofa(user_id=current_user.id)
     flash('Your preferences has been updated')
     return redirect(url_for('settings.security_home'))
 
@@ -229,8 +221,7 @@ def settings_switch_2fa():
 @bp.route('/logout_all/', methods=['GET', 'POST'])
 @login_required
 def settings_logout_all():
-    user_id = ext.session_manager.get_current_user_id()
-    ext.session_manager.logout_user_from_all_devices(user_id=user_id)
+    ext.session_manager.logout_user_from_all_devices(user_id=current_user.id)
     return redirect('/')
 
 
@@ -254,8 +245,7 @@ def settings_delete_session(session_id_hash: str):
 @bp.route('/notifications/', methods=['GET', 'POST'])
 @login_required
 def notifications_home():
-    user_id = ext.session_manager.get_current_user_id()
-    return render_template('settings/notifications_home.html', id=user_id)
+    return render_template('settings/notifications_home.html', id=current_user.id)
 
 
 @bp.route('/notify_password_change', methods=['GET', 'POST'])
@@ -282,8 +272,7 @@ def settings_notify_twofa_change():
 @bp.route('/privacy/', methods=['GET', 'POST'])
 @login_required
 def privacy_home():
-    user_id = ext.session_manager.get_current_user_id()
-    return render_template('settings/privacy_home.html', id=user_id)
+    return render_template('settings/privacy_home.html', id=current_user.id)
 
 
 @bp.route('/privacy/export_data', methods=['GET', 'POST'])
@@ -291,10 +280,9 @@ def privacy_home():
 @login_required
 @require_permission("export_own_data")
 def export_data():
-    user_id = ext.session_manager.get_current_user_id()
-    file = build_data_export(user_id)
+    file = build_data_export(current_user.id)
     return send_file(file, mimetype='text/plain', as_attachment=True,
-                     download_name=f'export_data_{user_id}.txt')
+                     download_name=f'export_data_{current_user.id}.txt')
 
 
 # ── Apparence ────────────────────────────────────────────────────────────────
@@ -303,8 +291,7 @@ def export_data():
 @bp.route('/appearance/', methods=['GET', 'POST'])
 @login_required
 def appearance_home():
-    user_id = ext.session_manager.get_current_user_id()
-    return render_template('settings/appearance_home.html', id=user_id)
+    return render_template('settings/appearance_home.html', id=current_user.id)
 
 
 # ── About / Support ──────────────────────────────────────────────────────────
@@ -313,5 +300,4 @@ def appearance_home():
 @bp.route('/about_support/', methods=['GET', 'POST'])
 @login_required
 def about_support_home():
-    user_id = ext.session_manager.get_current_user_id()
-    return render_template('settings/about_support_home.html', id=user_id)
+    return render_template('settings/about_support_home.html', id=current_user.id)

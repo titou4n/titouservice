@@ -1,7 +1,6 @@
 import extensions as ext
 import datetime
 import random
-from utils.utils import Utils
 
 class TwofaManager():
     def __init__(self):
@@ -10,7 +9,6 @@ class TwofaManager():
         self.email_manager = ext.email_manager
         self.hash_manager = ext.hash_manager
         self.config = ext.config
-        self.utils = Utils()
 
     def generate_code(self) -> int:
         return random.randint(100000,999999)
@@ -21,7 +19,7 @@ class TwofaManager():
         self.db_twofa.insert(
             user_id=user_id,
             code_hash=self.hash_manager.generate_password_hash(str(random_code)),
-            created_at=self.utils.get_datetime_isoformat())
+            created_at=ext.utils.get_datetime_isoformat())
 
     def verif_need_to_sent_new_code(self, user_id:int) -> bool:
         code_hash = self.db_twofa.get_latest_valid(user_id=user_id)
@@ -38,7 +36,7 @@ class TwofaManager():
             return True
         
         created_at = datetime.datetime.fromisoformat(code_hash["created_at"])
-        if self.utils.datetime_is_expired_minutes(created_at, self.config.TWOFA_TIMELAPS_MINUTES):
+        if ext.utils.datetime_is_expired_minutes(created_at, self.config.TWOFA_TIMELAPS_MINUTES):
             #raise TwoFactorCodeExpiredError("The 2FA code has expired.")
             return True
         
@@ -60,7 +58,7 @@ class TwofaManager():
             raise TwoFactorTooManyAttemptsError("Too many invalid attempts.")
         
         created_at = datetime.datetime.fromisoformat(code_hash["created_at"])
-        if self.utils.datetime_is_expired_minutes(created_at, self.config.TWOFA_TIMELAPS_MINUTES):
+        if ext.utils.datetime_is_expired_minutes(created_at, self.config.TWOFA_TIMELAPS_MINUTES):
             self.db_twofa.delete_by_user_id(user_id=user_id)
             raise TwoFactorCodeExpiredError("The 2FA code has expired.")
         

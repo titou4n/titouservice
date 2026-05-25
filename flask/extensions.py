@@ -2,6 +2,8 @@
 
 from flask_login import LoginManager
 from flask_wtf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from Data.database_manager import DatabaseManager
 from Data.database_job_tracker import DatabaseJobTracker
@@ -38,22 +40,15 @@ from permissions import Permissions
 # Flask Extensions
 login_manager = LoginManager()
 csrf = CSRFProtect()
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 # Config
 config = Config()
 permissions = Permissions()
-
-# Data
-#database_handler = DatabaseHandler()
-#database_manager = DatabaseManager()
-#db_account_repository = AccountRepository()
-#db_bank_repository = BankRepository()
-#db_movie_repository = MovieRepository()
-#db_post_repository = PostRepository()
-#db_role_repository = RoleRepository()
-#db_session_repository = SessionRepository()
-#db_social_repository = SocialRepository()
-#db_twofa_repository = TwoFARepository()
 
 # Shared connection factory ─ one per process
 db_connection = DatabaseConnection(db_path=config.DATABASE_URL)

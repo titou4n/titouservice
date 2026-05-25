@@ -32,20 +32,31 @@ class Config:
 
     SECRET_KEY = read_secret("secret_key") if ENV_PROD else os.getenv("SECRET_KEY")
     if not SECRET_KEY:
-        raise RuntimeError("SECRET_KEY manquante")
+        raise RuntimeError("SECRET_KEY is missing")
+    
+    USERNAME_SUPER_ADMIN: str = read_secret("username_super_admin") if ENV_PROD else os.getenv("USERNAME_SUPER_ADMIN")
+    if not USERNAME_SUPER_ADMIN:
+        raise RuntimeError("USERNAME_SUPER_ADMIN is missing")
+    
+    PASSWORD_SUPER_ADMIN: str = read_secret("password_super_admin") if ENV_PROD else os.getenv("PASSWORD_SUPER_ADMIN")
+    if not PASSWORD_SUPER_ADMIN:
+        raise RuntimeError("PASSWORD_SUPER_ADMIN is missing")
+
+    ROLE_NAME_SUPER_ADMIN: str = "super_admin"
+    NAME_SUPER_ADMIN: str = "SUPER ADMIN"
     
     TWELVEDATA_API_KEY = read_secret("twelvedata_api_key") if ENV_PROD else os.getenv("TWELVEDATA_API_KEY")
     if not TWELVEDATA_API_KEY:
-        raise RuntimeError("TWELVEDATA_API_KEY manquante")
+        raise RuntimeError("TWELVEDATA_API_KEY is missing")
 
     OMDB_API_KEY = read_secret("omdb_api_key") if ENV_PROD else os.getenv("OMDB_API_KEY")
     if not OMDB_API_KEY:
-        raise RuntimeError("OMDB_API_KEY manquante")
+        raise RuntimeError("OMDB_API_KEY is missing")
     
     EMAIL_ADDRESS = "titouservice.mail@gmail.com"
     EMAIL_APP_PASSWORD = read_secret("email_app_password") if ENV_PROD else os.getenv("EMAIL_APP_PASSWORD")
     if not EMAIL_APP_PASSWORD:
-        raise RuntimeError("EMAIL_APP_PASSWORD manquante")
+        raise RuntimeError("EMAIL_APP_PASSWORD is missing")
 
     # ──────────────────────────── Paths ─────────────────────────────────── #
 
@@ -93,18 +104,21 @@ class Config:
     # 2FA code validity window
     TWOFA_TIMELAPS_MINUTES: int = 15
 
+    # Password generation
+    PASSWORD_GENERATION_LENGTH: int = 20
+
     # ─────────────────────── Database reset flags ───────────────────────── #
 
-    NEED_TO_RESET_DB_EXCEPT_ACCOUNT: bool        = True
-    NEED_TO_RESET_ALL_DB: bool                   = False
+    NEED_TO_RESET_DB_EXCEPT_ACCOUNT: bool        = False
+    NEED_TO_RESET_ALL_DB: bool                   = True
     NEED_TO_RESET_ROLES_PERMISSIONS_TABLES: bool = True
+
+    # Built-in accounts - SECURITY: disabled by default
+    CREATE_SEEDED_ACCOUNTS: bool = False
 
     # ──────────────────────── Built-in accounts ─────────────────────────── #
 
-    USERNAME_SUPER_ADMIN: str = "super_admin"
     ROLE_NAME_SUPER_ADMIN: str = "super_admin"
-    NAME_SUPER_ADMIN: str = "Super Admin"
-
     ROLE_NAME_ADMIN: str = "admin"
 
     USERNAME_VISITOR: str = "UsernameVisitor"
@@ -150,4 +164,4 @@ class Config:
     MAX_SHORT_FIELD    = 150
     MAX_PHONE_FIELD    = 30
 
-    PUBLIC_RATE_LIMIT  = 30 # Rate-limiting for public token access (requests / minute)
+    PUBLIC_RATE_LIMIT  = 50 # Rate-limiting for public token access (requests / minute)

@@ -41,6 +41,10 @@ networks:
 secrets:
   secret_key:
     file: ./secrets/secret_key.txt
+  username_super_admin:
+    file: ./secrets/username_super_admin.txt
+  password_super_admin:
+    file: ./secrets/password_super_admin.txt
   email_app_password:
     file: ./secrets/email_app_password.txt
   omdb_api_key:

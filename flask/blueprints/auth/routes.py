@@ -1,61 +1,83 @@
 # blueprints/auth/routes.py
 
-from flask import render_template, redirect, request, flash, url_for
-from flask_login import login_required, current_user
+import logging
+from flask import render_template, redirect, request, flash, url_for, session as flask_session
+from flask_login import current_user, login_user
 
 from blueprints.auth import bp
 from blueprints.auth.services import authenticate_user, register_user, login_as_visitor
 import extensions as ext
 from models.user import User
-from flask_login import login_user
 from utils.twofa_manager import (
     TwoFactorCodeNotFoundError, TwoFactorCodeAlreadyUsedError,
     TwoFactorTooManyAttemptsError, TwoFactorCodeExpiredError,
     TwoFactorInvalidCodeError
 )
 
+logger = logging.getLogger(__name__)
+
 
 @bp.route('/login', methods=['GET', 'POST'])
 @bp.route('/login/', methods=['GET', 'POST'])
+@ext.limiter.limit("10 per minute")
 def login():
     if request.method == 'GET':
         return render_template('auth/login.html')
 
-    username     = str(request.form['username'])
-    raw_password = str(request.form['password'])
+    username = request.form.get('username', '').strip()
+    raw_password = request.form.get('password', '').strip()
+
+    if not username or not raw_password:
+        flash('Username and password are required.')
+        return redirect(url_for('auth.login'))
 
     user_id, error = authenticate_user(username, raw_password)
     if error:
         flash(error)
         return redirect(url_for('auth.login'))
 
-    ext.session_manager.send_session(user_id=user_id)
+    # Créer une session temporaire (sans accès full à l'app)
+    ext.session_manager.send_temp_2fa_session(user_id=user_id)
 
     if ext.db_account_repository.get_twofa_enabled(user_id=user_id):
-        return redirect('/two_factor_authentication/')
+        return redirect(url_for('auth.two_factor_authentication'))
 
-    user = User(user_id)
-    login_user(user)
-    return redirect('/home/')
+    # Si pas de 2FA, créer la session réelle
+    try:
+        user = User(user_id)
+        login_user(user)
+        ext.session_manager.finalize_2fa_session(user_id)
+        logger.info("User %s logged in successfully (no 2FA)", user_id)
+        return redirect(url_for('main.home'))
+    except Exception as e:
+        logger.error("Error loading user %s: %s", user_id, str(e))
+        flash('An error occurred during login. Please try again.')
+        return redirect(url_for('auth.login'))
 
 
 @bp.route('/register', methods=['GET', 'POST'])
 @bp.route('/register/', methods=['GET', 'POST'])
+@ext.limiter.limit("5 per minute")
 def register():
     if request.method == 'GET':
         return render_template('auth/register.html')
 
-    user_id, error = register_user(
-        username=str(request.form['username']),
-        raw_password=str(request.form['password']),
-        raw_verif=str(request.form['verif_password']),
-        name=str(request.form['name'])
-    )
+    username = request.form.get('username', '').strip()
+    raw_password = request.form.get('password', '').strip()
+    raw_verif = request.form.get('verif_password', '').strip()
+    name = request.form.get('name', '').strip()
+
+    if not all([username, raw_password, raw_verif, name]):
+        flash('All fields are required.')
+        return redirect(url_for('auth.register'))
+
+    user_id, error = register_user(username, raw_password, raw_verif, name)
     if error:
         flash(error)
         return redirect(url_for('auth.register'))
 
-    return redirect('/home/')
+    logger.info("User %s registered successfully", user_id)
+    return redirect(url_for('main.home'))
 
 
 @bp.route('/visitor', methods=['GET', 'POST'])
@@ -64,86 +86,111 @@ def continue_as_a_visitor():
     user_id, error = login_as_visitor()
     if error:
         flash(error)
+        logger.warning("Visitor login failed: %s", error)
         return render_template('auth/login.html')
-    return redirect('/home/')
+
+    logger.info("Visitor account logged in")
+    return redirect(url_for('main.home'))
 
 
 @bp.route('/forgot_password', methods=['GET', 'POST'])
 @bp.route('/forgot_password/', methods=['GET', 'POST'])
+@ext.limiter.limit("5 per minute")
 def forgot_password():
     if ext.session_manager.get_current_user_id() is not None:
-        return redirect('/home/')
+        return redirect(url_for('main.home'))
 
     if request.method == 'GET':
         return render_template('auth/forgot_password.html')
 
-    username = str(request.form['username'])
+    username = request.form.get('username', '').strip()
     if not username:
         flash('Username is required.')
-        return render_template('auth/login.html')
+        return render_template('auth/forgot_password.html')
 
     user_id = ext.db_account_repository.get_id_by_username(username=username)
     if user_id is None:
         flash("Username doesn't exist.")
-        return render_template('auth/login.html')
+        return render_template('auth/forgot_password.html')
 
     user_email = ext.db_account_repository.get_email_by_id(user_id)
-    if user_email is None:
+    if not user_email:
         flash("No email has been added.")
-        return render_template('auth/login.html')
+        return render_template('auth/forgot_password.html')
 
     if not ext.db_account_repository.get_email_verified_by_id(user_id=user_id):
-        flash("No email has been verified.")
-        return render_template('auth/login.html')
+        flash("Email has not been verified.")
+        return render_template('auth/forgot_password.html')
 
-    new_password = ext.utils.generate_password(size=20)
-    ext.db_account_repository.update_password(
-        user_id=user_id,
-        new_password_hash=ext.hash_manager.generate_password_hash(new_password)
-    )
-    ext.email_manager.send_new_password_code_with_html(user_id=user_id, new_password=new_password)
-    flash(f"An email containing a new password has been sent to "
-          f"{ext.email_manager.get_hide_email(user_id=user_id)}.")
-    return redirect(url_for('auth.login'))
+    try:
+        new_password = ext.utils.generate_password(size=ext.config.PASSWORD_GENERATION_LENGTH)
+        ext.db_account_repository.update_password(
+            user_id=user_id,
+            new_password_hash=ext.hash_manager.generate_password_hash(new_password)
+        )
+        ext.email_manager.send_new_password_code_with_html(user_id=user_id, new_password=new_password)
+        hidden_email = ext.email_manager.get_hide_email(user_id=user_id)
+        flash(f"An email containing a new password has been sent to {hidden_email or 'your email address'}.")
+        logger.info("Password reset requested for user %s", user_id)
+        return redirect(url_for('auth.login'))
+    except Exception as e:
+        logger.error("Error processing password reset: %s", str(e))
+        flash('An error occurred. Please try again later.')
+        return render_template('auth/forgot_password.html')
 
 
 @bp.route('/two_factor_authentication', methods=['GET', 'POST'])
 @bp.route('/two_factor_authentication/', methods=['GET', 'POST'])
-@login_required
+@ext.limiter.limit("10 per minute")
 def two_factor_authentication():
-    user_id = ext.session_manager.get_current_user_id()
+    # Vérifier qu'on est en session temporaire 2FA
+    temp_user_id = flask_session.get("temp_user_id")
+
+    if temp_user_id is not None:
+        user_id = int(temp_user_id)
+    else:
+        user_id = current_user.id
+
     ext.db_twofa_repository.delete_expired()
 
     if request.method == 'GET':
         if ext.twofa_manager.verif_need_to_sent_new_code(user_id=user_id):
             ext.db_twofa_repository.delete_by_user_id(user_id=user_id)
             ext.twofa_manager.send_code(user_id=user_id)
-        flash(f"An email containing a two-factor authentication code has been sent to: "
-              f"{ext.email_manager.get_hide_email(user_id=user_id)}")
+
+        hidden_email = ext.email_manager.get_hide_email(user_id=user_id)
+        flash(f"An email containing a two-factor authentication code has been sent to: {hidden_email or 'your email address'}")
         return render_template('auth/two_factor_authentication.html')
 
-    code = str(request.form['code'])
+    code = request.form.get('code', '').strip()
+    if not code:
+        flash("Code is required.", "error")
+        return redirect(url_for('auth.two_factor_authentication'))
+
     try:
         ext.twofa_manager.verif_code(code, user_id)
-        flash("Your two-factor authentication sucess.")
+        flash("Your two-factor authentication was successful.")
 
-        if current_user.email == ext.config.EMAIL_ADDRESS:
-            role_id = ext.db_role_repository.get_role_id(role_name=ext.config.ROLE_NAME_SUPER_ADMIN)
-            ext.db_account_repository.update_role(user_id=user_id, role_id=role_id)
-            flash("You are now a super administrator.")
-            return redirect(url_for("admin.admin_panel"))
+        # Créer la session réelle maintenant
+        user = User(user_id)
+        login_user(user)
+        ext.session_manager.finalize_2fa_session(user_id)
 
+        logger.info("2FA verified for user %s", user_id)
         return redirect(url_for("main.home"))
 
     except TwoFactorCodeNotFoundError:
-        flash("No authentication code found.", "error")
+        flash("Invalid or expired code.", "error")
     except TwoFactorCodeAlreadyUsedError:
         flash("This code was already used.", "error")
     except TwoFactorTooManyAttemptsError:
         flash("Too many attempts. Request a new code.", "error")
     except TwoFactorCodeExpiredError:
-        flash("Code expired. Request a new one.", "error")
+        flash("Invalid or expired code.", "error")
     except TwoFactorInvalidCodeError:
-        flash("Invalid code.", "error")
+        flash("Invalid or expired code.", "error")
+    except Exception as e:
+        logger.error("Unexpected error during 2FA: %s", str(e))
+        flash("An error occurred. Please try again.", "error")
 
     return redirect(url_for("auth.two_factor_authentication"))

@@ -1,5 +1,4 @@
 import extensions as ext
-from utils.utils import Utils
 from utils.twelvedata_manager import TwelveDataManager
 
 class StockMarketManager():
@@ -7,7 +6,6 @@ class StockMarketManager():
         self.db_bank = ext.db_bank_repository
         self.bank_manager = ext.bank_manager
         self.twelvedata_manager = TwelveDataManager()
-        self.utils = Utils()
 
     def sell(self, user_id:int, symbol:str, stock_number:float):
 
@@ -39,7 +37,7 @@ class StockMarketManager():
             symbol=symbol,
             stock_number=stock_number,
             stock_price=current_price,
-            transfer_datetime=self.utils.get_datetime_isoformat())
+            transfer_datetime=ext.utils.get_datetime_isoformat())
         
         return {"stock_number": stock_number,"symbol": symbol,"total_value": stock_number * current_price}
 
@@ -67,7 +65,7 @@ class StockMarketManager():
             symbol=symbol,
             stock_number=stock_number,
             stock_price=current_price,
-            transfer_datetime=self.utils.get_datetime_isoformat())
+            transfer_datetime=ext.utils.get_datetime_isoformat())
 
         return {"stock_number": stock_number,"symbol": symbol,"total_value": stock_number * current_price}
     

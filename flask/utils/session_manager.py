@@ -1,62 +1,101 @@
+import logging
 from datetime import datetime, timedelta
 from flask import request, session as flask_session
 import secrets
 import hashlib
 import requests
 import extensions as ext
-from utils.utils import Utils
 
-class SessionManager():
+logger = logging.getLogger(__name__)
+
+class SessionManager:
     def __init__(self):
         self.db_session = ext.db_session_repository
-        self.utils = Utils()
         self.config = ext.config
+        self._request_session = None
 
     def init_app(self, app_instance):
-        requests.Session()
+        self._request_session = requests.Session()
 
-    ############################################
-    #__________________IP______________________#
-    ############################################
+    def get_ip_session(self) -> str | None:
+        try:
+            session_id = flask_session.get("session_id")
+            if not session_id:
+                return None
 
-    def get_ip_session(self)  -> (str|None):
-        session_id = flask_session.get("session_id")
+            client_ip = request.remote_addr
+            if not client_ip:
+                return None
 
-        if not session_id:
+            session_id_hash = self.hash_session_id(session_id)
+
+            db_session = self.db_session.get_by_hash(session_id_hash=session_id_hash)
+
+            if not db_session:
+                return None
+
+            db_session = dict(db_session)
+
+            if db_session.get("is_revoked", False):
+                return None
+
+            expires_at_str = db_session.get("expires_at")
+            if not expires_at_str:
+                return None
+
+            try:
+                expires_at = datetime.fromisoformat(expires_at_str)
+            except ValueError:
+                logger.warning(
+                    "Invalid expires_at format for session %s",
+                    session_id_hash
+                )
+                self.revoke_session(session_id_hash)
+                return None
+
+            if expires_at < ext.utils.get_datetime_utc():
+                self.revoke_session(session_id_hash)
+                return None
+
+            ip_hash_stored = db_session.get("ip_hash")
+            if not ip_hash_stored:
+                return None
+
+            if ip_hash_stored != self.hash_ip(client_ip):
+                logger.warning("Session hijacking attempt detected for session %s", session_id_hash)
+                self.revoke_session(session_id_hash)
+                return None
+
+            return client_ip
+
+        except Exception:
+            logger.exception("Error in get_ip_session")
             return None
-        
-        session_id_hash = self.hash_session_id(session_id=session_id)
-        db_session = self.db_session.get_by_hash(session_id_hash=session_id_hash)
-            
-        if not db_session:
+
+    def get_ip_location(self, ip_address: str) -> str | None:
+        if not ip_address:
             return None
-        
-        if db_session["is_revoked"]:
-            return None
-        
-        
-        expires_at = datetime.fromisoformat(db_session["expires_at"])
-        if expires_at < self.utils.get_datetime_utc():
-            self.revoke_session(session_id_hash)
+        try:
+            logger.info("Fetching IP location for: %s", ip_address)
+            url = f"https://ipapi.co/{ip_address}/json/"
+            response = self._request_session.get(url, timeout=5)
+            response.raise_for_status()
+
+            data = response.json()
+            if data.get("error") or "country_name" not in data:
+                logger.warning("Invalid IP location response for %s", ip_address)
+                return None
+
+            return data.get("country_name")
+        except Exception as e:
+            logger.error("Error fetching IP location: %s", str(e))
             return None
     
-        if db_session["ip_hash"] != self.hash_ip(request.remote_addr):
-            self.revoke_session(session_id_hash)
+    def get_location(self) -> str | None:
+        ip = self.get_ip_session()
+        if not ip:
             return None
-
-        return request.remote_addr
-
-    def get_ip_location(self, ip_adress:str) -> (str|None):
-        print(f"[TITOUSERVICE - INFO] Get ip location : {ip_adress}")
-        url = f"https://ipapi.co/{ip_adress}/json/"
-        response = requests.get(url)
-        data = response.json()
-        if "error" in data and data["error"] or "country_name" not in data:
-            return None
-        return data["country_name"]
-    
-    def get_location(self) -> (str|None):
-        return self.get_ip_location(ip_adress=self.get_ip_session())
+        return self.get_ip_location(ip_address=ip)
 
     ############################################
     #_______________SESSION____________________#
@@ -74,32 +113,45 @@ class SessionManager():
     def hash_user_agent(self, user_agent: str) -> str:
         return hashlib.sha256(user_agent.encode()).hexdigest()
 
-    def verif_session_is_active(self, session_id_hash:str) -> bool:
-        db_session = self.db_session.get_by_hash(session_id_hash=session_id_hash)
-            
-        if not db_session:
-            return None
-        
-        if db_session["is_revoked"]:
-            return False
-        
-        expires_at = datetime.fromisoformat(db_session["expires_at"])
-        if expires_at < self.utils.get_datetime_utc():
-            self.revoke_session(session_id_hash)
-            return False
-    
-        if db_session["ip_hash"] != self.hash_ip(request.remote_addr):
-            self.revoke_session(session_id_hash)
-            return False
+    def verif_session_is_active(self, session_id_hash: str) -> bool:
+        try:
+            db_session = self.db_session.get_by_hash(session_id_hash=session_id_hash)
 
-        if db_session["user_agent_hash"] != self.hash_user_agent(request.headers.get("User-Agent", "")):
-            self.revoke_session(session_id_hash)
+            if not db_session:
+                return False
+
+            if db_session.get("is_revoked", False):
+                return False
+
+            expires_at_str = db_session.get("expires_at")
+            if not expires_at_str:
+                return False
+
+            expires_at = datetime.fromisoformat(expires_at_str)
+            if expires_at < ext.utils.get_datetime_utc():
+                self.revoke_session(session_id_hash)
+                return False
+
+            ip_hash_stored = db_session.get("ip_hash")
+            current_ip = request.remote_addr or ""
+            if ip_hash_stored != self.hash_ip(current_ip):
+                self.revoke_session(session_id_hash)
+                return False
+
+            ua_hash_stored = db_session.get("user_agent_hash")
+            current_ua = request.headers.get("User-Agent", "")
+            if ua_hash_stored != self.hash_user_agent(current_ua):
+                self.revoke_session(session_id_hash)
+                return False
+
+            self.db_session.touch(
+                session_id_hash=session_id_hash,
+                last_used_at=ext.utils.get_datetime_utc()
+            )
+            return True
+        except Exception as e:
+            logger.error("Error verifying session: %s", str(e))
             return False
-        
-        self.db_session.touch(
-            session_id_hash=session_id_hash,
-            last_used_at=self.utils.get_datetime_utc())
-        return True
 
     def send_session(self, user_id:int) -> None:
         session_id = self.generate_session_id()
@@ -107,7 +159,7 @@ class SessionManager():
 
         ip_hash = self.hash_ip(request.remote_addr)
         ua_hash = self.hash_user_agent(request.headers.get("User-Agent", ""))
-        now = self.utils.get_datetime_utc()
+        now = ext.utils.get_datetime_utc()
 
         self.db_session.insert(
             session_id_hash=session_id_hash,
@@ -129,61 +181,85 @@ class SessionManager():
     def get_session_info(self, session_id_hash:str):
         return self.db_session.get_by_hash(session_id_hash=session_id_hash)
 
-    def get_current_session_id_hash(self) -> (str|None):
-        session_id = flask_session.get("session_id")
+    def get_current_session_id_hash(self) -> str | None:
+        try:
+            session_id = flask_session.get("session_id")
+            if not session_id:
+                return None
 
-        if not session_id:
-            return None
-        
-        session_id_hash = self.hash_session_id(session_id=session_id)
-        if not self.verif_session_is_active(session_id_hash=session_id_hash):
-            return None
+            session_id_hash = self.hash_session_id(session_id=session_id)
+            if not self.verif_session_is_active(session_id_hash=session_id_hash):
+                return None
 
-        return session_id_hash
+            return session_id_hash
+        except Exception as e:
+            logger.error("Error getting current session hash: %s", str(e))
+            return None
     
-    def get_current_user_id(self) -> (int|None):
-        session_id = flask_session.get("session_id")
+    def get_current_user_id(self) -> int | None:
+        try:
+            session_id = flask_session.get("session_id")
+            if not session_id:
+                return None
 
-        if not session_id:
-            return None
-        
-        session_id_hash = self.hash_session_id(session_id=session_id)
-        if not self.verif_session_is_active(session_id_hash=session_id_hash):
-            return None
+            session_id_hash = self.hash_session_id(session_id=session_id)
+            if not self.verif_session_is_active(session_id_hash=session_id_hash):
+                return None
 
-        db_session = self.db_session.get_by_hash(session_id_hash=session_id_hash)
-        return db_session["user_id"]
+            db_session = self.db_session.get_by_hash(session_id_hash=session_id_hash)
+            if not db_session:
+                return None
+
+            user_id = db_session.get("user_id")
+            return int(user_id) if user_id is not None else None
+        except (ValueError, TypeError) as e:
+            logger.error("Error retrieving current user ID: %s", str(e))
+            return None
     
     def logout(self) -> None:
-        session_id = flask_session.get("session_id")
-        if not session_id:
-            return None
-        
-        session_id_hash = self.hash_session_id(session_id=session_id)
-        db_session = self.db_session.get_by_hash(session_id_hash=session_id_hash)
-            
-        if not db_session:
-            return None
+        try:
+            session_id = flask_session.get("session_id")
+            if not session_id:
+                return
 
-        self.revoke_session(session_id_hash)
-        flask_session.clear()
+            session_id_hash = self.hash_session_id(session_id=session_id)
+            db_session = self.db_session.get_by_hash(session_id_hash=session_id_hash)
 
-    def logout_user_from_all_devices(self, user_id:int) -> None:
-        session_id = flask_session.get("session_id")
-        if not session_id:
-            return None
-        
-        session_id_hash = self.hash_session_id(session_id=session_id)
-        db_session = self.db_session.get_by_hash(session_id_hash=session_id_hash)
-            
-        if not db_session:
-            return None
+            if db_session:
+                self.revoke_session(session_id_hash)
 
-        self.revoke_session(session_id_hash)
-        flask_session.clear()
+            flask_session.clear()
+            logger.info("User logged out successfully")
+        except Exception as e:
+            logger.error("Error during logout: %s", str(e))
+            flask_session.clear()
+
+    def logout_user_from_all_devices(self, user_id: int) -> None:
+        try:
+            session_id = flask_session.get("session_id")
+            if not session_id:
+                return
+
+            session_id_hash = self.hash_session_id(session_id=session_id)
+            db_session = self.db_session.get_by_hash(session_id_hash=session_id_hash)
+
+            if db_session:
+                self.revoke_session(session_id_hash)
+
+            flask_session.clear()
+            logger.info("User %s logged out from all devices", user_id)
+        except Exception as e:
+            logger.error("Error logging out user from all devices: %s", str(e))
 
     def logout_session(self, session_id_hash:str) -> None:
         self.db_session.revoke(session_id_hash=session_id_hash)
 
     def delete_session(self, session_id_hash:str) -> None:
         self.db_session.delete(session_id_hash=session_id_hash)
+
+    def send_temp_2fa_session(self, user_id: int) -> None:
+        flask_session["temp_user_id"] = user_id
+
+    def finalize_2fa_session(self, user_id: int) -> None:
+        flask_session.pop("temp_user_id", None)
+        self.send_session(user_id=user_id)
