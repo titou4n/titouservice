@@ -2,7 +2,7 @@
 # TitouService - Nginx Web Server Image
 # ==================================================
 
-FROM nginx:latest
+FROM nginx:latest-alpine
 
 # Copier uniquement la config nginx
 COPY nginx.conf /etc/nginx/nginx.conf
