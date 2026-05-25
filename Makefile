@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs clean secrets deploy ssl-init
+.PHONY: help build up down restart logs clean secrets deploy
 
 help:
 	@echo "TitouService - Commandes disponibles:"

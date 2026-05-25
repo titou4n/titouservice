@@ -34,38 +34,15 @@ services:
 
     ports:
       - "80:80"
-      - "443:443"
 
     volumes:
       - ./nginx/conf:/etc/nginx/conf.d
-      - certbot-etc:/etc/letsencrypt
-      - certbot-www:/var/www/certbot
 
     networks:
       - titouservice-network
 
     depends_on:
       - flask
-
-
-  certbot:
-    image: certbot/certbot
-    container_name: titouservice-certbot
-
-    volumes:
-      - certbot-etc:/etc/letsencrypt
-      - certbot-www:/var/www/certbot
-
-    entrypoint: "/bin/sh -c"
-    command: >
-      "trap exit TERM;
-       while :; do
-         certbot renew --webroot -w /var/www/certbot --quiet;
-         sleep 12h;
-       done"
-
-    networks:
-      - titouservice-network
 
 
 networks:
@@ -75,8 +52,6 @@ networks:
 
 volumes:
   db-data:
-  certbot-etc:
-  certbot-www:
 
 
 secrets:
