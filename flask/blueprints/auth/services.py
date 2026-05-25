@@ -37,7 +37,7 @@ def authenticate_user(username: str, raw_password: str):
         ext.db_account_repository.insert_metadata(
             user_id=user_id,
             date_connected=ext.utils.get_datetime_isoformat(),
-            ipv4="0.0.0.0"
+            ipv4=ext.session_manager.get_ip_session()
         )
         logger.info("User %s authenticated successfully", user_id)
     except Exception as e:

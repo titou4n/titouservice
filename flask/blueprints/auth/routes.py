@@ -2,7 +2,7 @@
 
 import logging
 from flask import render_template, redirect, request, flash, url_for, session as flask_session
-from flask_login import login_required, current_user, login_user
+from flask_login import current_user, login_user
 
 from blueprints.auth import bp
 from blueprints.auth.services import authenticate_user, register_user, login_as_visitor
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @bp.route('/login', methods=['GET', 'POST'])
 @bp.route('/login/', methods=['GET', 'POST'])
-@ext.limiter.limit("5 per minute")
+@ext.limiter.limit("10 per minute")
 def login():
     if request.method == 'GET':
         return render_template('auth/login.html')
@@ -57,7 +57,7 @@ def login():
 
 @bp.route('/register', methods=['GET', 'POST'])
 @bp.route('/register/', methods=['GET', 'POST'])
-@ext.limiter.limit("3 per minute")
+@ext.limiter.limit("5 per minute")
 def register():
     if request.method == 'GET':
         return render_template('auth/register.html')
@@ -95,7 +95,7 @@ def continue_as_a_visitor():
 
 @bp.route('/forgot_password', methods=['GET', 'POST'])
 @bp.route('/forgot_password/', methods=['GET', 'POST'])
-@ext.limiter.limit("3 per minute")
+@ext.limiter.limit("5 per minute")
 def forgot_password():
     if ext.session_manager.get_current_user_id() is not None:
         return redirect(url_for('main.home'))
@@ -145,11 +145,11 @@ def forgot_password():
 def two_factor_authentication():
     # Vérifier qu'on est en session temporaire 2FA
     temp_user_id = flask_session.get("temp_user_id")
-    if temp_user_id is None:
-        flash("Session expired. Please log in again.")
-        return redirect(url_for('auth.login'))
 
-    user_id = int(temp_user_id)
+    if temp_user_id is not None:
+        user_id = int(temp_user_id)
+    else:
+        user_id = current_user.id
 
     ext.db_twofa_repository.delete_expired()
 

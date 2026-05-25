@@ -23,11 +23,18 @@ class SessionManager:
             if not session_id:
                 return None
 
-            session_id_hash = self.hash_session_id(session_id=session_id)
+            client_ip = request.remote_addr
+            if not client_ip:
+                return None
+
+            session_id_hash = self.hash_session_id(session_id)
+
             db_session = self.db_session.get_by_hash(session_id_hash=session_id_hash)
 
             if not db_session:
                 return None
+
+            db_session = dict(db_session)
 
             if db_session.get("is_revoked", False):
                 return None
@@ -36,7 +43,16 @@ class SessionManager:
             if not expires_at_str:
                 return None
 
-            expires_at = datetime.fromisoformat(expires_at_str)
+            try:
+                expires_at = datetime.fromisoformat(expires_at_str)
+            except ValueError:
+                logger.warning(
+                    "Invalid expires_at format for session %s",
+                    session_id_hash
+                )
+                self.revoke_session(session_id_hash)
+                return None
+
             if expires_at < ext.utils.get_datetime_utc():
                 self.revoke_session(session_id_hash)
                 return None
@@ -45,13 +61,15 @@ class SessionManager:
             if not ip_hash_stored:
                 return None
 
-            if ip_hash_stored != self.hash_ip(request.remote_addr or ""):
+            if ip_hash_stored != self.hash_ip(client_ip):
+                logger.warning("Session hijacking attempt detected for session %s", session_id_hash)
                 self.revoke_session(session_id_hash)
                 return None
 
-            return request.remote_addr
-        except Exception as e:
-            logger.warning("Error in get_ip_session: %s", str(e))
+            return client_ip
+
+        except Exception:
+            logger.exception("Error in get_ip_session")
             return None
 
     def get_ip_location(self, ip_address: str) -> str | None:
@@ -87,25 +105,13 @@ class SessionManager:
         return secrets.token_urlsafe(32)
     
     def hash_session_id(self, session_id) -> str:
-        return hmac.new(
-            self.config.SECRET_KEY.encode(),
-            session_id.encode(),
-            hashlib.sha256
-        ).hexdigest()
-
+        return hashlib.sha256(session_id.encode()).hexdigest()
+    
     def hash_ip(self, ip: str) -> str:
-        return hmac.new(
-            self.config.SECRET_KEY.encode(),
-            ip.encode(),
-            hashlib.sha256
-        ).hexdigest()
-
+        return hashlib.sha256(ip.encode()).hexdigest()
+    
     def hash_user_agent(self, user_agent: str) -> str:
-        return hmac.new(
-            self.config.SECRET_KEY.encode(),
-            user_agent.encode(),
-            hashlib.sha256
-        ).hexdigest()
+        return hashlib.sha256(user_agent.encode()).hexdigest()
 
     def verif_session_is_active(self, session_id_hash: str) -> bool:
         try:
@@ -167,44 +173,6 @@ class SessionManager:
             is_revoked=0)
 
         flask_session["session_id"] = session_id
-
-    def send_temp_2fa_session(self, user_id: int) -> None:
-        """Crée une session temporaire pour la vérification 2FA uniquement"""
-        temp_session_id = self.generate_session_id()
-        flask_session["temp_2fa_session_id"] = temp_session_id
-        flask_session["temp_user_id"] = user_id
-        flask_session["temp_session_created_at"] = ext.utils.get_datetime_utc().isoformat()
-        logger.info("Temporary 2FA session created for user %s", user_id)
-
-    def verify_temp_2fa_session(self, user_id: int) -> bool:
-        """Vérifie que la session temporaire 2FA est valide"""
-        temp_user_id = flask_session.get("temp_user_id")
-        if temp_user_id != user_id:
-            logger.warning("2FA session user mismatch: expected %s, got %s", user_id, temp_user_id)
-            return False
-
-        created_at_str = flask_session.get("temp_session_created_at")
-        if not created_at_str:
-            return False
-
-        try:
-            created_at = datetime.fromisoformat(created_at_str)
-            if ext.utils.get_datetime_utc() > created_at + timedelta(minutes=15):
-                logger.warning("2FA session expired for user %s", user_id)
-                return False
-        except Exception as e:
-            logger.error("Error verifying temp 2FA session: %s", str(e))
-            return False
-
-        return True
-
-    def finalize_2fa_session(self, user_id: int) -> None:
-        """Transforme la session temporaire 2FA en session réelle"""
-        flask_session.pop("temp_2fa_session_id", None)
-        flask_session.pop("temp_user_id", None)
-        flask_session.pop("temp_session_created_at", None)
-        self.send_session(user_id)
-        logger.info("2FA session finalized for user %s", user_id)
 
     def revoke_session(self, session_id_hash:str) -> None:
         self.db_session.revoke(session_id_hash=session_id_hash)
@@ -288,3 +256,10 @@ class SessionManager:
 
     def delete_session(self, session_id_hash:str) -> None:
         self.db_session.delete(session_id_hash=session_id_hash)
+
+    def send_temp_2fa_session(self, user_id: int) -> None:
+        flask_session["temp_user_id"] = user_id
+
+    def finalize_2fa_session(self, user_id: int) -> None:
+        flask_session.pop("temp_user_id", None)
+        self.send_session(user_id=user_id)
