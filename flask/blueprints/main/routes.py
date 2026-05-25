@@ -1,8 +1,8 @@
 # blueprints/main/routes.py
 
 import io
-from flask import render_template, redirect, send_file
-from flask_login import login_required, current_user
+from flask import render_template, redirect, send_file, url_for
+from flask_login import login_required, current_user, logout_user
 
 from blueprints.main import bp
 import extensions as ext
@@ -26,9 +26,9 @@ def get_graph_connection_per_day():
 
 @bp.route('/')
 def index():
-    if ext.session_manager.get_current_user_id() is None:
-        return render_template('main/index.html')
-    return redirect('/home/')
+    if current_user.is_authenticated:
+        return redirect(url_for('main.home'))
+    return render_template('main/index.html')
 
 
 @bp.route('/home')
@@ -46,7 +46,6 @@ def home():
 @bp.route('/logout/')
 @login_required
 def logout():
-    from flask_login import logout_user
     logout_user()
     ext.session_manager.logout()
     return redirect('/')
