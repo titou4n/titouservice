@@ -4,66 +4,49 @@ services:
     container_name: titouservice-flask
     restart: unless-stopped
 
-    environment:
-      ENV_PROD: "true"
-      FLASK_ENV: "production"
+    ports:
+      - "5000:5000"
 
     volumes:
       - db-data:/app/Data/db
       - ./secrets:/run/secrets
 
-    expose:
-      - "5000"
-
     networks:
       - titouservice-network
-
     secrets:
       - secret_key
-      - username_super_admin
-      - password_super_admin
       - email_app_password
       - omdb_api_key
       - twelvedata_api_key
 
-
   nginx:
-    image: nginx:latest
+    image: titou4n/titouservice-nginx:latest
     container_name: titouservice-nginx
     restart: unless-stopped
 
     ports:
-      - "80:80"
-
-    volumes:
-      - ./nginx/conf:/etc/nginx/conf.d:ro
-
-    depends_on:
-      - flask
+      - "8080:80"
+      - "8443:443"
 
     networks:
       - titouservice-network
 
+    depends_on:
+      - flask
 
 networks:
   titouservice-network:
     driver: bridge
 
-
-volumes:
-  db-data:
-
-
 secrets:
   secret_key:
     file: ./secrets/secret_key.txt
-  username_super_admin:
-    file: ./secrets/username_super_admin.txt
-  password_super_admin:
-    file: ./secrets/password_super_admin.txt
   email_app_password:
     file: ./secrets/email_app_password.txt
   omdb_api_key:
     file: ./secrets/omdb_api_key.txt
   twelvedata_api_key:
     file: ./secrets/twelvedata_api_key.txt
+
+volumes:
+  db-data:
