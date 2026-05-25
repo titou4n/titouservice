@@ -5,12 +5,15 @@ services:
     restart: unless-stopped
 
     environment:
-      - ENV_PROD=true
-      - FLASK_ENV=production
+      ENV_PROD: "true"
+      FLASK_ENV: "production"
 
     volumes:
       - db-data:/app/Data/db
       - ./secrets:/run/secrets
+
+    expose:
+      - "5000"
 
     networks:
       - titouservice-network
@@ -23,9 +26,6 @@ services:
       - omdb_api_key
       - twelvedata_api_key
 
-    expose:
-      - "5000"
-
 
   nginx:
     image: nginx:latest
@@ -36,13 +36,13 @@ services:
       - "80:80"
 
     volumes:
-      - ./nginx/conf:/etc/nginx/conf.d
-
-    networks:
-      - titouservice-network
+      - ./nginx/conf:/etc/nginx/conf.d:ro
 
     depends_on:
       - flask
+
+    networks:
+      - titouservice-network
 
 
 networks:
