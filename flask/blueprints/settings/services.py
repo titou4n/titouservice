@@ -2,11 +2,17 @@
 # Logique métier settings : upload photo de profil, export des données.
 
 import os
+import logging
+import mimetypes
+import secrets
 from io import BytesIO
+from PIL import Image
 from werkzeug.utils import secure_filename
 from flask import current_app
 
 import extensions as ext
+
+logger = logging.getLogger(__name__)
 
 
 def build_data_export(user_id: int) -> BytesIO:
@@ -26,32 +32,88 @@ def build_data_export(user_id: int) -> BytesIO:
     return BytesIO(content.encode('utf-8'))
 
 
-def allowed_profile_picture(filename: str) -> bool:
-    allowed = current_app.config.get("ALLOWED_EXTENSIONS_PROFILE_PICTURE", set())
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
+def validate_profile_picture(file) -> tuple[bool, str]:
+    """Valide un fichier image de profil."""
+
+    if not file or file.filename == '':
+        return False, "No file provided"
+
+    # 1. Vérifier le nom de fichier
+    filename = secure_filename(file.filename)
+    if not filename or '.' not in filename:
+        return False, "Invalid filename"
+
+    # 2. Vérifier l'extension
+    allowed_extensions = current_app.config.get("ALLOWED_EXTENSIONS_PROFILE_PICTURE", {'png', 'jpg', 'jpeg'})
+    ext_name = filename.rsplit('.', 1)[1].lower()
+    if ext_name not in allowed_extensions:
+        return False, f"File extension not allowed: {ext_name}"
+
+    # 3. Vérifier le type MIME
+    file.seek(0)
+    mime_type = file.mimetype or mimetypes.guess_type(filename)[0]
+    allowed_mimes = {'image/png', 'image/jpeg'}
+    if mime_type not in allowed_mimes:
+        return False, f"Invalid MIME type: {mime_type}"
+
+    # 4. Vérifier les magic bytes
+    file.seek(0)
+    header = file.read(8)
+    if not (
+        (header[:4] == b'\x89PNG') or  # PNG
+        (header[:2] == b'\xff\xd8') or  # JPEG
+        (header[:2] == b'BM')  # BMP
+    ):
+        return False, "Invalid image file (magic bytes)"
+
+    # 5. Vérifier que c'est une image valide
+    file.seek(0)
+    try:
+        img = Image.open(file)
+        img.verify()
+        file.seek(0)
+    except Exception as e:
+        return False, f"Corrupted image file: {str(e)}"
+
+    # 6. Vérifier la taille
+    file.seek(0, 2)  # Aller à la fin
+    file_size = file.tell()
+    max_size = current_app.config.get("PROFILE_PICTURE_MAX_SIZE", 5 * 1024 * 1024)
+    if file_size > max_size:
+        return False, f"File too large: {file_size} bytes (max: {max_size})"
+
+    file.seek(0)
+    return True, ""
 
 
 def save_profile_picture(user_id: int, file) -> bool:
-    """
-    Sauvegarde la photo de profil.
-    Retourne True si succès, False sinon.
-    """
-    if not file or file.filename == '':
+    """Sauvegarde la photo de profil avec validation complète."""
+
+    # Valider le fichier
+    is_valid, error_msg = validate_profile_picture(file)
+    if not is_valid:
+        logger.warning("Invalid profile picture upload attempt for user %s: %s", user_id, error_msg)
         return False
 
-    if not allowed_profile_picture(file.filename):
-        return False
+    # Générer un nom sûr
+    filename = secure_filename(file.filename)
+    extension = filename.rsplit('.', 1)[1].lower()
+    new_filename = f"user_{user_id}_{secrets.token_hex(8)}.{extension}"
 
-    filename     = secure_filename(file.filename)
-    extension    = filename.rsplit('.', 1)[1].lower()
-    new_filename = f"user_{user_id}.{extension}"
-    folder       = current_app.config['UPLOAD_PROFILE_PICTURE_FOLDER']
-    filepath     = os.path.join(folder, new_filename)
+    folder = current_app.config['UPLOAD_PROFILE_PICTURE_FOLDER']
+    filepath = os.path.join(folder, new_filename)
 
+    # Supprimer l'ancienne image si elle existe
     old_path = ext.db_account_repository.get_profile_picture_path(user_id)
     if old_path and os.path.exists(old_path):
-        os.remove(old_path)
+        try:
+            os.remove(old_path)
+        except Exception as e:
+            logger.warning("Failed to delete old profile picture for user %s: %s", user_id, str(e))
 
+    # Sauvegarder
     file.save(filepath)
     ext.db_account_repository.update_profile_picture_path(user_id, filepath)
+
+    logger.info("Profile picture uploaded for user %s", user_id)
     return True

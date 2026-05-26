@@ -1,9 +1,11 @@
 # extensions.py
 
+import os
 from flask_login import LoginManager
 from flask_wtf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask import request
 
 from Data.database_manager import DatabaseManager
 from Data.database_job_tracker import DatabaseJobTracker
@@ -37,13 +39,37 @@ from utils.decorators import *
 
 from permissions import Permissions
 
+def get_client_identifier():
+    """
+    Récupère l'identifiant client réel pour le rate limiting, en tenant compte des proxies.
+
+    Raison: Sans cela, tous les clients derrière un proxy (Cloudflare, load balancer)
+    semblent avoir la même IP et partagent la même limite, permettant des contournements.
+
+    Chaîne de priorité:
+    1. CF-Connecting-IP: IP réelle du client transmise par Cloudflare
+    2. X-Forwarded-For: IP réelle du client (peut avoir plusieurs IPs, on prend la première)
+    3. Fallback: IP directe du client (connexion directe, pas de proxy)
+    """
+    # Cloudflare envoie l'IP réelle dans ce header
+    if request.headers.get('CF-Connecting-IP'):
+        return request.headers.get('CF-Connecting-IP')
+
+    # X-Forwarded-For peut contenir plusieurs IPs (client, proxy1, proxy2...)
+    # On récupère la première (le client réel), en supprimant les espaces
+    if request.headers.get('X-Forwarded-For'):
+        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+
+    # Fallback: si pas de proxy, retourner l'IP directe
+    return get_remote_address()
+
 # Flask Extensions
 login_manager = LoginManager()
 csrf = CSRFProtect()
 limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
-    storage_uri="memory://"
+    key_func=get_client_identifier,
+    default_limits=["1000 per day", "100 per hour"],
+    strategy="fixed-window"
 )
 
 # Config
