@@ -54,10 +54,10 @@ def logout():
 @bp.route('/conditions_uses')
 @bp.route('/conditions_uses/')
 def conditions_uses():
-    return render_template('main/conditions_uses.html', id=ext.session_manager.get_current_user_id())
+    return render_template('main/conditions_uses.html')
 
 
 @bp.route('/thank_you')
 @bp.route('/thank_you/')
 def thank_you():
-    return render_template('main/thank_you.html', id=ext.session_manager.get_current_user_id())
+    return render_template('main/thank_you.html')

@@ -57,7 +57,7 @@ def login():
 
 @bp.route('/register', methods=['GET', 'POST'])
 @bp.route('/register/', methods=['GET', 'POST'])
-@ext.limiter.limit("5 per minute")
+@ext.limiter.limit("3 per minute")
 def register():
     if request.method == 'GET':
         return render_template('auth/register.html')
@@ -95,9 +95,9 @@ def continue_as_a_visitor():
 
 @bp.route('/forgot_password', methods=['GET', 'POST'])
 @bp.route('/forgot_password/', methods=['GET', 'POST'])
-@ext.limiter.limit("5 per minute")
+@ext.limiter.limit("2 per minute")
 def forgot_password():
-    if ext.session_manager.get_current_user_id() is not None:
+    if current_user.is_authenticated:
         return redirect(url_for('main.home'))
 
     if request.method == 'GET':
@@ -109,17 +109,21 @@ def forgot_password():
         return render_template('auth/forgot_password.html')
 
     user_id = ext.db_account_repository.get_id_by_username(username=username)
-    if user_id is None:
-        flash("Username doesn't exist.")
-        return render_template('auth/forgot_password.html')
 
+    if user_id is None:
+        logger.warning("Password reset attempt with non-existent username: %s", username)
+        flash("If this account exists and email is verified, you will receive a password reset link.")
+        return render_template('auth/forgot_password.html')
+    
     user_email = ext.db_account_repository.get_email_by_id(user_id)
     if not user_email:
-        flash("No email has been added.")
+        logger.warning("Password reset attempt for user without email: %s", user_id)
+        flash("If this account exists and email is verified, you will receive a password reset link.")
         return render_template('auth/forgot_password.html')
 
     if not ext.db_account_repository.get_email_verified_by_id(user_id=user_id):
-        flash("Email has not been verified.")
+        logger.warning("Password reset attempt for user without email verified: %s", user_id)
+        flash("If this account exists and email is verified, you will receive a password reset link.")
         return render_template('auth/forgot_password.html')
 
     try:

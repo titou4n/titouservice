@@ -49,16 +49,15 @@ def create_post():
 @login_required
 @require_permission("edit_own_content")
 def edit_post(id_post: int):
-    user_id = ext.session_manager.get_current_user_id()
-
+    
     # Vérification de propriété
-    if user_id != ext.db_post_repository.get_user_id_by_post_id(id_post):
+    if current_user.id != ext.db_post_repository.get_user_id_by_post_id(id_post):
         flash("You cannot edit this post.")
         return redirect(url_for('chatroom.chatroom'))
 
     if request.method == 'GET':
         post = ext.db_post_repository.get_by_id(id_post)
-        return render_template('chatroom/chatroom_edit_post.html', id=user_id, post=post)
+        return render_template('chatroom/chatroom_edit_post.html', id=current_user.id, post=post)
 
     title   = str(request.form['title'])
     content = str(request.form['content'])

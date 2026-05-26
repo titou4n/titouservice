@@ -4,6 +4,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from markupsafe import escape
 import extensions as ext
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,7 @@ class EmailManager:
         self.smtp_port = 587
         self.sender_email_address = self.config.EMAIL_ADDRESS
         self.sender_email_password = self.config.EMAIL_APP_PASSWORD
+        self.EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+"r"@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$")
 
     def get_hide_email(self, user_id: int) -> str | None:
         try:
@@ -235,3 +237,46 @@ class EmailManager:
         except Exception as e:
             logger.error("Error sending password reset email to user %s: %s", user_id, str(e))
             return False
+        
+    def validate_user_email(self, email: str) -> tuple[bool, str]:
+        """
+        Validate an email address.
+        Returns:
+            tuple[bool, str]:
+                (True, "") if valid
+                (False, error_message) otherwise
+        """
+
+        if not isinstance(email, str):
+            return False, "Email is required"
+
+        email = email.strip().lower()
+        if not email:
+            return False, "Email is required"
+
+        if len(email) > 254:
+            return False, "Email too long"
+
+        if email.count("@") != 1:
+            return False, "Invalid email format"
+
+        local_part, domain_part = email.split("@")
+
+        # RFC limits
+        if len(local_part) > 64:
+            return False, "Email local part too long"
+
+        if len(domain_part) > 253:
+            return False, "Email domain too long"
+
+        if not self.EMAIL_REGEX.fullmatch(email):
+            return False, "Invalid email format"
+
+        # Prevent malformed domains
+        if ".." in domain_part:
+            return False, "Invalid domain"
+
+        if domain_part.startswith("-") or domain_part.endswith("-"):
+            return False, "Invalid domain"
+
+        return True, ""

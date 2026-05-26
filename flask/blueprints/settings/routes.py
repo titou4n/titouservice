@@ -50,9 +50,11 @@ def account_change_email():
                                user_has_email=(current_user.email is not None),
                                email=current_user.email)
 
-    email = str(request.form['email'])
-    if not email:
-        flash('Email is required !')
+    email = request.form.get("email", "")
+    is_valid, error = ext.email_manager.validate_user_email(email)
+
+    if not is_valid:
+        flash(error, "error")
         return redirect(url_for('settings.account_change_email'))
 
     ext.db_account_repository.update_email(current_user.id, email)

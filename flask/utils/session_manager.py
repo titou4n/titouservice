@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 from flask import request, session as flask_session
+from requests.exceptions import RequestException, Timeout
 import secrets
 import hashlib
 import requests
@@ -73,22 +74,49 @@ class SessionManager:
             return None
 
     def get_ip_location(self, ip_address: str) -> str | None:
+        """Récupère la localisation d'une IP."""
+        
         if not ip_address:
             return None
+        
         try:
-            logger.info("Fetching IP location for: %s", ip_address)
-            url = f"https://ipapi.co/{ip_address}/json/"
-            response = self._request_session.get(url, timeout=5)
-            response.raise_for_status()
-
-            data = response.json()
-            if data.get("error") or "country_name" not in data:
-                logger.warning("Invalid IP location response for %s", ip_address)
+            # Validation de l'IP
+            import ipaddress
+            try:
+                ipaddress.ip_address(ip_address)
+            except ValueError:
+                logger.warning("Invalid IP address: %s", ip_address)
                 return None
-
-            return data.get("country_name")
+            
+            # Timeout court (5 secondes)
+            response = requests.get(
+                f"https://ipapi.co/{ip_address}/json/",
+                timeout=5,
+                verify=True,  # Vérifier le certificat SSL
+            )
+            
+            # Vérifier le statut
+            if response.status_code != 200:
+                logger.warning("IP location API returned status %s", response.status_code)
+                return None
+            
+            # Valider la réponse
+            data = response.json()
+            if not isinstance(data, dict) or 'city' not in data:
+                logger.warning("Invalid IP location response")
+                return None
+            
+            location = f"{data.get('city', '')}, {data.get('country_code', '')}"
+            return location.strip() if location.strip() else None
+            
+        except Timeout:
+            logger.warning("IP location API timeout for: %s", ip_address)
+            return None
+        except RequestException as e:
+            logger.error("IP location API error: %s", str(e))
+            return None
         except Exception as e:
-            logger.error("Error fetching IP location: %s", str(e))
+            logger.error("Unexpected error getting IP location: %s", str(e))
             return None
     
     def get_location(self) -> str | None:

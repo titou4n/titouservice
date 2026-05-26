@@ -15,23 +15,25 @@ def authenticate_user(username: str, raw_password: str):
     Retourne (user_id, error_message).
     error_message est None si succès.
     """
-    if not username:
-        logger.warning("Authentication attempt with empty username")
-        return None, "Username is required."
+    AUTHENTICATION_ERROR_MESSAGE = "Invalid username or password."
+
+    if not username or not raw_password:
+        logger.warning("Authentication attempt with empty username or password.")
+        return None, AUTHENTICATION_ERROR_MESSAGE
 
     user_id = ext.db_account_repository.get_id_by_username(username)
     if user_id is None:
-        logger.warning("Authentication failed: username '%s' not found", username)
-        return None, "Username is not correct."
+        logger.warning("Authentication failed: user '%s' not found", user_id)
+        return None, AUTHENTICATION_ERROR_MESSAGE
 
     stored_hash = ext.db_account_repository.get_password_hash(user_id)
     if not stored_hash:
         logger.error("No password hash found for user %s", user_id)
-        return None, "Authentication failed. Please try again."
+        return None, AUTHENTICATION_ERROR_MESSAGE
 
     if not ext.hash_manager.check_password(raw_password, stored_hash):
         logger.warning("Authentication failed: invalid password for user %s", user_id)
-        return None, "Password is not correct."
+        return None, AUTHENTICATION_ERROR_MESSAGE
 
     try:
         ext.db_account_repository.insert_metadata(
@@ -56,15 +58,15 @@ def register_user(username: str, raw_password: str, raw_verif: str, name: str):
         return None, "All fields are required."
 
     if ext.db_account_repository.exists_by_username(username):
-        logger.warning("Registration failed: username '%s' already exists", username)
+        logger.warning("Registration failed: username already exists")
         return None, "Username is already used."
 
     if ext.db_account_repository.exists_by_name(name):
-        logger.warning("Registration failed: name '%s' already exists", name)
+        logger.warning("Registration failed: name already exists")
         return None, "Name is already used."
 
     if raw_password != raw_verif:
-        logger.warning("Registration failed: password mismatch for username '%s'", username)
+        logger.warning("Registration failed: password mismatch for user '%s'", user_id)
         return None, "Passwords must be identical."
 
     try:
@@ -79,7 +81,7 @@ def register_user(username: str, raw_password: str, raw_verif: str, name: str):
         user_id = ext.db_account_repository.get_id_by_username(username)
 
         if user_id is None:
-            logger.error("Failed to retrieve created user %s", username)
+            logger.error("Failed to retrieve created user %s", user_id)
             return None, "Registration failed. Please try again."
 
         ext.session_manager.send_session(user_id=user_id)
@@ -91,7 +93,7 @@ def register_user(username: str, raw_password: str, raw_verif: str, name: str):
         ext.db_account_repository.insert_metadata(
             user_id=user_id,
             date_connected=ext.utils.get_datetime_isoformat(),
-            ipv4="0.0.0.0"
+            ipv4=ext.session_manager.get_ip_session()
         )
 
         logger.info("User %s registered successfully", user_id)
@@ -131,7 +133,7 @@ def login_as_visitor():
         ext.db_account_repository.insert_metadata(
             user_id=user_id,
             date_connected=ext.utils.get_datetime_isoformat(),
-            ipv4="0.0.0.0"
+            ipv4=ext.session_manager.get_ip_session()
         )
 
         logger.info("Visitor account logged in")
