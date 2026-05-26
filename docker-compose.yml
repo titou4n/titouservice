@@ -34,10 +34,12 @@ services:
 
     ports:
       - "80:80"
+      - "443:443"
 
     volumes:
       # IMPORTANT : conf.d only
       - ./nginx/conf:/etc/nginx/conf.d:ro
+      - ./certs:/etc/nginx/ssl:ro
 
     depends_on:
       - flask

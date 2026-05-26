@@ -2,6 +2,8 @@
 secrets/
 flask\.env
 *.env
+.env.local
+*.pyc
 
 # ===== Flask / app =====
 instance/
@@ -46,3 +48,12 @@ htmlcov/
 *.pid
 *.env
 docker-compose.override.yml
+
+# ===== SSL Certificates =====
+certs/*.pem
+certs/*.key
+certs/*.crt
+certs/*.csr
+
+# ===== SECURITY_AUDIT_REPORT.md =====
+SECURITY_AUDIT_REPORT.md

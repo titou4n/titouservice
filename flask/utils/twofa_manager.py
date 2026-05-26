@@ -1,6 +1,5 @@
 import extensions as ext
 import datetime
-import random
 
 class TwofaManager():
     def __init__(self):
@@ -10,15 +9,16 @@ class TwofaManager():
         self.hash_manager = ext.hash_manager
         self.config = ext.config
 
-    def generate_code(self) -> int:
-        return random.randint(100000,999999)
+    def generate_code(self) -> str:
+        """Génère un code 2FA de 6 chiffres cryptographiquement sûr."""
+        return self.hash_manager.generate_numeric_otp(digits=6)
 
     def send_code(self, user_id:int) -> None:
         random_code = self.generate_code()
         self.email_manager.send_two_factor_authentication_code_with_html(user_id, random_code)
         self.db_twofa.insert(
             user_id=user_id,
-            code_hash=self.hash_manager.generate_password_hash(str(random_code)),
+            code_hash=self.hash_manager.generate_password_hash(random_code),
             created_at=ext.utils.get_datetime_isoformat())
 
     def verif_need_to_sent_new_code(self, user_id:int) -> bool:
@@ -42,7 +42,7 @@ class TwofaManager():
         
         return False
 
-    def verif_code(self, code:int, user_id:int) -> bool:
+    def verif_code(self, code:str, user_id:int) -> bool:
 
         code_hash = self.db_twofa.get_latest_valid(user_id=user_id)
         if code_hash is None:
@@ -62,7 +62,7 @@ class TwofaManager():
             self.db_twofa.delete_by_user_id(user_id=user_id)
             raise TwoFactorCodeExpiredError("The 2FA code has expired.")
         
-        if not self.hash_manager.check_password(str(code), code_hash["code_hash"]):
+        if not self.hash_manager.check_password(code, code_hash["code_hash"]):
             self.db_twofa.increment_attempts(id_two_factor_codes=code_hash["id_two_factor_codes"])
             raise TwoFactorInvalidCodeError("Invalid 2FA code.")
         
