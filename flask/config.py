@@ -12,7 +12,7 @@ class Config:
 
     # ─────────────────────────── Environment ────────────────────────────── #
 
-    ENV_PROD: bool = False
+    ENV_PROD: bool = True
 
     FLASK_ENV: str = "production" if ENV_PROD else "development"
     DEBUG: bool = not ENV_PROD
