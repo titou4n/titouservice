@@ -63,18 +63,20 @@ def get_client_identifier():
     # Fallback: si pas de proxy, retourner l'IP directe
     return get_remote_address()
 
+# Config
+config = Config()
+permissions = Permissions()
+
 # Flask Extensions
 login_manager = LoginManager()
 csrf = CSRFProtect()
 limiter = Limiter(
     key_func=get_client_identifier,
-    default_limits=["1000 per day", "100 per hour"],
-    strategy="fixed-window"
+    storage_uri=config.REDIS_URL,
+    strategy="fixed-window",
+    headers_enabled=True,
+    default_limits=[]
 )
-
-# Config
-config = Config()
-permissions = Permissions()
 
 # Shared connection factory ─ one per process
 db_connection = DatabaseConnection(db_path=config.DATABASE_URL)

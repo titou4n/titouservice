@@ -1,6 +1,7 @@
 import logging
 from flask import Flask
 from config import Config
+import redis
 import extensions as ext
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -18,7 +19,7 @@ def create_app(config_object=Config):
         template_folder='templates',
         static_folder='static'
     )
-    
+
     app.config.from_object(obj=config_object)
 
     app.wsgi_app = ProxyFix(
@@ -36,6 +37,16 @@ def create_app(config_object=Config):
     ext.login_manager.login_view = "auth.login"
     ext.session_manager.init_app(app)
     ext.limiter.init_app(app)
+
+    # redis
+    try:
+        redis_client = redis.from_url(app.config["REDIS_URL"])
+        redis_client.ping()
+        logger.info("Redis connected successfully")
+
+    except Exception as e:
+        logger.error("Redis connection failed: %s",str(e))
+        raise RuntimeError("Unable to connect to Redis") from e
 
     # Configuration applicative
     register_login_manager()

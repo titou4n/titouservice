@@ -8,12 +8,18 @@ services:
       ENV_PROD: "true"
       FLASK_ENV: "production"
 
+      RATELIMIT_STORAGE_URI: redis://redis:6379/0
+
     volumes:
       - db-data:/app/Data/db
       - ./secrets:/run/secrets
 
     expose:
       - "5000"
+
+    depends_on:
+      redis:
+        condition: service_healthy
 
     networks:
       - titouservice-network
@@ -26,6 +32,27 @@ services:
       - omdb_api_key
       - twelvedata_api_key
 
+  redis:
+    image: redis:7-alpine
+    container_name: titouservice-redis
+    restart: unless-stopped
+
+    command:
+      - redis-server
+      - --appendonly
+      - yes
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+    volumes:
+      - redis-data:/data
+
+    networks:
+      - titouservice-network
 
   nginx:
     image: nginx:latest
@@ -37,7 +64,6 @@ services:
       - "443:443"
 
     volumes:
-      # IMPORTANT : conf.d only
       - ./nginx/conf:/etc/nginx/conf.d:ro
       - ./certs:/etc/nginx/ssl:ro
 
@@ -47,15 +73,13 @@ services:
     networks:
       - titouservice-network
 
-
 networks:
   titouservice-network:
     driver: bridge
 
-
 volumes:
   db-data:
-
+  redis-data:
 
 secrets:
   secret_key:

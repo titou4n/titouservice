@@ -3,7 +3,7 @@
 # ==================================================
 
 # Use a specific, updated patch version of the nginx Alpine image to reduce known vulnerabilities
-FROM nginx:1.26-alpine
+FROM nginx:latest
 
 # Copier uniquement la config nginx
 COPY nginx.conf /etc/nginx/nginx.conf

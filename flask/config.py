@@ -107,6 +107,13 @@ class Config:
     # Password generation
     PASSWORD_GENERATION_LENGTH: int = 20
 
+    # ─────────────────────── Redis ─────────────────────── #
+    # Redis
+    REDIS_URL: str = os.getenv(
+        "RATELIMIT_STORAGE_URI",
+        "redis://localhost:6379/0"
+    )
+
     # ─────────────────────── Database reset flags ───────────────────────── #
 
     NEED_TO_RESET_DB_EXCEPT_ACCOUNT: bool        = False
