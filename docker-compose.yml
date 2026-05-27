@@ -65,7 +65,7 @@ services:
 
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./cert:/etc/nginx/ssl:ro
+      - ./certs:/etc/nginx/ssl:ro
 
     depends_on:
       - flask
