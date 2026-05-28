@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import redis
 
 class Config:
     """
@@ -10,15 +11,14 @@ class Config:
     environment variables (via .env) in development.
     """
 
+    load_dotenv()
+
     # ─────────────────────────── Environment ────────────────────────────── #
 
-    ENV_PROD: bool = True
+    ENV_PROD: bool = os.getenv("ENV_PROD", "false").lower() == "true"
 
     FLASK_ENV: str = "production" if ENV_PROD else "development"
     DEBUG: bool = not ENV_PROD
-
-    if not ENV_PROD:
-        load_dotenv()
     
     #_______________________KEY_________________________#
 
@@ -84,17 +84,20 @@ class Config:
 
     # ──────────────────────── Flask-Session ─────────────────────────────── #
 
-    SESSION_TYPE: str            = "filesystem"
-    SESSION_FILE_DIR: Path       = BASE_DIR / "flask_session"
+    SESSION_TYPE: str = "redis"
+    REDIS_URL: str = os.getenv("RATELIMIT_STORAGE_URI", "redis://localhost:6379/0")
+    SESSION_REDIS = redis.from_url(REDIS_URL)
     SESSION_PERMANENT: bool      = False
     SESSION_USE_SIGNER: bool     = True
 
-    SESSION_COOKIE_NAME: str     = "cookie_Titouservice"
+    SESSION_COOKIE_NAME: str     = "session_id"
     SESSION_COOKIE_DOMAIN        = None
     SESSION_COOKIE_PATH          = None
     SESSION_COOKIE_HTTPONLY: bool = True          # Blocks JS access to the cookie
     SESSION_COOKIE_SECURE: bool  = ENV_PROD       # Requires HTTPS in production
-    SESSION_COOKIE_SAMESITE: str = "Lax"
+    SESSION_COOKIE_SAMESITE: str = "Strict"
+
+    SESSION_COOKIE_MAX_AGE: int = 3600  # 1 heure
 
     # Session lifetime
     SESSION_COOKIE_TIME_DAYS: int    = 0
@@ -107,21 +110,14 @@ class Config:
     # Password generation
     PASSWORD_GENERATION_LENGTH: int = 20
 
-    # ─────────────────────── Redis ─────────────────────── #
-    # Redis
-    REDIS_URL: str = os.getenv(
-        "RATELIMIT_STORAGE_URI",
-        "redis://localhost:6379/0"
-    )
-
     # ─────────────────────── Database reset flags ───────────────────────── #
 
-    NEED_TO_RESET_DB_EXCEPT_ACCOUNT: bool        = False
-    NEED_TO_RESET_ALL_DB: bool                   = True
-    NEED_TO_RESET_ROLES_PERMISSIONS_TABLES: bool = True
+    NEED_TO_RESET_DB_EXCEPT_ACCOUNT: bool        = os.getenv("NEED_TO_RESET_DB_EXCEPT_ACCOUNT", "false").lower() == "true"
+    NEED_TO_RESET_ALL_DB: bool                   = os.getenv("NEED_TO_RESET_ALL_DB", "false").lower() == "true"
+    NEED_TO_RESET_ROLES_PERMISSIONS_TABLES: bool = os.getenv("NEED_TO_RESET_ROLES_PERMISSIONS_TABLES", "false").lower() == "true"
 
     # Built-in accounts - SECURITY: disabled by default
-    CREATE_SEEDED_ACCOUNTS: bool = False
+    CREATE_SEEDED_ACCOUNTS: bool = os.getenv("CREATE_SEEDED_ACCOUNTS", "false").lower() == "true"
 
     # ──────────────────────── Built-in accounts ─────────────────────────── #
 
