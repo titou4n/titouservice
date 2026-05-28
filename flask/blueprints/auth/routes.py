@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @bp.route('/login', methods=['GET', 'POST'])
 @bp.route('/login/', methods=['GET', 'POST'])
-@ext.limiter.limit("10 per minute")
+@ext.limiter.limit("5 per minute; 20 per hour; 100 per day")
 def login():
     if request.method == 'GET':
         return render_template('auth/login.html')
@@ -57,7 +57,7 @@ def login():
 
 @bp.route('/register', methods=['GET', 'POST'])
 @bp.route('/register/', methods=['GET', 'POST'])
-@ext.limiter.limit("3 per minute")
+@ext.limiter.limit("3 per minute; 10 per hour; 30 per day")
 def register():
     if request.method == 'GET':
         return render_template('auth/register.html')
@@ -147,13 +147,17 @@ def forgot_password():
 @bp.route('/two_factor_authentication/', methods=['GET', 'POST'])
 @ext.limiter.limit("10 per minute")
 def two_factor_authentication():
-    # Vérifier qu'on est en session temporaire 2FA
-    temp_user_id = flask_session.get("temp_user_id")
-
-    if temp_user_id is not None:
-        user_id = int(temp_user_id)
-    else:
+    if current_user.is_authenticated:
         user_id = current_user.id
+
+    else:
+        temp_user_id = flask_session.get("temp_user_id")
+
+        if temp_user_id is None:
+            flash("Unauthorized access", "error")
+            return redirect(url_for('auth.login'))
+        
+        user_id = int(temp_user_id)
 
     ext.db_twofa_repository.delete_expired()
 

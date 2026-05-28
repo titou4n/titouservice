@@ -23,7 +23,7 @@ def authenticate_user(username: str, raw_password: str):
 
     user_id = ext.db_account_repository.get_id_by_username(username)
     if user_id is None:
-        logger.warning("Authentication failed: user '%s' not found", user_id)
+        logger.warning("Authentication failed: user not found (username not resolved to ID)")
         return None, AUTHENTICATION_ERROR_MESSAGE
 
     stored_hash = ext.db_account_repository.get_password_hash(user_id)
@@ -66,7 +66,7 @@ def register_user(username: str, raw_password: str, raw_verif: str, name: str):
         return None, "Name is already used."
 
     if raw_password != raw_verif:
-        logger.warning("Registration failed: password mismatch for user '%s'", user_id)
+        logger.warning("Registration failed: password mismatch for username '%s'", username)
         return None, "Passwords must be identical."
 
     try:

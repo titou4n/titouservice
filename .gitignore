@@ -55,5 +55,5 @@ certs/*.key
 certs/*.crt
 certs/*.csr
 
-# ===== SECURITY_AUDIT_REPORT.md =====
-SECURITY_AUDIT_REPORT.md
+# ===== SECURITY_AUDITS =====
+audits/*.md

@@ -39,6 +39,7 @@ from utils.decorators import *
 
 from permissions import Permissions
 
+'''
 def get_client_identifier():
     """
     Récupère l'identifiant client réel pour le rate limiting, en tenant compte des proxies.
@@ -61,6 +62,25 @@ def get_client_identifier():
         return request.headers.get('X-Forwarded-For').split(',')[0].strip()
 
     # Fallback: si pas de proxy, retourner l'IP directe
+    return get_remote_address()
+
+'''
+
+def get_client_identifier():
+    # CF-Connecting-IP est de confiance car signé par Cloudflare
+    if request.headers.get('CF-Connecting-IP'):
+        return request.headers.get('CF-Connecting-IP')
+    
+    # Si derrière Nginx Proxy Manager SANS Cloudflare,
+    # vérifier que Nginx est le seul reverse proxy
+    # et que X-Forwarded-For ne peut venir que de Nginx
+    
+    # Valider que la source est notre reverse proxy autorisé
+    if request.remote_addr in ["127.0.0.1", "10.0.0.0/8"]:  # IP interne du reverse proxy
+        x_forwarded = request.headers.get('X-Forwarded-For')
+        if x_forwarded:
+            return x_forwarded.split(',')[0].strip()
+    
     return get_remote_address()
 
 # Config
