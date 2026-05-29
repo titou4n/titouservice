@@ -29,8 +29,7 @@ def create_app(config_object=Config):
         x_proto=1,
         x_host=1,
         x_port=1,
-        x_prefix=0,
-        trusted_hosts=["127.0.0.1", "::1"]
+        x_prefix=0
     )
 
     @app.before_request
