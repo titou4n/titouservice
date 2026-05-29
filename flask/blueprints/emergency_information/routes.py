@@ -21,6 +21,7 @@ from blueprints.emergency_information.permissions import (
 )
 import extensions as ext
 from utils.decorators import require_permission, require_admin
+from utils.url_helper import get_safe_base_url
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 def dashboard():
     try:
         record = ext.emergency_information_service.get_record_for_user(current_user.id)
-        base_url = request.host_url.rstrip('/')
+        base_url = get_safe_base_url()
         return render_template(
             'emergency_information/dashboard.html',
             id=current_user.id,

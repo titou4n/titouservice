@@ -168,3 +168,18 @@ class Config:
     MAX_PHONE_FIELD    = 30
 
     PUBLIC_RATE_LIMIT  = 50 # Rate-limiting for public token access (requests / minute)
+
+    # ──────────────────────────── Proxy Trust ───────────────────────────── #
+
+    ALLOWED_HOSTS: set[str] = {
+        "titouservice.ltjs.net",
+        "localhost",
+        "127.0.0.1",
+        "[::1]",
+    }
+
+    TRUST_PROXY: bool = os.getenv("TRUST_PROXY", "false").lower() == "true"
+    PROXY_IP_HEADER: str = os.getenv("PROXY_IP_HEADER", "CF-Connecting-IP")
+
+    # External URL base for generating tokens and reset links (must match a domain in ALLOWED_HOSTS)
+    EXTERNAL_URL_BASE: str = os.getenv("EXTERNAL_URL_BASE", "https://titouservice.ltjs.net")
