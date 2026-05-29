@@ -1,5 +1,6 @@
 import logging
-from flask import Flask
+from flask import Flask, request
+from werkzeug.exceptions import BadRequest
 from config import Config
 import redis
 import extensions as ext
@@ -28,8 +29,16 @@ def create_app(config_object=Config):
         x_proto=1,
         x_host=1,
         x_port=1,
-        x_prefix=0
+        x_prefix=0,
+        trusted_hosts=["127.0.0.1", "::1"]
     )
+
+    @app.before_request
+    def validate_host():
+        allowed_hosts = config_object.ALLOWED_HOSTS
+        if allowed_hosts and request.host not in allowed_hosts:
+            logger.warning("Rejected request with invalid Host header: %s", request.host)
+            raise BadRequest("Invalid Host header")
 
     # Extensions
     ext.csrf.init_app(app)

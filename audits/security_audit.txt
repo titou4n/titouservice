@@ -51,6 +51,6 @@ Vérifie que cette séparation est correctement respectée et qu’aucun secret 
 
 Sois extrêmement rigoureux et critique. Considère qu'un attaquant possède des connaissances avancées. Fournis à la fin un résumé des risques, une note globale de sécurité sur 100 et une liste priorisée des corrections à effectuer.
 
-À la fin de l’audit, génère automatiquement un rapport horodaté dans le dossier `audits/` avec un nom de fichier au format :
+À la fin de l’audit, ajoute une note globalle sur 100 puis génère automatiquement un rapport horodaté dans le dossier `audits/` avec un nom de fichier au format :
 
 audit_YYYY-MM-DD.md

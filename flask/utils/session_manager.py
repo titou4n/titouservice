@@ -18,13 +18,39 @@ class SessionManager:
     def init_app(self, app_instance):
         self._request_session = requests.Session()
 
+    def get_client_ip(self) -> str | None:
+        """Get client's real IP, accounting for proxy headers if TRUST_PROXY is enabled."""
+        if not self.config.TRUST_PROXY:
+            return request.remote_addr
+
+        ip = None
+
+        # Check header defined in config (default: CF-Connecting-IP for Cloudflare)
+        if self.config.PROXY_IP_HEADER:
+            ip = request.headers.get(self.config.PROXY_IP_HEADER)
+            if ip:
+                return ip.split(",")[0].strip()
+
+        # Fallback: X-Forwarded-For (most common)
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip()
+
+        # Fallback: X-Real-IP
+        real_ip = request.headers.get("X-Real-IP")
+        if real_ip:
+            return real_ip
+
+        # Last resort
+        return request.remote_addr
+
     def get_ip_session(self) -> str | None:
         try:
             session_id = flask_session.get("session_id")
             if not session_id:
                 return None
 
-            client_ip = request.remote_addr
+            client_ip = self.get_client_ip()
             if not client_ip:
                 return None
 
@@ -161,7 +187,7 @@ class SessionManager:
                 return False
 
             ip_hash_stored = db_session.get("ip_hash")
-            current_ip = request.remote_addr or ""
+            current_ip = self.get_client_ip() or ""
             if ip_hash_stored != self.hash_ip(current_ip):
                 self.revoke_session(session_id_hash)
                 return False
@@ -185,7 +211,7 @@ class SessionManager:
         session_id = self.generate_session_id()
         session_id_hash = self.hash_session_id(session_id)
 
-        ip_hash = self.hash_ip(request.remote_addr)
+        ip_hash = self.hash_ip(self.get_client_ip() or "")
         ua_hash = self.hash_user_agent(request.headers.get("User-Agent", ""))
         now = ext.utils.get_datetime_utc()
 
@@ -264,16 +290,7 @@ class SessionManager:
 
     def logout_user_from_all_devices(self, user_id: int) -> None:
         try:
-            session_id = flask_session.get("session_id")
-            if not session_id:
-                return
-
-            session_id_hash = self.hash_session_id(session_id=session_id)
-            db_session = self.db_session.get_by_hash(session_id_hash=session_id_hash)
-
-            if db_session:
-                self.revoke_session(session_id_hash)
-
+            self.db_session.revoke_all_for_user(user_id=user_id)
             flask_session.clear()
             logger.info("User %s logged out from all devices", user_id)
         except Exception as e:
