@@ -202,6 +202,15 @@ class AccountRepository:
             ).fetchone()
         return row is not None
 
+    def exists_by_role_id(self, role_id: int) -> bool:
+        """Return True if at least one account currently holds *role_id*."""
+        with self._db.connect() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM account WHERE role_id = ? LIMIT 1;",
+                (role_id,),
+            ).fetchone()
+        return row is not None
+
     # ------------------------------------------------------------------ #
     # Account – updates
     # ------------------------------------------------------------------ #
@@ -263,6 +272,30 @@ class AccountRepository:
             conn.execute(
                 "UPDATE account SET pay = ? WHERE id = ?;",
                 (new_pay, user_id),
+            )
+            conn.commit()
+
+    def withdraw_pay(self, user_id: int, amount: float) -> bool:
+        """
+        Atomically debit *amount* from *user_id*'s balance, but only if the
+        balance is sufficient. Avoids the read-then-write race of a separate
+        SELECT + UPDATE under concurrent requests. Returns True if the debit
+        was applied, False if the balance was insufficient.
+        """
+        with self._db.connect() as conn:
+            cur = conn.execute(
+                "UPDATE account SET pay = pay - ? WHERE id = ? AND pay >= ?;",
+                (amount, user_id, amount),
+            )
+            conn.commit()
+        return cur.rowcount > 0
+
+    def deposit_pay(self, user_id: int, amount: float) -> None:
+        """Atomically credit *amount* to *user_id*'s balance."""
+        with self._db.connect() as conn:
+            conn.execute(
+                "UPDATE account SET pay = pay + ? WHERE id = ?;",
+                (amount, user_id),
             )
             conn.commit()
 

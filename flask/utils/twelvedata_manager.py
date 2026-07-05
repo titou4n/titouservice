@@ -11,7 +11,7 @@ class TwelveDataManager():
         interval = "1day"
         output_size = 10
         requestURL = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={interval}&outputsize={output_size}&apikey={self.twelvedata_api_key}"
-        r = requests.get(requestURL)
+        r = requests.get(requestURL, timeout=5)
         result = r.json()
 
         if "status" in result and result["status"] == "error":  # run out api credits : result["code"] == 429
@@ -23,7 +23,7 @@ class TwelveDataManager():
     
     def get_current_price(self, symbol:str):
         requestURL = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={self.twelvedata_api_key}"
-        r = requests.get(requestURL)
+        r = requests.get(requestURL, timeout=5)
         current_price = r.json()
         
         if "status" in current_price and current_price["status"] == "error":  # run out api credits : result["code"] == 429

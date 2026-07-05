@@ -1,7 +1,7 @@
 # blueprints/chatroom/routes.py
 # Préfixe : /chatroom  (défini dans create_app)
 
-from flask import render_template, redirect, request, flash, url_for
+from flask import render_template, redirect, request, flash, url_for, abort
 from flask_login import login_required, current_user
 
 from blueprints.chatroom import bp
@@ -75,6 +75,14 @@ def edit_post(id_post: int):
 @login_required
 @require_permission("delete_own_content")
 def delete_post(id_post: int):
+    owner_id = ext.db_post_repository.get_user_id_by_post_id(id_post)
+    if owner_id is None:
+        abort(404)
+
+    # Vérification de propriété (les modérateurs/admins avec "delete_all_content" restent autorisés)
+    if owner_id != current_user.id and not current_user.has_permission("delete_all_content"):
+        abort(403)
+
     post = ext.db_post_repository.get_by_id(id_post)
     ext.db_post_repository.delete(id_post)
     flash(f'"{post["title"]}" was successfully deleted!')

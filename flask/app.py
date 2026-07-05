@@ -1,5 +1,7 @@
 import logging
-from flask import Flask, request
+from pathlib import Path
+from flask import Flask, request, flash, redirect, url_for
+from flask_login import current_user
 from werkzeug.exceptions import BadRequest
 from config import Config
 import redis
@@ -14,6 +16,21 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 
+def _hostname_without_port(host: str) -> str:
+    """
+    Strip a trailing ":<port>" from a Host header value.
+
+    `request.host` includes the port whenever it's non-default (e.g. the
+    dev server on 127.0.0.1:8080 makes browsers send "Host: 127.0.0.1:8080"),
+    while ALLOWED_HOSTS only lists bare hostnames. IPv6 literals (e.g.
+    "[::1]:8080") keep their brackets so they still match the configured
+    "[::1]" entry.
+    """
+    if host.startswith('['):
+        return host.split(']')[0] + ']'
+    return host.rsplit(':', 1)[0] if ':' in host else host
+
+
 def create_app(config_object=Config):
     app = Flask(
         __name__,
@@ -23,21 +40,51 @@ def create_app(config_object=Config):
 
     app.config.from_object(obj=config_object)
 
+    # Number of trusted reverse-proxy hops in front of Flask (NPM + this
+    # repo's nginx). Must match the real chain or remote_addr silently
+    # resolves to the wrong hop's IP (see audits/ - this previously
+    # neutralized the Cloudflare IP check and mutualized rate-limiting
+    # across all visitors).
+    proxy_hops = config_object.PROXY_TRUSTED_HOP_COUNT
     app.wsgi_app = ProxyFix(
         app.wsgi_app,
-        x_for=1,
-        x_proto=1,
-        x_host=1,
-        x_port=1,
+        x_for=proxy_hops,
+        x_proto=proxy_hops,
+        x_host=proxy_hops,
+        x_port=proxy_hops,
         x_prefix=0
     )
 
     @app.before_request
     def validate_host():
         allowed_hosts = config_object.ALLOWED_HOSTS
-        if allowed_hosts and request.host not in allowed_hosts:
+        if allowed_hosts and _hostname_without_port(request.host) not in allowed_hosts:
             logger.warning("Rejected request with invalid Host header: %s", request.host)
             raise BadRequest("Invalid Host header")
+
+    @app.before_request
+    def enforce_password_change():
+        """
+        Security: an account whose password has never been changed since
+        creation (nbpasswordchange == 0) — in practice, a freshly
+        bootstrapped Super Admin (see AccountsSeeder._seed_super_admin_account)
+        — is locked to the "change password" page until it sets a new one.
+        """
+        if not current_user.is_authenticated:
+            return
+
+        if getattr(current_user, "role_name", None) != config_object.ROLE_NAME_SUPER_ADMIN:
+            return
+
+        if getattr(current_user, "nbpasswordchange", 0):
+            return
+
+        allowed_endpoints = {"settings.account_change_password", "main.logout", "static"}
+        if request.endpoint in allowed_endpoints:
+            return
+
+        flash("For security reasons, you must set a new password before continuing.", "warning")
+        return redirect(url_for("settings.account_change_password"))
 
     # Extensions
     ext.csrf.init_app(app)
@@ -68,7 +115,22 @@ def create_app(config_object=Config):
 
 if __name__ == '__main__' and not ext.config.ENV_PROD:
     try:
+        # First-run convenience: a fresh dev checkout has no SQLite file yet.
+        # Detected *before* anything touches the database, since opening a
+        # connection would otherwise create an empty file and hide the check.
+        db_path = Path(ext.config.DATABASE_URL)
+        needs_init = not db_path.exists()
+
         app = create_app()
+
+        if needs_init:
+            logger.warning("No database found at %s - running first-time initialization...", db_path)
+            with app.app_context():
+                ext._db_manager.init_database()
+                ext._roles_permissions_seeders.run()
+                ext._accounts_seeder.run()
+            logger.info("Database initialization complete.")
+
         logger.info("Starting development server on 127.0.0.1:8080")
         app.run(
             debug=ext.config.DEBUG,

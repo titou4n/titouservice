@@ -34,17 +34,19 @@ class Config:
     if not SECRET_KEY:
         raise RuntimeError("SECRET_KEY is missing")
     
-    USERNAME_SUPER_ADMIN: str = read_secret("username_super_admin") if ENV_PROD else os.getenv("USERNAME_SUPER_ADMIN")
-    if not USERNAME_SUPER_ADMIN:
-        raise RuntimeError("USERNAME_SUPER_ADMIN is missing")
-    
-    PASSWORD_SUPER_ADMIN: str = read_secret("password_super_admin") if ENV_PROD else os.getenv("PASSWORD_SUPER_ADMIN")
-    if not PASSWORD_SUPER_ADMIN:
-        raise RuntimeError("PASSWORD_SUPER_ADMIN is missing")
+    # Security: the Super Admin account is bootstrapped automatically on the
+    # first run against an empty database (see
+    # Data/seeders/accounts_seeder.py::_seed_super_admin_account). Its
+    # password is a cryptographically random value generated at that moment,
+    # printed once to the application logs, and never stored in a file, an
+    # environment variable or a Docker secret. Only the username below is
+    # configurable, and it is not sensitive.
+    USERNAME_SUPER_ADMIN: str = os.getenv("USERNAME_SUPER_ADMIN", "superadmin")
+    SUPER_ADMIN_INITIAL_PASSWORD_LENGTH: int = 24  # bytes of entropy (secrets.token_urlsafe)
 
     ROLE_NAME_SUPER_ADMIN: str = "super_admin"
     NAME_SUPER_ADMIN: str = "SUPER ADMIN"
-    
+
     TWELVEDATA_API_KEY = read_secret("twelvedata_api_key") if ENV_PROD else os.getenv("TWELVEDATA_API_KEY")
     if not TWELVEDATA_API_KEY:
         raise RuntimeError("TWELVEDATA_API_KEY is missing")
@@ -167,7 +169,10 @@ class Config:
     MAX_SHORT_FIELD    = 150
     MAX_PHONE_FIELD    = 30
 
-    PUBLIC_RATE_LIMIT  = 50 # Rate-limiting for public token access (requests / minute)
+    # Rate limit for the unauthenticated public emergency-info view
+    # (/emergency/<token>) - token is high-entropy (384 bits) so this guards
+    # against DoS/scanning rather than brute-force.
+    PUBLIC_RATE_LIMIT: int = int(os.getenv("PUBLIC_RATE_LIMIT", "50"))
 
     # ──────────────────────────── Proxy Trust ───────────────────────────── #
 
@@ -180,6 +185,23 @@ class Config:
 
     TRUST_PROXY: bool = os.getenv("TRUST_PROXY", "false").lower() == "true"
     PROXY_IP_HEADER: str = os.getenv("PROXY_IP_HEADER", "CF-Connecting-IP")
+
+    # Number of reverse-proxy hops between the browser and this Flask app that
+    # each add their own entry to X-Forwarded-For / X-Forwarded-Proto / etc.
+    # Passed straight to ProxyFix(x_for=..., x_proto=..., ...) in app.py.
+    # Current topology: Client -> Cloudflare -> NPM -> nginx (this repo) -> Flask.
+    # NPM and this repo's nginx each append a hop, hence 2 (see audits/).
+    # If NPM's proxying behaviour changes, confirm the real count by
+    # temporarily inspecting nginx's access log ($remote_addr) before
+    # changing this value.
+    PROXY_TRUSTED_HOP_COUNT: int = int(os.getenv("PROXY_TRUSTED_HOP_COUNT", "2"))
+
+    # Comma-separated CIDR list of reverse proxies allowed to set X-Forwarded-For
+    # directly (e.g. Nginx Proxy Manager's address, or the docker-compose bridge
+    # subnet). Only consulted when the immediate TCP peer isn't a known
+    # Cloudflare address (see extensions.py::get_client_identifier) — keep this
+    # tight, it is a trust boundary for rate-limiting.
+    TRUSTED_PROXY_NETWORKS: str = os.getenv("TRUSTED_PROXY_NETWORKS", "127.0.0.1/32,::1/128")
 
     # External URL base for generating tokens and reset links (must match a domain in ALLOWED_HOSTS)
     EXTERNAL_URL_BASE: str = os.getenv("EXTERNAL_URL_BASE", "https://titouservice.ltjs.net")
