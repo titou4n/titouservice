@@ -8,35 +8,25 @@ class BankManager():
     def withdrawl(self, user_id:int, amount:float):
         if amount <= 0:
             raise InvalidTransferAmountError("Transfer amount must be strictly positive.")
-        
+
         if not self.db_account.exists_by_id(user_id):
             raise IdNotFoundError("User ID does not exist.")
 
-        pay = self.db_account.get_pay_by_id(user_id)
-        if pay < amount:
+        if not self.db_account.withdraw_pay(user_id, amount):
             raise InsufficientFundsError("Insufficient balance for this transfer.")
- 
-        new_pay = pay - amount
-
-        self.db_account.update_pay(user_id, new_pay)
 
     def transfer(self, sender_id:int, receiver_id:int, transfer_value:float) -> None:
 
         if transfer_value <= 0:
             raise InvalidTransferAmountError("Transfer amount must be strictly positive.")
-        
+
         if not self.db_account.exists_by_id(receiver_id):
             raise IdNotFoundError("Receiver ID does not exist.")
 
-        pay = self.db_account.get_pay_by_id(sender_id)
-        if pay < transfer_value:
+        if not self.db_account.withdraw_pay(sender_id, transfer_value):
             raise InsufficientFundsError("Insufficient balance for this transfer.")
- 
-        new_pay_senders = pay - transfer_value
-        new_pay_receiver = self.db_account.get_pay_by_id(receiver_id) + transfer_value
 
-        self.db_account.update_pay(sender_id, new_pay_senders)
-        self.db_account.update_pay(receiver_id, new_pay_receiver)
+        self.db_account.deposit_pay(receiver_id, transfer_value)
         self.db_bank.insert_transfer(sender_id, receiver_id, transfer_value, ext.utils.get_datetime_isoformat())
 
     def get_sum_transfers_from_id_symbol(self, user_id, symbol):

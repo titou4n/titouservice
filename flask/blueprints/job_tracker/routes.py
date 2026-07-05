@@ -82,7 +82,7 @@ def ajouter():
 @login_required
 @require_permission("job_tracker_access")
 def modifier(id):
-    c = ext.database_job_tracker.get_candidature(id)
+    c = ext.database_job_tracker.get_candidature(id, user_id=current_user.id)
     if c is None:
         flash("Candidature introuvable.", "error")
         return redirect(url_for("job_tracker.candidatures.index"))
@@ -107,6 +107,7 @@ def modifier(id):
         status=status,
         date_applied=date_applied,
         notes=notes,
+        user_id=current_user.id,
     )
     flash("Candidature mise à jour.", "success")
     return redirect(url_for("job_tracker.candidatures.index"))
@@ -116,12 +117,12 @@ def modifier(id):
 @login_required
 @require_permission("job_tracker_access")
 def supprimer(id):
-    c = ext.database_job_tracker.get_candidature(id)
+    c = ext.database_job_tracker.get_candidature(id, user_id=current_user.id)
     if c is None:
         flash("Candidature introuvable.", "error")
         return redirect(url_for("job_tracker.candidatures.index"))
 
-    ext.database_job_tracker.delete_candidature(id)
+    ext.database_job_tracker.delete_candidature(id, user_id=current_user.id)
     flash("Candidature supprimée.", "info")
     return redirect(url_for("job_tracker.candidatures.index"))
 
@@ -137,7 +138,7 @@ def changer_statut(id):
     if new_status not in STATUTS:
         return jsonify({"success": False, "error": "Statut invalide"}), 400
 
-    c = ext.database_job_tracker.update_statut(id, new_status)
+    c = ext.database_job_tracker.update_statut(id, new_status, user_id=current_user.id)
     if c is None:
         return jsonify({"success": False, "error": "Candidature introuvable"}), 404
 
@@ -233,7 +234,7 @@ def ajouter():
 @login_required
 @require_permission("job_tracker_access")
 def modifier(id):
-    e = ext.database_job_tracker.get_entreprise(id)
+    e = ext.database_job_tracker.get_entreprise(id, user_id=current_user.id)
     if e is None:
         flash("Entreprise introuvable.", "error")
         return redirect(url_for("job_tracker.entreprises.index"))
@@ -244,6 +245,7 @@ def modifier(id):
         secteur=request.form.get("secteur", e["secteur"]),
         localisation=request.form.get("localisation", e["localisation"]),
         notes=request.form.get("notes", e["notes"]),
+        user_id=current_user.id,
     )
     flash("Entreprise mise à jour.", "success")
     return redirect(url_for("job_tracker.entreprises.index"))
@@ -253,12 +255,12 @@ def modifier(id):
 @login_required
 @require_permission("job_tracker_access")
 def supprimer(id):
-    e = ext.database_job_tracker.get_entreprise(id)
+    e = ext.database_job_tracker.get_entreprise(id, user_id=current_user.id)
     if e is None:
         flash("Entreprise introuvable.", "error")
         return redirect(url_for("job_tracker.entreprises.index"))
 
-    ext.database_job_tracker.delete_entreprise(id)
+    ext.database_job_tracker.delete_entreprise(id, user_id=current_user.id)
     flash("Entreprise supprimée.", "info")
     return redirect(url_for("job_tracker.entreprises.index"))
 
@@ -267,7 +269,7 @@ def supprimer(id):
 @login_required
 @require_permission("job_tracker_access")
 def detail(id):
-    e = ext.database_job_tracker.get_entreprise(id)
+    e = ext.database_job_tracker.get_entreprise(id, user_id=current_user.id)
     if e is None:
         flash("Entreprise introuvable.", "error")
         return redirect(url_for("job_tracker.entreprises.index"))

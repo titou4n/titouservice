@@ -57,3 +57,7 @@ certs/*.csr
 
 # ===== SECURITY_AUDITS =====
 audits/*.md
+
+# ===== CLAUDE =====
+CLAUDE.md
+.claude/

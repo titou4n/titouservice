@@ -34,6 +34,7 @@ class User(UserMixin):
         self.email_verified = user.get("email_verified", False)
         self.pay = user.get("pay", 0)
         self.role_id = user.get("role_id")
+        self.nbpasswordchange = user.get("nbpasswordchange", 0)
 
         if self.role_id is None:
             logger.warning("User %s has no role_id", self.id)

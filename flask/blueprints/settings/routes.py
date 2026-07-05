@@ -1,7 +1,7 @@
 # blueprints/settings/routes.py
 # Préfixe : /settings  (défini dans create_app)
 
-from flask import render_template, redirect, request, flash, url_for, send_file
+from flask import render_template, redirect, request, flash, url_for, send_file, abort
 from flask_login import login_required, current_user
 
 from blueprints.settings import bp
@@ -230,14 +230,16 @@ def settings_logout_all():
 @bp.route('/logout_session/<string:session_id_hash>', methods=['POST'])
 @login_required
 def settings_logout_session(session_id_hash: str):
-    ext.session_manager.logout_session(session_id_hash=session_id_hash)
+    if not ext.session_manager.logout_session_owned(session_id_hash=session_id_hash, user_id=current_user.id):
+        abort(403)
     return redirect(url_for('settings.security_home'))
 
 
 @bp.route('/delete_session/<string:session_id_hash>', methods=['POST'])
 @login_required
 def settings_delete_session(session_id_hash: str):
-    ext.session_manager.delete_session(session_id_hash=session_id_hash)
+    if not ext.session_manager.delete_session_owned(session_id_hash=session_id_hash, user_id=current_user.id):
+        abort(403)
     return redirect(url_for('settings.security_home'))
 
 

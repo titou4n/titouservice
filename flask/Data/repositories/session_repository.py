@@ -117,6 +117,26 @@ class SessionRepository:
             conn.commit()
         logger.info("Session revoked: hash=%s", session_id_hash)
 
+    def revoke_owned(self, session_id_hash: str, user_id: int) -> bool:
+        """
+        Mark a single session as revoked, but only if it belongs to *user_id*.
+
+        Returns True if a row was actually revoked, False if no session
+        matched (either it doesn't exist or it belongs to someone else) -
+        callers must not distinguish between these two cases in the
+        response, to avoid leaking whether a given hash exists.
+        """
+        with self._db.connect() as conn:
+            cur = conn.execute(
+                "UPDATE sessions SET is_revoked = 1 WHERE session_id_hash = ? AND user_id = ?;",
+                (session_id_hash, user_id),
+            )
+            conn.commit()
+        revoked = cur.rowcount > 0
+        if revoked:
+            logger.info("Session revoked: hash=%s, user_id=%d", session_id_hash, user_id)
+        return revoked
+
     def revoke_all_for_user(self, user_id: int) -> None:
         """Revoke every active session belonging to *user_id*."""
         with self._db.connect() as conn:
@@ -138,6 +158,22 @@ class SessionRepository:
                 (session_id_hash,),
             )
             conn.commit()
+
+    def delete_owned(self, session_id_hash: str, user_id: int) -> bool:
+        """
+        Delete a single session, but only if it belongs to *user_id*.
+        Returns True if a row was actually deleted.
+        """
+        with self._db.connect() as conn:
+            cur = conn.execute(
+                "DELETE FROM sessions WHERE session_id_hash = ? AND user_id = ?;",
+                (session_id_hash, user_id),
+            )
+            conn.commit()
+        deleted = cur.rowcount > 0
+        if deleted:
+            logger.info("Session deleted: hash=%s, user_id=%d", session_id_hash, user_id)
+        return deleted
 
     def delete_all(self) -> None:
         """Purge the entire sessions table (use with caution)."""

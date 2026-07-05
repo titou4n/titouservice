@@ -25,6 +25,11 @@ class DatabaseJobTracker:
         finally:
             conn.close()
 
+    def ping(self) -> None:
+        """Raise if the job-tracker database is not reachable."""
+        with self._connection() as conn:
+            conn.execute("SELECT 1")
+
     def _init_db(self):
         with self._connection() as conn:
             conn.executescript("""
@@ -99,10 +104,10 @@ class DatabaseJobTracker:
             result.append(card)
         return result
 
-    def get_candidature(self, id: int) -> dict | None:
+    def get_candidature(self, id: int, user_id: int) -> dict | None:
         with self._connection() as conn:
             row = conn.execute(
-                "SELECT * FROM candidatures WHERE id = ?", (id,)
+                "SELECT * FROM candidatures WHERE id = ? AND user_id = ?", (id, user_id)
             ).fetchone()
         return self._row_to_dict(row)
 
@@ -133,28 +138,29 @@ class DatabaseJobTracker:
         status: str,
         date_applied: date,
         notes: str,
+        user_id: int,
     ) -> None:
         with self._connection() as conn:
             conn.execute(
                 """
                 UPDATE candidatures
                 SET title=?, company_id=?, status=?, date_applied=?, last_update=?, notes=?
-                WHERE id=?
+                WHERE id=? AND user_id=?
                 """,
-                (title, company_id, status, str(date_applied), str(date.today()), notes, id),
+                (title, company_id, status, str(date_applied), str(date.today()), notes, id, user_id),
             )
 
-    def delete_candidature(self, id: int) -> None:
+    def delete_candidature(self, id: int, user_id: int) -> None:
         with self._connection() as conn:
-            conn.execute("DELETE FROM candidatures WHERE id = ?", (id,))
+            conn.execute("DELETE FROM candidatures WHERE id = ? AND user_id = ?", (id, user_id))
 
-    def update_statut(self, id: int, new_status: str) -> dict | None:
+    def update_statut(self, id: int, new_status: str, user_id: int) -> dict | None:
         with self._connection() as conn:
             conn.execute(
-                "UPDATE candidatures SET status=?, last_update=? WHERE id=?",
-                (new_status, str(date.today()), id),
+                "UPDATE candidatures SET status=?, last_update=? WHERE id=? AND user_id=?",
+                (new_status, str(date.today()), id, user_id),
             )
-        return self.get_candidature(id)
+        return self.get_candidature(id, user_id)
 
     def count_by_status(self, user_id: int) -> dict[str, int]:
         with self._connection() as conn:
@@ -204,22 +210,23 @@ class DatabaseJobTracker:
             for c in companies:
                 d = dict(c)
                 cands = conn.execute(
-                    "SELECT * FROM candidatures WHERE company_id=?", (d["id"],)
+                    "SELECT * FROM candidatures WHERE company_id=? AND user_id=?",
+                    (d["id"], d["user_id"]),
                 ).fetchall()
                 d["candidatures"] = [dict(ca) for ca in cands]
                 result.append(d)
         return result
 
-    def get_entreprise(self, id: int) -> dict | None:
+    def get_entreprise(self, id: int, user_id: int) -> dict | None:
         with self._connection() as conn:
             row = conn.execute(
-                "SELECT * FROM entreprises WHERE id=?", (id,)
+                "SELECT * FROM entreprises WHERE id=? AND user_id=?", (id, user_id)
             ).fetchone()
             if row is None:
                 return None
             e = dict(row)
             cands = conn.execute(
-                "SELECT * FROM candidatures WHERE company_id=?", (id,)
+                "SELECT * FROM candidatures WHERE company_id=? AND user_id=?", (id, user_id)
             ).fetchall()
             e["candidatures"] = [dict(c) for c in cands]
         return e
@@ -234,17 +241,17 @@ class DatabaseJobTracker:
             )
 
     def update_entreprise(
-        self, id: int, name: str, secteur: str, localisation: str, notes: str
+        self, id: int, name: str, secteur: str, localisation: str, notes: str, user_id: int
     ) -> None:
         with self._connection() as conn:
             conn.execute(
-                "UPDATE entreprises SET name=?, secteur=?, localisation=?, notes=? WHERE id=?",
-                (name, secteur, localisation, notes, id),
+                "UPDATE entreprises SET name=?, secteur=?, localisation=?, notes=? WHERE id=? AND user_id=?",
+                (name, secteur, localisation, notes, id, user_id),
             )
 
-    def delete_entreprise(self, id: int) -> None:
+    def delete_entreprise(self, id: int, user_id: int) -> None:
         with self._connection() as conn:
-            conn.execute("DELETE FROM entreprises WHERE id = ?", (id,))
+            conn.execute("DELETE FROM entreprises WHERE id = ? AND user_id = ?", (id, user_id))
 
     def count_entreprises(self, user_id: int) -> int:
         with self._connection() as conn:

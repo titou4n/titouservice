@@ -296,11 +296,13 @@ class SessionManager:
         except Exception as e:
             logger.error("Error logging out user from all devices: %s", str(e))
 
-    def logout_session(self, session_id_hash:str) -> None:
-        self.db_session.revoke(session_id_hash=session_id_hash)
+    def logout_session_owned(self, session_id_hash: str, user_id: int) -> bool:
+        """Revoke a session, but only if it belongs to *user_id*. Returns True on success."""
+        return self.db_session.revoke_owned(session_id_hash=session_id_hash, user_id=user_id)
 
-    def delete_session(self, session_id_hash:str) -> None:
-        self.db_session.delete(session_id_hash=session_id_hash)
+    def delete_session_owned(self, session_id_hash: str, user_id: int) -> bool:
+        """Delete a session, but only if it belongs to *user_id*. Returns True on success."""
+        return self.db_session.delete_owned(session_id_hash=session_id_hash, user_id=user_id)
 
     def send_temp_2fa_session(self, user_id: int) -> None:
         flask_session["temp_user_id"] = user_id
