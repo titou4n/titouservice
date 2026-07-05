@@ -66,7 +66,7 @@ def _parse_trusted_networks(raw: str) -> list:
         try:
             networks.append(ipaddress.ip_network(cidr))
         except ValueError:
-            logger.warning("Ignoring invalid entry in TRUSTED_PROXY_NETWORKS: %r", cidr)
+            logger.warning("Ignoring invalid entry in TRUSTED_PROXY_NETWORKS.")
     return networks
 
 
