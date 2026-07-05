@@ -132,6 +132,7 @@ def delete():
 
 @bp.route('/public/<string:token>')
 @bp.route('/public/<string:token>/')
+@ext.limiter.limit(f"{ext.config.PUBLIC_RATE_LIMIT} per minute")
 def public_view(token: str):
     """
     Publicly accessible page — no authentication required.

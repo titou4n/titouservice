@@ -141,7 +141,7 @@ def social_network_chat_selected(id_receiver: int):
 @bp.route('/chat/send_message/<int:id_receiver>', methods=['GET', 'POST'])
 @bp.route('/chat/send_message/<int:id_receiver>/', methods=['GET', 'POST'])
 @login_required
-@require_permission("create_own_messages")
+@require_permission("create_messages")
 def social_network_send_message(id_receiver: int):
     if request.method == 'GET':
         all_followeds = _resolve_followeds(current_user.id)

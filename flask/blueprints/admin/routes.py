@@ -44,12 +44,14 @@ def assign_role():
                                id=current_user.id,
                                dict_role_permission=ext.permission_manager.get_dict())
 
-    account_id    = request.form.get("account_id")
-    selected_role = request.form.get("roles")
+    account_id_raw = request.form.get("account_id")
+    selected_role   = request.form.get("roles")
 
-    if not account_id:
-        flash("Please select an account ID.", "warning")
+    if not account_id_raw or not account_id_raw.isdigit():
+        flash("Please select a valid account ID.", "warning")
         return redirect(url_for("admin.role_permission_manager"))
+
+    account_id = int(account_id_raw)
 
     if not ext.db_account_repository.exists_by_id(id=account_id):
         flash("ID doesn't exist", "warning")
@@ -76,6 +78,17 @@ def assign_role():
         return redirect(url_for("admin.assign_role"))
 
     role_id = ext.db_role_repository.get_role_id(role_name=selected_role)
+    if role_id is None:
+        flash("Role doesn't exist", "warning")
+        return redirect(url_for("admin.assign_role"))
+
+    # Security: only a Super Admin may grant the Super Admin or Admin role.
+    # Without this check, any account holding just "access_admin_panel" +
+    # "assign_role" (e.g. a custom role) could grant itself/others full admin rights.
+    if role_id in (super_admin_role_id, admin_role_id) and current_user.role_name != ext.config.ROLE_NAME_SUPER_ADMIN:
+        flash("Only a Super Admin can assign the Admin or Super Admin role.", "danger")
+        return redirect(url_for("admin.assign_role"))
+
     ext.db_account_repository.update_role(user_id=account_id, role_id=role_id)
     flash("Role assigned successfully.", "success")
     return redirect(url_for("admin.admin_panel"))

@@ -1,11 +1,52 @@
 # blueprints/main/routes.py
 
 import io
+import logging
 from flask import render_template, redirect, send_file, url_for
 from flask_login import login_required, current_user, logout_user
 
 from blueprints.main import bp
 import extensions as ext
+
+logger = logging.getLogger(__name__)
+
+
+@bp.route('/health')
+def health():
+    """
+    Unauthenticated liveness/readiness probe used by the Docker HEALTHCHECK.
+
+    Checks every hard dependency the app actually needs to serve traffic
+    (Redis, main SQLite database, job-tracker SQLite database). Never
+    returns exception detail to the caller - only "ok"/"error" per
+    dependency - the full detail goes to the server logs only.
+    """
+    checks = {}
+
+    try:
+        ext.config.SESSION_REDIS.ping()
+        checks["redis"] = "ok"
+    except Exception as e:
+        logger.error("Health check failed: Redis unreachable (%s)", e)
+        checks["redis"] = "error"
+
+    try:
+        with ext.db_connection.connect() as conn:
+            conn.execute("SELECT 1")
+        checks["database"] = "ok"
+    except Exception as e:
+        logger.error("Health check failed: main database unreachable (%s)", e)
+        checks["database"] = "error"
+
+    try:
+        ext.database_job_tracker.ping()
+        checks["job_tracker_database"] = "ok"
+    except Exception as e:
+        logger.error("Health check failed: job tracker database unreachable (%s)", e)
+        checks["job_tracker_database"] = "error"
+
+    is_healthy = all(v == "ok" for v in checks.values())
+    return {"status": "ok" if is_healthy else "error", "checks": checks}, 200 if is_healthy else 503
 
 
 @bp.route('/graph/connections-per-day')
