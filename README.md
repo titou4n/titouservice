@@ -7,8 +7,6 @@ Plateforme web modulaire construite avec **Flask** et **Docker Compose**, regrou
 
 **Instance en production :** [https://titouservice.ltjs.net](https://titouservice.ltjs.net)
 
-> Aucune capture d'écran n'est disponible dans ce dépôt à ce jour. Si des visuels sont ajoutés (dossier `docs/images/` ou `screenshots/`), pensez à les référencer ici.
-
 ---
 
 ## Sommaire
