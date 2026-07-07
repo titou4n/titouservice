@@ -855,6 +855,10 @@ footer a:hover {
     display: inline;
 }
 
+.inline-form {
+    display: inline;
+}
+
 /* =====================================
    PAGES SPÉCIFIQUES - SETTINGS
    ===================================== */

@@ -1,4 +1,4 @@
-# blueprints/api/services.py
+# blueprints/movie_information/services.py
 # Logique d'appel à l'API OMDB. Isolée de la route pour être testable sans Flask.
 
 import requests
@@ -12,10 +12,13 @@ def search_movie_by_title(title: str) -> tuple[dict | None, str | None]:
     movie_data est None si le film n'existe pas ou si l'API échoue.
     """
     api_key = current_app.config.get('OMDB_API_KEY', '')
-    url     = f"http://www.omdbapi.com/?apikey={api_key}&t={title}"
 
     try:
-        response = requests.get(url, timeout=5)
+        response = requests.get(
+            "https://www.omdbapi.com/",
+            params={"apikey": api_key, "t": title},
+            timeout=5,
+        )
         response.raise_for_status()
         data = response.json()
     except requests.RequestException as e:

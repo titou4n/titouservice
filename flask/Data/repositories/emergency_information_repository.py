@@ -144,7 +144,6 @@ class EmergencyInformationRepository:
         user_id: int,
         first_name: str,
         last_name: str,
-        age: Optional[int],
         date_of_birth: Optional[str],
         gender: Optional[str],
         blood_type: Optional[str],
@@ -174,7 +173,6 @@ class EmergencyInformationRepository:
                     user_id,
                     first_name,
                     last_name,
-                    age,
                     date_of_birth,
                     gender,
                     blood_type,
@@ -196,7 +194,7 @@ class EmergencyInformationRepository:
                     updated_at
                 )
                 VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 );
                 """,
@@ -204,7 +202,6 @@ class EmergencyInformationRepository:
                     user_id,
                     first_name,
                     last_name,
-                    age,
                     date_of_birth,
                     gender,
                     blood_type,
@@ -247,6 +244,100 @@ class EmergencyInformationRepository:
                 WHERE id = ?;
                 """,
                 (last_public_access, record_id),
+            )
+            conn.commit()
+
+    def update_all_fields(
+        self,
+        user_id: int,
+        first_name: str,
+        last_name: str,
+        date_of_birth: Optional[str],
+        gender: Optional[str],
+        blood_type: Optional[str],
+        height_cm: Optional[int],
+        weight_kg: Optional[float],
+        allergies: Optional[str],
+        medical_conditions: Optional[str],
+        current_medications: Optional[str],
+        critical_info: Optional[str],
+        medical_notes: Optional[str],
+        emergency_contact_name: Optional[str],
+        emergency_contact_phone: Optional[str],
+        emergency_contact_relation: Optional[str],
+        doctor_name: Optional[str],
+        doctor_phone: Optional[str],
+        organ_donor: bool,
+        updated_at: str,
+    ) -> None:
+        """Update every editable field of a user's emergency information record."""
+
+        with self._db.connect() as conn:
+            conn.execute(
+                """
+                UPDATE emergency_information
+                SET
+                    first_name = ?,
+                    last_name = ?,
+                    date_of_birth = ?,
+                    gender = ?,
+                    blood_type = ?,
+                    height_cm = ?,
+                    weight_kg = ?,
+                    allergies = ?,
+                    medical_conditions = ?,
+                    current_medications = ?,
+                    critical_info = ?,
+                    medical_notes = ?,
+                    emergency_contact_name = ?,
+                    emergency_contact_phone = ?,
+                    emergency_contact_relation = ?,
+                    doctor_name = ?,
+                    doctor_phone = ?,
+                    organ_donor = ?,
+                    updated_at = ?
+                WHERE user_id = ?;
+                """,
+                (
+                    first_name,
+                    last_name,
+                    date_of_birth,
+                    gender,
+                    blood_type,
+                    height_cm,
+                    weight_kg,
+                    allergies,
+                    medical_conditions,
+                    current_medications,
+                    critical_info,
+                    medical_notes,
+                    emergency_contact_name,
+                    emergency_contact_phone,
+                    emergency_contact_relation,
+                    doctor_name,
+                    doctor_phone,
+                    int(organ_donor),
+                    updated_at,
+                    user_id,
+                ),
+            )
+            conn.commit()
+
+    def update_public_token(
+        self,
+        record_id: int,
+        public_token: str,
+    ) -> None:
+        """Update the public token of a record."""
+
+        with self._db.connect() as conn:
+            conn.execute(
+                """
+                UPDATE emergency_information
+                SET public_token = ?
+                WHERE id = ?;
+                """,
+                (public_token, record_id),
             )
             conn.commit()
 

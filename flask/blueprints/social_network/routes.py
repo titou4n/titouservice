@@ -84,7 +84,7 @@ def social_network_user_profile(id_account: int):
     )
 
 
-@bp.route('/follow_action/<int:id_followed>', methods=['GET', 'POST'])
+@bp.route('/follow_action/<int:id_followed>', methods=['POST'])
 @login_required
 @require_permission("follow_profile")
 def social_network_follow_action(id_followed: int):
@@ -100,7 +100,7 @@ def social_network_follow_action(id_followed: int):
     return redirect(url_for('social_network.social_network_friends'))
 
 
-@bp.route('/unfollow_action/<int:id_unfollowed>', methods=['GET', 'POST'])
+@bp.route('/unfollow_action/<int:id_unfollowed>', methods=['POST'])
 @login_required
 @require_permission("follow_profile")
 def social_network_unfollow_action(id_unfollowed: int):
@@ -127,8 +127,12 @@ def social_network_chat():
 @bp.route('/chat/<int:id_receiver>/', methods=['GET', 'POST'])
 @login_required
 def social_network_chat_selected(id_receiver: int):
+    if not ext.db_social_repository.is_following(current_user.id, id_receiver):
+        flash("You can only message accounts you follow.")
+        return redirect(url_for('social_network.social_network_chat'))
+
     all_followeds = _resolve_followeds(current_user.id)
-    messages      = ext.db_social_repository.get_messages_between(current_user.id, id_receiver)
+    messages      = ext.db_social_repository.get_conversation(current_user.id, id_receiver)
 
     return render_template('social_network/social_network_chat.html',
         id=current_user.id,
@@ -143,9 +147,13 @@ def social_network_chat_selected(id_receiver: int):
 @login_required
 @require_permission("create_messages")
 def social_network_send_message(id_receiver: int):
+    if not ext.db_social_repository.is_following(current_user.id, id_receiver):
+        flash("You can only message accounts you follow.")
+        return redirect(url_for('social_network.social_network_chat'))
+
     if request.method == 'GET':
         all_followeds = _resolve_followeds(current_user.id)
-        messages      = ext.db_social_repository.get_messages_between(current_user.id, id_receiver)
+        messages      = ext.db_social_repository.get_conversation(current_user.id, id_receiver)
         return render_template('social_network/social_network_chat.html',
             id=current_user.id,
             all_followeds=all_followeds,

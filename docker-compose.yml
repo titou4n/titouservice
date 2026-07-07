@@ -37,12 +37,6 @@ services:
       # attacker to forge this header against regardless.
       PROXY_TRUSTED_HOP_COUNT: "2"
 
-      # No internal proxy network needs special trust anymore now that NPM
-      # is gone - falls back to config.py's default (localhost-only). Only
-      # set this if you have another internal caller (e.g. a healthcheck)
-      # that legitimately needs to set X-Forwarded-For directly.
-      # TRUSTED_PROXY_NETWORKS: "<CIDR>"
-
     volumes:
       - db-data:/app/Data/db
       - ./secrets:/run/secrets:ro
@@ -115,8 +109,8 @@ networks:
 
   # Backend tier: flask, redis and nginx (as the bridge). No fixed subnet
   # pinning needed anymore - that was only there to match Nginx Proxy
-  # Manager's gateway address for TRUSTED_PROXY_NETWORKS, which no longer
-  # applies now that NPM is out of the chain (see audits/).
+  # Manager's gateway address, which no longer applies now that NPM is out
+  # of the chain (see audits/).
   titouservice-network:
     driver: bridge
 

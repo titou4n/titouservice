@@ -19,30 +19,17 @@ class SessionManager:
         self._request_session = requests.Session()
 
     def get_client_ip(self) -> str | None:
-        """Get client's real IP, accounting for proxy headers if TRUST_PROXY is enabled."""
-        if not self.config.TRUST_PROXY:
-            return request.remote_addr
+        """
+        Get the client's real IP.
 
-        ip = None
-
-        # Check header defined in config (default: CF-Connecting-IP for Cloudflare)
-        if self.config.PROXY_IP_HEADER:
-            ip = request.headers.get(self.config.PROXY_IP_HEADER)
-            if ip:
-                return ip.split(",")[0].strip()
-
-        # Fallback: X-Forwarded-For (most common)
-        forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            return forwarded_for.split(",")[0].strip()
-
-        # Fallback: X-Real-IP
-        real_ip = request.headers.get("X-Real-IP")
-        if real_ip:
-            return real_ip
-
-        # Last resort
-        return request.remote_addr
+        Delegates to extensions.get_client_identifier(), whose value already
+        comes from ProxyFix (installed in app.py) resolving request.remote_addr
+        at the WSGI layer. Do not re-implement header parsing here - a second,
+        unverified reading of CF-Connecting-IP/X-Forwarded-For/X-Real-IP would
+        reintroduce IP spoofing on session-hijack detection even though
+        rate-limiting stays protected (see audits/).
+        """
+        return ext.get_client_identifier()
 
     def get_ip_session(self) -> str | None:
         try:

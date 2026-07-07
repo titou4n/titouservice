@@ -40,11 +40,11 @@ def create_app(config_object=Config):
 
     app.config.from_object(obj=config_object)
 
-    # Number of trusted reverse-proxy hops in front of Flask (NPM + this
-    # repo's nginx). Must match the real chain or remote_addr silently
-    # resolves to the wrong hop's IP (see audits/ - this previously
-    # neutralized the Cloudflare IP check and mutualized rate-limiting
-    # across all visitors).
+    # Number of trusted reverse-proxy hops in front of Flask. Current
+    # topology: Client -> Cloudflare -> cloudflared -> nginx (this repo) ->
+    # Flask. Must match the real chain or remote_addr silently resolves to
+    # the wrong hop's IP (see audits/ - this previously mutualized
+    # rate-limiting across all visitors).
     proxy_hops = config_object.PROXY_TRUSTED_HOP_COUNT
     app.wsgi_app = ProxyFix(
         app.wsgi_app,

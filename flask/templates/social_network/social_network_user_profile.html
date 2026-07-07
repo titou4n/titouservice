@@ -16,10 +16,16 @@
         <img class="profile-pic-big" src="{{ url_for('settings.profile_picture', user_id=user_profile_id) }}" alt="Profile Picture">
     </div>
     {% if id1_follow_id2 %}
-        <a href="{{ url_for('social_network.social_network_unfollow_action', id_unfollowed=user_profile_id) }}" class="button_red">Unfollow</a>
+        <form action="{{ url_for('social_network.social_network_unfollow_action', id_unfollowed=user_profile_id) }}" method="post" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="button_red">Unfollow</button>
+        </form>
         <a href="{{ url_for('social_network.social_network_chat_selected', id_receiver=user_profile_id) }}" class="button">Chat with him/her</a>
     {% else %}
-        <a href="{{ url_for('social_network.social_network_follow_action', id_followed=user_profile_id) }}" class="button">Follow</a>
+        <form action="{{ url_for('social_network.social_network_follow_action', id_followed=user_profile_id) }}" method="post" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="button">Follow</button>
+        </form>
     {% endif %}
     <hr>
     <h3>Account Details</h3>

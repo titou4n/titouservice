@@ -102,23 +102,6 @@ class SocialRepository:
             )
             conn.commit()
 
-    def get_messages_between(
-        self,
-        sender_id: int,
-        receiver_id: int,
-    ) -> list[sqlite3.Row]:
-        """Return all messages from *sender_id* to *receiver_id*."""
-        with self._db.connect() as conn:
-            return conn.execute(
-                """
-                SELECT *
-                FROM messages
-                WHERE sender_id = ? AND receiver_id = ?
-                ORDER BY datetime ASC;
-                """,
-                (sender_id, receiver_id),
-            ).fetchall()
-
     def get_conversation(
         self,
         user_id_a: int,

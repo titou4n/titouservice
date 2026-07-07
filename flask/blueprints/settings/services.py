@@ -56,13 +56,12 @@ def validate_profile_picture(file) -> tuple[bool, str]:
     if mime_type not in allowed_mimes:
         return False, f"Invalid MIME type: {mime_type}"
 
-    # 4. Vérifier les magic bytes
+    # 4. Vérifier les magic bytes (BMP non listé : déjà exclu par ALLOWED_EXTENSIONS_PROFILE_PICTURE)
     file.seek(0)
     header = file.read(8)
     if not (
         (header[:4] == b'\x89PNG') or  # PNG
-        (header[:2] == b'\xff\xd8') or  # JPEG
-        (header[:2] == b'BM')  # BMP
+        (header[:2] == b'\xff\xd8')    # JPEG
     ):
         return False, "Invalid image file (magic bytes)"
 
@@ -103,6 +102,25 @@ def save_profile_picture(user_id: int, file) -> bool:
     folder = current_app.config['UPLOAD_PROFILE_PICTURE_FOLDER']
     filepath = os.path.join(folder, new_filename)
 
+    # Ré-encoder l'image (pixels uniquement) plutôt que de sauvegarder le fichier
+    # tel quel : neutralise toute donnée additionnelle (polyglotte, métadonnées)
+    # au-delà de ce que PIL décode réellement comme image.
+    # img.verify() (dans validate_profile_picture) invalide l'objet PIL pour tout
+    # usage ultérieur - on rouvre donc le fichier depuis le début.
+    try:
+        file.seek(0)
+        img = Image.open(file)
+        if extension in ("jpg", "jpeg"):
+            img = img.convert("RGB")
+            save_format = "JPEG"
+        else:  # png
+            img = img.convert("RGBA")
+            save_format = "PNG"
+        img.save(filepath, format=save_format)
+    except Exception as e:
+        logger.warning("Failed to re-encode profile picture for user %s: %s", user_id, str(e))
+        return False
+
     # Supprimer l'ancienne image si elle existe
     old_path = ext.db_account_repository.get_profile_picture_path(user_id)
     if old_path and os.path.exists(old_path):
@@ -111,8 +129,6 @@ def save_profile_picture(user_id: int, file) -> bool:
         except Exception as e:
             logger.warning("Failed to delete old profile picture for user %s: %s", user_id, str(e))
 
-    # Sauvegarder
-    file.save(filepath)
     ext.db_account_repository.update_profile_picture_path(user_id, filepath)
 
     logger.info("Profile picture uploaded for user %s", user_id)

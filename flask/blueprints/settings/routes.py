@@ -73,9 +73,13 @@ def account_change_username():
                                id=current_user.id,
                                username=ext.db_account_repository.get_username_by_id(current_user.id))
 
-    new_username = str(request.form['new_username'])
+    new_username = str(request.form['new_username']).strip()
     if not new_username:
         flash('Username is required !')
+        return redirect(url_for('settings.account_change_username'))
+
+    if len(new_username) > ext.config.MAX_SHORT_FIELD:
+        flash(f'Username must not exceed {ext.config.MAX_SHORT_FIELD} characters.')
         return redirect(url_for('settings.account_change_username'))
 
     if ext.db_account_repository.exists_by_username(new_username):
@@ -108,6 +112,11 @@ def account_change_password():
         flash("Passwords must be identical.")
         return redirect(url_for('settings.account_change_password'))
 
+    password_error = ext.utils.validate_password_strength(new_password, ext.config.MIN_PASSWORD_LENGTH)
+    if password_error:
+        flash(password_error)
+        return redirect(url_for('settings.account_change_password'))
+
     ext.db_account_repository.update_password(current_user.id, ext.hash_manager.generate_password_hash(new_password))
     flash('Your password has been updated')
     return redirect(url_for('settings.account_home'))
@@ -123,9 +132,13 @@ def account_change_name():
                                id=current_user.id,
                                name=ext.db_account_repository.get_name_by_id(current_user.id))
 
-    new_name = str(request.form['new_name'])
+    new_name = str(request.form['new_name']).strip()
     if not new_name:
         flash('Name is required !')
+        return redirect(url_for('settings.account_change_name'))
+
+    if len(new_name) > ext.config.MAX_SHORT_FIELD:
+        flash(f'Name must not exceed {ext.config.MAX_SHORT_FIELD} characters.')
         return redirect(url_for('settings.account_change_name'))
 
     if ext.db_account_repository.exists_by_name(new_name):
