@@ -39,7 +39,6 @@ services:
 
     volumes:
       - db-data:/app/Data/db
-      - ./secrets:/run/secrets:ro
 
     expose:
       - "5000"
