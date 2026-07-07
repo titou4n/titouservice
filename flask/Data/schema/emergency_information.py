@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS emergency_information (
 
     first_name                   TEXT,
     last_name                    TEXT,
-    age                          INTEGER,
     date_of_birth                TEXT,
     gender                       TEXT,
     blood_type                   TEXT,

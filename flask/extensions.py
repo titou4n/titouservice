@@ -1,13 +1,11 @@
 # extensions.py
 
-import ipaddress
 import logging
 import os
 from flask_login import LoginManager
 from flask_wtf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask import request
 
 logger = logging.getLogger(__name__)
 
@@ -43,77 +41,28 @@ from utils.decorators import *
 
 from permissions import Permissions
 
-# Official Cloudflare IP ranges (https://www.cloudflare.com/ips/).
-# CF-Connecting-IP is only trustworthy if the request actually reached us
-# through Cloudflare — i.e. the immediate TCP peer address is one of these.
-_CLOUDFLARE_CIDRS = [
-    "173.245.48.0/20", "103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22",
-    "141.101.64.0/18", "108.162.192.0/18", "190.93.240.0/20", "188.114.96.0/20",
-    "197.234.240.0/22", "198.41.128.0/17", "162.158.0.0/15", "104.16.0.0/13",
-    "104.24.0.0/14", "172.64.0.0/13", "131.0.72.0/22",
-    "2400:cb00::/32", "2606:4700::/32", "2803:f800::/32", "2405:b500::/32",
-    "2405:8100::/32", "2a06:98c0::/29", "2c0f:f248::/32",
-]
-_CLOUDFLARE_NETWORKS = [ipaddress.ip_network(cidr) for cidr in _CLOUDFLARE_CIDRS]
-
-
-def _parse_trusted_networks(raw: str) -> list:
-    networks = []
-    for cidr in raw.split(","):
-        cidr = cidr.strip()
-        if not cidr:
-            continue
-        try:
-            networks.append(ipaddress.ip_network(cidr))
-        except ValueError:
-            logger.warning("Ignoring invalid entry in TRUSTED_PROXY_NETWORKS.")
-    return networks
-
-
-def _ip_in_networks(ip_value: str, networks: list) -> bool:
-    """Real CIDR membership test — never a string/prefix comparison."""
-    if not ip_value:
-        return False
-    try:
-        ip = ipaddress.ip_address(ip_value)
-    except ValueError:
-        return False
-    return any(ip in net for net in networks)
-
-
 def get_client_identifier():
     """
-    Real client IP for rate-limiting, trusting a proxy header only when the
-    immediate TCP peer (request.remote_addr) is itself a known-trustworthy
-    address — never just because the header is present (headers are fully
-    attacker-controlled otherwise).
+    Real client IP for rate-limiting.
 
-    Priority:
-      1. CF-Connecting-IP, but only if remote_addr is a real Cloudflare IP.
-      2. X-Forwarded-For, but only if remote_addr is in TRUSTED_PROXY_NETWORKS
-         (e.g. Nginx Proxy Manager reaching this app directly, without Cloudflare).
-      3. Fallback: the direct connection IP (no proxy trusted).
+    Trust resolution does NOT happen here: ProxyFix(x_for=PROXY_TRUSTED_HOP_COUNT)
+    is installed on the WSGI stack in app.py and already rewrites
+    request.remote_addr, at the WSGI layer, by peeling exactly
+    PROXY_TRUSTED_HOP_COUNT trusted hops (cloudflared + nginx) off
+    X-Forwarded-For before any Flask code runs — including this function. So
+    by the time we get here, request.remote_addr already IS the real visitor
+    IP; there's no header left to read or peer address left to verify.
+
+    Do not add CF-Connecting-IP / X-Forwarded-For parsing back into this
+    function: request.remote_addr at this point is never Cloudflare's own
+    address (ProxyFix already consumed that hop), so any such check would be
+    dead code that never fires — see audits/ for the history of that mistake.
     """
-    remote_addr = request.remote_addr
-
-    if _ip_in_networks(remote_addr, _CLOUDFLARE_NETWORKS):
-        cf_ip = request.headers.get('CF-Connecting-IP')
-        if cf_ip:
-            return cf_ip.strip()
-
-    if _ip_in_networks(remote_addr, _TRUSTED_INTERNAL_NETWORKS):
-        x_forwarded = request.headers.get('X-Forwarded-For')
-        if x_forwarded:
-            return x_forwarded.split(',')[0].strip()
-
     return get_remote_address()
 
 # Config
 config = Config()
 permissions = Permissions()
-
-# Parsed once at import time (not per-request) from config.TRUSTED_PROXY_NETWORKS
-_TRUSTED_INTERNAL_NETWORKS = _parse_trusted_networks(config.TRUSTED_PROXY_NETWORKS)
 
 # Flask Extensions
 login_manager = LoginManager()

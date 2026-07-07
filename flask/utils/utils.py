@@ -69,4 +69,14 @@ class Utils:
     def generate_password(size: int) -> str:
         """Generate a URL-safe random password of given size."""
         return secrets.token_urlsafe(size)
-    
+
+    @staticmethod
+    def validate_password_strength(password: str, min_length: int) -> str | None:
+        """
+        Validate a plaintext password server-side.
+        Returns an error message if the password is too weak, ``None`` if it's acceptable.
+        """
+        if not password or len(password) < min_length:
+            return f"Password must be at least {min_length} characters."
+        return None
+

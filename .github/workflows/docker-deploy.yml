@@ -15,6 +15,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Audit Python dependencies (pip-audit)
+        run: |
+          pip install pip-audit
+          pip-audit -r flask/requirements.txt
+
       - name: Validate Nginx configuration
         run: |
           mkdir -p /tmp/nginx-test/ssl
@@ -39,15 +49,7 @@ jobs:
           # Tag avec le SHA du commit pour versionner
           docker tag titou4n/titouservice-flask:latest titou4n/titouservice-flask:${{ github.sha }}
 
-      - name: Build Docker image (titouservice-nginx)
-        run: |
-          docker build -t titou4n/titouservice-nginx:latest -f nginx/Dockerfile ./nginx
-          # Tag avec le SHA du commit pour versionner
-          docker tag titou4n/titouservice-nginx:latest titou4n/titouservice-nginx:${{ github.sha }}
-
       - name: Push Docker image
         run: |
           docker push titou4n/titouservice-flask:latest
           docker push titou4n/titouservice-flask:${{ github.sha }}
-          docker push titou4n/titouservice-nginx:latest
-          docker push titou4n/titouservice-nginx:${{ github.sha }}

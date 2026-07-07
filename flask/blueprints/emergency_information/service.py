@@ -20,6 +20,7 @@ from blueprints.emergency_information.utils.token_generator import (
 )
 
 from blueprints.emergency_information.utils.validators import (
+    compute_age,
     validate_boolean,
     validate_blood_type,
     validate_date_of_birth,
@@ -56,7 +57,7 @@ class EmergencyInformationService:
             user_id=row["user_id"],
             first_name=row["first_name"],
             last_name=row["last_name"],
-            age=row["age"],
+            age=compute_age(row["date_of_birth"]),
             date_of_birth=row["date_of_birth"],
             gender=row["gender"],
             blood_type=row["blood_type"],
@@ -282,12 +283,6 @@ class EmergencyInformationService:
             form_data.get("organ_donor", False)
         )
 
-        # -------------------------------------------------------------- #
-        # Computed values
-        # -------------------------------------------------------------- #
-
-        cleaned["age"] = form_data.get("age")
-
         return cleaned, errors
 
     # ------------------------------------------------------------------ #
@@ -315,59 +310,28 @@ class EmergencyInformationService:
             logger.info("Updating emergency information "
                         "for user_id=%s",user_id)
 
-            with self._repository._db.connect() as conn:
-                conn.execute(
-                    """
-                    UPDATE emergency_information
-                    SET
-                        first_name = ?,
-                        last_name = ?,
-                        age = ?,
-                        date_of_birth = ?,
-                        gender = ?,
-                        blood_type = ?,
-                        height_cm = ?,
-                        weight_kg = ?,
-                        allergies = ?,
-                        medical_conditions = ?,
-                        current_medications = ?,
-                        critical_info = ?,
-                        medical_notes = ?,
-                        emergency_contact_name = ?,
-                        emergency_contact_phone = ?,
-                        emergency_contact_relation = ?,
-                        doctor_name = ?,
-                        doctor_phone = ?,
-                        organ_donor = ?,
-                        updated_at = ?
-                    WHERE user_id = ?;
-                    """,
-                    (
-                        cleaned["first_name"],
-                        cleaned["last_name"],
-                        cleaned["age"],
-                        cleaned["date_of_birth"],
-                        cleaned["gender"],
-                        cleaned["blood_type"],
-                        cleaned["height_cm"],
-                        cleaned["weight_kg"],
-                        cleaned["allergies"],
-                        cleaned["medical_conditions"],
-                        cleaned["current_medications"],
-                        cleaned["critical_info"],
-                        cleaned["medical_notes"],
-                        cleaned["emergency_contact_name"],
-                        cleaned["emergency_contact_phone"],
-                        cleaned["emergency_contact_relation"],
-                        cleaned["doctor_name"],
-                        cleaned["doctor_phone"],
-                        int(cleaned["organ_donor"]),
-                        now,
-                        user_id,
-                    ),
-                )
-
-                conn.commit()
+            self._repository.update_all_fields(
+                user_id=user_id,
+                first_name=cleaned["first_name"],
+                last_name=cleaned["last_name"],
+                date_of_birth=cleaned["date_of_birth"],
+                gender=cleaned["gender"],
+                blood_type=cleaned["blood_type"],
+                height_cm=cleaned["height_cm"],
+                weight_kg=cleaned["weight_kg"],
+                allergies=cleaned["allergies"],
+                medical_conditions=cleaned["medical_conditions"],
+                current_medications=cleaned["current_medications"],
+                critical_info=cleaned["critical_info"],
+                medical_notes=cleaned["medical_notes"],
+                emergency_contact_name=cleaned["emergency_contact_name"],
+                emergency_contact_phone=cleaned["emergency_contact_phone"],
+                emergency_contact_relation=cleaned["emergency_contact_relation"],
+                doctor_name=cleaned["doctor_name"],
+                doctor_phone=cleaned["doctor_phone"],
+                organ_donor=cleaned["organ_donor"],
+                updated_at=now,
+            )
 
             updated_row = self._repository.get_by_user_id(user_id)
             return (
@@ -391,7 +355,6 @@ class EmergencyInformationService:
             user_id=user_id,
             first_name=cleaned["first_name"],
             last_name=cleaned["last_name"],
-            age=cleaned["age"],
             date_of_birth=cleaned["date_of_birth"],
             gender=cleaned["gender"],
             blood_type=cleaned["blood_type"],
@@ -431,17 +394,7 @@ class EmergencyInformationService:
 
         token = self._generate_unique_token()
 
-        with self._repository._db.connect() as conn:
-            conn.execute(
-                """
-                UPDATE emergency_information
-                SET public_token = ?
-                WHERE id = ?;
-                """,
-                (token, record_id),
-            )
-
-            conn.commit()
+        self._repository.update_public_token(record_id, token)
 
         return token
 

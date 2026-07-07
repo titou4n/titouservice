@@ -69,6 +69,11 @@ def register_user(username: str, raw_password: str, raw_verif: str, name: str):
         logger.warning("Registration failed: password mismatch for username '%s'", username)
         return None, "Passwords must be identical."
 
+    password_error = ext.utils.validate_password_strength(raw_password, ext.config.MIN_PASSWORD_LENGTH)
+    if password_error:
+        logger.warning("Registration failed: weak password for username '%s'", username)
+        return None, password_error
+
     try:
         password_hash = ext.hash_manager.generate_password_hash(raw_password)
         role_id = ext.db_role_repository.get_role_id(role_name="user")

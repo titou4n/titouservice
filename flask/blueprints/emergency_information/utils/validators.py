@@ -100,3 +100,25 @@ def validate_gender(value: str, gender_options: list):
     if value not in keys:
         return None, 'Invalid gender value.'
     return value, None
+
+
+def compute_age(date_of_birth) -> int | None:
+    """
+    Compute age in whole years from a date of birth - accepts either a
+    ``date`` object (form submission, already validated) or a 'YYYY-MM-DD'
+    string (value read back from the ``date_of_birth`` DB column). Never
+    stored: recomputed on every read so it can't go stale or be tampered
+    with, unlike a persisted value.
+    """
+    if not date_of_birth:
+        return None
+    if isinstance(date_of_birth, str):
+        try:
+            date_of_birth = datetime.strptime(date_of_birth, '%Y-%m-%d').date()
+        except ValueError:
+            return None
+    today = date.today()
+    years = today.year - date_of_birth.year
+    if (today.month, today.day) < (date_of_birth.month, date_of_birth.day):
+        years -= 1
+    return years

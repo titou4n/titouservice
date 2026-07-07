@@ -35,15 +35,12 @@ class Config:
         raise RuntimeError("SECRET_KEY is missing")
     
     # Security: the Super Admin account is bootstrapped automatically on the
-    # first run against an empty database (see
-    # Data/seeders/accounts_seeder.py::_seed_super_admin_account). Its
-    # password is a cryptographically random value generated at that moment,
-    # printed once to the application logs, and never stored in a file, an
-    # environment variable or a Docker secret. Only the username below is
-    # configurable, and it is not sensitive.
+    # first run against an empty database
+    # Its password is printed once to the application logs,
+    # and never stored in a file, an environment variable or a Docker secret.
+    # Only the username below is configurable, and it is not sensitive.
     USERNAME_SUPER_ADMIN: str = os.getenv("USERNAME_SUPER_ADMIN", "superadmin")
-    SUPER_ADMIN_INITIAL_PASSWORD_LENGTH: int = 24  # bytes of entropy (secrets.token_urlsafe)
-
+    SUPER_ADMIN_INITIAL_PASSWORD_LENGTH: int = 24  # bytes (secrets.token_urlsafe)
     ROLE_NAME_SUPER_ADMIN: str = "super_admin"
     NAME_SUPER_ADMIN: str = "SUPER ADMIN"
 
@@ -55,7 +52,7 @@ class Config:
     if not OMDB_API_KEY:
         raise RuntimeError("OMDB_API_KEY is missing")
     
-    EMAIL_ADDRESS = "titouservice.mail@gmail.com"
+    EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS", "titouservice.mail@gmail.com")
     EMAIL_APP_PASSWORD = read_secret("email_app_password") if ENV_PROD else os.getenv("EMAIL_APP_PASSWORD")
     if not EMAIL_APP_PASSWORD:
         raise RuntimeError("EMAIL_APP_PASSWORD is missing")
@@ -81,7 +78,7 @@ class Config:
 
     # ──────────────────────────── Uploads ───────────────────────────────── #
 
-    MAX_CONTENT_LENGTH: int             = 16 * 1024 * 1024   # 16 MB
+    MAX_CONTENT_LENGTH: int             = int(os.getenv("MAX_UPLOAD_SIZE_MB", "16")) * 1024 * 1024
     ALLOWED_EXTENSIONS_PROFILE_PICTURE: set[str] = {"png", "jpg", "jpeg"}
 
     # ──────────────────────── Flask-Session ─────────────────────────────── #
@@ -102,23 +99,25 @@ class Config:
     SESSION_COOKIE_MAX_AGE: int = 3600  # 1 heure
 
     # Session lifetime
-    SESSION_COOKIE_TIME_DAYS: int    = 0
-    SESSION_COOKIE_TIME_HOURS: int   = 1
-    SESSION_COOKIE_TIME_MINUTES: int = 0
+    SESSION_COOKIE_TIME_DAYS: int    = int(os.getenv("SESSION_COOKIE_TIME_DAYS", "0"))
+    SESSION_COOKIE_TIME_HOURS: int   = int(os.getenv("SESSION_COOKIE_TIME_HOURS", "1"))
+    SESSION_COOKIE_TIME_MINUTES: int = int(os.getenv("SESSION_COOKIE_TIME_MINUTES", "0"))
 
     # 2FA code validity window
-    TWOFA_TIMELAPS_MINUTES: int = 15
+    TWOFA_TIMELAPS_MINUTES: int = int(os.getenv("TWOFA_TIMELAPS_MINUTES", "15"))
 
     # Password generation
     PASSWORD_GENERATION_LENGTH: int = 20
+
+    # Minimum length enforced server-side on registration and password change
+    # (client-side/HTML validation alone is trivially bypassed with a direct POST).
+    MIN_PASSWORD_LENGTH: int = int(os.getenv("MIN_PASSWORD_LENGTH", "10"))
 
     # ─────────────────────── Database reset flags ───────────────────────── #
 
     NEED_TO_RESET_DB_EXCEPT_ACCOUNT: bool        = os.getenv("NEED_TO_RESET_DB_EXCEPT_ACCOUNT", "false").lower() == "true"
     NEED_TO_RESET_ALL_DB: bool                   = os.getenv("NEED_TO_RESET_ALL_DB", "false").lower() == "true"
     NEED_TO_RESET_ROLES_PERMISSIONS_TABLES: bool = os.getenv("NEED_TO_RESET_ROLES_PERMISSIONS_TABLES", "false").lower() == "true"
-
-    # Built-in accounts - SECURITY: disabled by default
     CREATE_SEEDED_ACCOUNTS: bool = os.getenv("CREATE_SEEDED_ACCOUNTS", "false").lower() == "true"
 
     # ──────────────────────── Built-in accounts ─────────────────────────── #
@@ -126,33 +125,25 @@ class Config:
     ROLE_NAME_SUPER_ADMIN: str = "super_admin"
     ROLE_NAME_ADMIN: str = "admin"
 
-    USERNAME_VISITOR: str = "UsernameVisitor"
-    PASSWORD_VISITOR: str = "PasswordVisitor"
+    USERNAME_VISITOR: str = os.getenv("USERNAME_VISITOR", "UsernameVisitor")
+    PASSWORD_VISITOR: str = os.getenv("PASSWORD_VISITOR", "PasswordVisitor")
     ROLE_NAME_VISITOR: str = "visitor"
     NAME_VISITOR: str = "Visitor"
 
     # Debug user (development only)
-    USERNAME_DEBUG: str    = "11"
-    PASSWORD_DEBUG: str    = "11"
+    USERNAME_DEBUG: str    = os.getenv("USERNAME_DEBUG", "username_debug")
+    PASSWORD_DEBUG: str    = os.getenv("PASSWORD_DEBUG", "password_debug")
     ROLE_NAME_DEBUG: str   = ROLE_NAME_SUPER_ADMIN
     NAME_DEBUG : str       = "DEBUG"
 
     # ─────────────────────────── Bank / Game ────────────────────────────── #
 
-    BANK_DEFAULT_PAY: int         = 1_000_000
-    STOCK_MARKET_COEFFICIENT: int = 1
+    BANK_DEFAULT_PAY: int         = int(os.getenv("BANK_DEFAULT_PAY", "1000000"))
+    STOCK_MARKET_COEFFICIENT: int = int(os.getenv("STOCK_MARKET_COEFFICIENT", "1"))
 
-    # =============================================== #
-    # ============ Emergency information ============
-    # =============================================== #
-    """
-    Configuration constants for the Emergency Information module.
-    Override any value via environment variables or app.config before registering the blueprint.
-    """
-    
+    # ────────────────────── Emergency information ───────────────────────── #
     TOKEN_LENGTH          = 48              # bytes → 64 hex chars (url-safe)
-    TOKEN_URL_PREFIX      = '/emergency'    # public URL prefix
-    ADMIN_PAGE_SIZE       = 25              # Pagination
+    ADMIN_PAGE_SIZE       = int(os.getenv("EMERGENCY_INFO_ADMIN_PAGE_SIZE", "25"))
     BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Unknown']
     GENDER_OPTIONS = [
         ('male',            'Male'),
@@ -165,14 +156,10 @@ class Config:
         'Friend', 'Colleague', 'Neighbor', 'Other',
     ]
 
-    MAX_TEXT_FIELD     = 5000
-    MAX_SHORT_FIELD    = 150
-    MAX_PHONE_FIELD    = 30
-
-    # Rate limit for the unauthenticated public emergency-info view
-    # (/emergency/<token>) - token is high-entropy (384 bits) so this guards
-    # against DoS/scanning rather than brute-force.
-    PUBLIC_RATE_LIMIT: int = int(os.getenv("PUBLIC_RATE_LIMIT", "50"))
+    MAX_TEXT_FIELD: int     = 5000
+    MAX_SHORT_FIELD: int    = 150
+    MAX_PHONE_FIELD: int    = 30
+    PUBLIC_RATE_LIMIT: int = 50
 
     # ──────────────────────────── Proxy Trust ───────────────────────────── #
 
@@ -183,25 +170,16 @@ class Config:
         "[::1]",
     }
 
-    TRUST_PROXY: bool = os.getenv("TRUST_PROXY", "false").lower() == "true"
-    PROXY_IP_HEADER: str = os.getenv("PROXY_IP_HEADER", "CF-Connecting-IP")
-
     # Number of reverse-proxy hops between the browser and this Flask app that
     # each add their own entry to X-Forwarded-For / X-Forwarded-Proto / etc.
     # Passed straight to ProxyFix(x_for=..., x_proto=..., ...) in app.py.
-    # Current topology: Client -> Cloudflare -> NPM -> nginx (this repo) -> Flask.
-    # NPM and this repo's nginx each append a hop, hence 2 (see audits/).
-    # If NPM's proxying behaviour changes, confirm the real count by
-    # temporarily inspecting nginx's access log ($remote_addr) before
-    # changing this value.
+    # Current topology: Client -> Cloudflare -> cloudflared -> nginx (this repo) -> Flask.
+    # Cloudflare appends the visitor IP before cloudflared, and this repo's nginx
+    # appends its own peer (cloudflared) via $proxy_add_x_forwarded_for before Flask,
+    # hence 2 (see audits/). Must stay in sync with .env.example and docker-compose.yml's
+    # explicit override - if the real topology ever changes, confirm the count by
+    # inspecting nginx's access log ($remote_addr) before changing this value.
     PROXY_TRUSTED_HOP_COUNT: int = int(os.getenv("PROXY_TRUSTED_HOP_COUNT", "2"))
-
-    # Comma-separated CIDR list of reverse proxies allowed to set X-Forwarded-For
-    # directly (e.g. Nginx Proxy Manager's address, or the docker-compose bridge
-    # subnet). Only consulted when the immediate TCP peer isn't a known
-    # Cloudflare address (see extensions.py::get_client_identifier) — keep this
-    # tight, it is a trust boundary for rate-limiting.
-    TRUSTED_PROXY_NETWORKS: str = os.getenv("TRUSTED_PROXY_NETWORKS", "127.0.0.1/32,::1/128")
 
     # External URL base for generating tokens and reset links (must match a domain in ALLOWED_HOSTS)
     EXTERNAL_URL_BASE: str = os.getenv("EXTERNAL_URL_BASE", "https://titouservice.ltjs.net")
