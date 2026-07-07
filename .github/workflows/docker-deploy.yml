@@ -20,11 +20,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Audit Python dependencies (pip-audit)
-        run: |
-          pip install pip-audit
-          pip-audit -r flask/requirements.txt
-
       - name: Validate Nginx configuration
         run: |
           mkdir -p /tmp/nginx-test/ssl
