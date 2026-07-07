@@ -23,12 +23,12 @@ COPY . .
 # *before* USER switches away from root - Docker Compose's db-data volume
 # copies this directory's existing ownership into the volume on first
 # mount, so appuser keeps write access after the volume is attached.
-RUN useradd --create-home --uid 1000 appuser \
-    && mkdir -p Data/db static/uploads/profile_pictures \
-    && chmod +x entrypoint.sh \
-    && chown -R appuser:appuser /app
+#RUN useradd --create-home --uid 1000 appuser \
+#    && mkdir -p Data/db static/uploads/profile_pictures \
+#    && chmod +x entrypoint.sh \
+#    && chown -R appuser:appuser /app
 
-USER appuser
+#USER appuser
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
