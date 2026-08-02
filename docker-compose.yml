@@ -3,15 +3,11 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: titouservice-cloudflared
     restart: unless-stopped
+    user: "0:0"
     command: tunnel --no-autoupdate run --token-file /run/secrets/cloudflare_tunnel_token
     depends_on:
       - nginx
     networks:
-      # Edge tier only: cloudflared can resolve/reach nginx, nothing else.
-      # It is never attached to titouservice-network, so even if this
-      # container were compromised it could not reach flask:5000 or
-      # redis:6379 directly - it would have to go through nginx (Host
-      # header check, security headers, etc.) like any other client.
       - titouservice-edge-network
     secrets:
       - cloudflare_tunnel_token
@@ -24,17 +20,7 @@ services:
     environment:
       ENV_PROD: "true"
       FLASK_ENV: "production"
-
       RATELIMIT_STORAGE_URI: redis://redis:6379/0
-
-      # NPM is no longer in the chain (replaced by Cloudflare Tunnel, see
-      # audits/). Topology is now: Cloudflare edge -> cloudflared -> nginx
-      # (this repo) -> Flask. Cloudflare appends the visitor IP to
-      # X-Forwarded-For before reaching cloudflared, and nginx appends its
-      # own peer (cloudflared) before Flask -> still 2 hops in principle,
-      # but CONFIRM empirically (nginx access log) after cutover before
-      # relying on this value; there is no exposed public port left for an
-      # attacker to forge this header against regardless.
       PROXY_TRUSTED_HOP_COUNT: "2"
 
     volumes:
