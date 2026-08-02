@@ -31,7 +31,7 @@ def search_movie():
 
     movie = str(request.form.get('movie', '')).strip()
     if not movie:
-        flash('Movie title is required.')
+        flash("Movie title is required.")
         return redirect(url_for('movie_information.search_movie'))
 
     return redirect(url_for('movie_information.infos_movie', movie_title=movie))
@@ -43,15 +43,17 @@ def search_movie():
 def infos_movie(movie_title: str):
 
     if not movie_title:
-        flash('Movie title is required.')
+        flash("Movie title is required.")
         return redirect(url_for('movie_information.search_movie'))
 
     data, error = search_movie_by_title(movie_title)
     if error:
-        flash(f'"{error}"')
+        if not ext.config.ENV_PROD:
+            flash(f'"{error}"')
+        else:
+            flash("An error has occurred.")
         return redirect(url_for('movie_information.search_movie'))
 
-    # Sauvegarde de l'historique de recherche (dédupliqué)
     clean_title = data["Title"]
     if not ext.db_movie_repository.has_already_searched(current_user.id, movie_title=clean_title):
         ext.db_movie_repository.insert_search(current_user.id, clean_title, ext.utils.get_datetime_isoformat())

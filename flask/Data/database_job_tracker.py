@@ -53,6 +53,10 @@ class DatabaseJobTracker:
                     created_at   TEXT DEFAULT (date('now')),
                     user_id      INTEGER
                 );
+
+                CREATE INDEX IF NOT EXISTS idx_entreprises_user_id ON entreprises(user_id);
+                CREATE INDEX IF NOT EXISTS idx_candidatures_user_id ON candidatures(user_id);
+                CREATE INDEX IF NOT EXISTS idx_candidatures_company_id ON candidatures(company_id);
             """)
 
     # ------------------------------------------------------------------
@@ -196,24 +200,30 @@ class DatabaseJobTracker:
     # ------------------------------------------------------------------
 
     def get_all_entreprises(self, user_id: int = None) -> list[dict]:
+        """Récupère toutes les entreprises et leurs candidatures liées en 2
+        requêtes (au lieu d'une requête candidatures par entreprise)."""
         with self._connection() as conn:
             if user_id is not None:
                 companies = conn.execute(
                     "SELECT * FROM entreprises WHERE user_id=? ORDER BY name", (user_id,)
                 ).fetchall()
+                cand_rows = conn.execute(
+                    "SELECT * FROM candidatures WHERE user_id=?", (user_id,)
+                ).fetchall()
             else:
                 companies = conn.execute(
                     "SELECT * FROM entreprises ORDER BY name"
                 ).fetchall()
+                cand_rows = conn.execute("SELECT * FROM candidatures").fetchall()
+
+            cands_by_company = {}
+            for ca in cand_rows:
+                cands_by_company.setdefault(ca["company_id"], []).append(dict(ca))
 
             result = []
             for c in companies:
                 d = dict(c)
-                cands = conn.execute(
-                    "SELECT * FROM candidatures WHERE company_id=? AND user_id=?",
-                    (d["id"], d["user_id"]),
-                ).fetchall()
-                d["candidatures"] = [dict(ca) for ca in cands]
+                d["candidatures"] = cands_by_company.get(d["id"], [])
                 result.append(d)
         return result
 

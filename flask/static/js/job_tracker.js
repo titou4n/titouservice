@@ -86,20 +86,7 @@ function filterCompanies() {
 
 function initStats() {
   const el = document.getElementById('stats-data');
-  
-  console.log('initStats called');
-  console.log('stats-data element:', el);
-
-  if (!el) {
-    console.warn('stats-data introuvable — on est pas sur la page stats');
-    return;
-  }
-
-  console.log('raw statuts:', el.dataset.statuts);
-  console.log('raw byStatus:', el.dataset.byStatus);
-  console.log('raw statusColors:', el.dataset.statusColors);
-  console.log('raw topLabels:', el.dataset.topLabels);
-  console.log('raw topData:', el.dataset.topData);
+  if (!el) return;  // page sans stats → on sort silencieusement
 
   try {
     const statuts      = JSON.parse(el.dataset.statuts);
@@ -110,35 +97,12 @@ function initStats() {
       data:   JSON.parse(el.dataset.topData),
     };
 
-    console.log('parsed statuts:', statuts);
-    console.log('parsed byStatus:', byStatus);
-    console.log('parsed topCompanies:', topCompanies);
-    console.log('Chart disponible ?', typeof Chart);
-    console.log('canvas chart-status:', document.getElementById('chart-status'));
-    console.log('canvas chart-companies:', document.getElementById('chart-companies'));
-
     initStatsCharts(statuts, byStatus, statusColors, topCompanies);
 
   } catch(err) {
     console.error('Erreur dans initStats:', err);
   }
 }
-
-
-/*function initStats() {
-  const el = document.getElementById('stats-data');
-  if (!el) return;  // page sans stats → on sort silencieusement
-
-  const statuts      = JSON.parse(el.dataset.statuts);
-  const byStatus     = JSON.parse(el.dataset.byStatus);
-  const statusColors = JSON.parse(el.dataset.statusColors);
-  const topCompanies = {
-    labels: JSON.parse(el.dataset.topLabels),
-    data:   JSON.parse(el.dataset.topData),
-  };
-
-  initStatsCharts(statuts, byStatus, statusColors, topCompanies);
-}*/
 
 function initStatsCharts(statuts, byStatus, statusColors, topCompanies) {
 
@@ -201,5 +165,4 @@ function initStatsCharts(statuts, byStatus, statusColors, topCompanies) {
   }
 }
 
-// FIX : appelé après les déclarations, au niveau global
 document.addEventListener('DOMContentLoaded', initStats);

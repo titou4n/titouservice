@@ -17,6 +17,28 @@ bp.register_blueprint(dashboard_bp,    url_prefix="/dashboard")
 bp.register_blueprint(entreprises_bp,  url_prefix="/entreprises")
 bp.register_blueprint(statistiques_bp, url_prefix="/statistiques")
 
+# Limites de validation appliquées côté serveur sur les champs texte libres.
+MAX_TITLE_LENGTH = 200
+MAX_NAME_LENGTH = 200
+MAX_FIELD_LENGTH = 150
+MAX_NOTES_LENGTH = 5000
+
+
+def _parse_company_id(raw, user_id):
+    """Valide un company_id soumis par formulaire : doit être un entier
+    référençant une entreprise appartenant à user_id, sinon (None, message
+    d'erreur). Empêche de lier une candidature à l'entreprise d'un autre
+    utilisateur (IDOR)."""
+    if not raw:
+        return None, None
+    try:
+        company_id = int(raw)
+    except (TypeError, ValueError):
+        return None, "Entreprise invalide."
+    if ext.database_job_tracker.get_entreprise(company_id, user_id=user_id) is None:
+        return None, "Entreprise invalide."
+    return company_id, None
+
 
 # ==============================================================================
 # Candidatures
@@ -39,6 +61,7 @@ def index():
         "job_tracker/job_tracker_candidatures.html",
         kanban=kanban,
         statuts=STATUTS,
+        colors=STATUT_COLORS,
         entreprises=entreprises,
         active="candidatures",
         id=current_user.id,
@@ -50,13 +73,29 @@ def index():
 @require_permission("job_tracker_access")
 def ajouter():
     title            = request.form.get("title", "").strip()
-    company_id       = request.form.get("company_id") or None
+    company_id_raw   = request.form.get("company_id") or None
     status           = request.form.get("status", "À postuler")
     notes            = request.form.get("notes", "").strip()
     date_applied_str = request.form.get("date_applied")
 
-    if not title:
-        flash("Le titre est obligatoire.", "error")
+    if not title or len(title) > MAX_TITLE_LENGTH:
+        flash(f"Le titre est obligatoire et doit faire moins de {MAX_TITLE_LENGTH} caractères.", "error")
+        return redirect(url_for("job_tracker.candidatures.index"))
+
+    if status not in STATUTS:
+        flash("Statut invalide.", "error")
+        return redirect(url_for("job_tracker.candidatures.index"))
+
+    if len(notes) > MAX_NOTES_LENGTH:
+        flash(f"Les notes doivent faire moins de {MAX_NOTES_LENGTH} caractères.", "error")
+        return redirect(url_for("job_tracker.candidatures.index"))
+
+    company_id, error = _parse_company_id(company_id_raw, current_user.id)
+    if error:
+        if not ext.config.ENV_PROD:
+            flash(error, "error")
+        else:
+            flash("An error has occurred.", "error")
         return redirect(url_for("job_tracker.candidatures.index"))
 
     date_applied = date.today()
@@ -68,7 +107,7 @@ def ajouter():
 
     ext.database_job_tracker.add_candidature(
         title=title,
-        company_id=int(company_id) if company_id else None,
+        company_id=company_id,
         status=status,
         date_applied=date_applied,
         notes=notes,
@@ -88,10 +127,27 @@ def modifier(id):
         return redirect(url_for("job_tracker.candidatures.index"))
 
     title            = request.form.get("title", c["title"]).strip()
-    company_id       = request.form.get("company_id") or None
+    company_id_raw   = request.form.get("company_id") or None
     status           = request.form.get("status", c["status"])
-    notes            = request.form.get("notes", c["notes"])
+    notes            = request.form.get("notes", c["notes"] or "").strip()
     date_applied_str = request.form.get("date_applied")
+
+    if not title or len(title) > MAX_TITLE_LENGTH:
+        flash("Le titre est obligatoire et doit faire moins de 200 caractères.", "error")
+        return redirect(url_for("job_tracker.candidatures.index"))
+
+    if status not in STATUTS:
+        flash("Statut invalide.", "error")
+        return redirect(url_for("job_tracker.candidatures.index"))
+
+    if len(notes) > MAX_NOTES_LENGTH:
+        flash("Les notes sont trop longues.", "error")
+        return redirect(url_for("job_tracker.candidatures.index"))
+
+    company_id, error = _parse_company_id(company_id_raw, current_user.id)
+    if error:
+        flash(error, "error")
+        return redirect(url_for("job_tracker.candidatures.index"))
 
     date_applied = date.fromisoformat(c["date_applied"]) if c["date_applied"] else date.today()
     if date_applied_str:
@@ -103,7 +159,7 @@ def modifier(id):
     ext.database_job_tracker.update_candidature(
         id=id,
         title=title,
-        company_id=int(company_id) if company_id else None,
+        company_id=company_id,
         status=status,
         date_applied=date_applied,
         notes=notes,
@@ -132,7 +188,10 @@ def supprimer(id):
 @require_permission("job_tracker_access")
 def changer_statut(id):
     """Endpoint AJAX pour drag & drop kanban."""
-    data       = request.get_json()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Requête invalide"}), 400
+
     new_status = data.get("status")
 
     if new_status not in STATUTS:
@@ -186,6 +245,7 @@ def dashboard():
         recentes=recentes,
         nb_entreprises=nb_entreprises,
         statuts=STATUTS,
+        colors=STATUT_COLORS,
         entreprises=entreprises,
         active="dashboard",
         id=uid,
@@ -213,17 +273,28 @@ def index():
 @login_required
 @require_permission("job_tracker_access")
 def ajouter():
-    name = request.form.get("name", "").strip()
+    name         = request.form.get("name", "").strip()
+    secteur      = request.form.get("secteur", "").strip()
+    localisation = request.form.get("localisation", "").strip()
+    notes        = request.form.get("notes", "").strip()
 
-    if not name:
-        flash("Le nom est obligatoire.", "error")
+    if not name or len(name) > MAX_NAME_LENGTH:
+        flash("Le nom est obligatoire et doit faire moins de 200 caractères.", "error")
+        return redirect(url_for("job_tracker.entreprises.index"))
+
+    if len(secteur) > MAX_FIELD_LENGTH or len(localisation) > MAX_FIELD_LENGTH:
+        flash("Le secteur ou la localisation est trop long.", "error")
+        return redirect(url_for("job_tracker.entreprises.index"))
+
+    if len(notes) > MAX_NOTES_LENGTH:
+        flash("Les notes sont trop longues.", "error")
         return redirect(url_for("job_tracker.entreprises.index"))
 
     ext.database_job_tracker.add_entreprise(
         name=name,
-        secteur=request.form.get("secteur", "").strip(),
-        localisation=request.form.get("localisation", "").strip(),
-        notes=request.form.get("notes", "").strip(),
+        secteur=secteur,
+        localisation=localisation,
+        notes=notes,
         user_id=current_user.id,
     )
     flash("Entreprise ajoutée !", "success")
@@ -239,12 +310,29 @@ def modifier(id):
         flash("Entreprise introuvable.", "error")
         return redirect(url_for("job_tracker.entreprises.index"))
 
+    name         = request.form.get("name", e["name"]).strip()
+    secteur      = request.form.get("secteur", e["secteur"] or "").strip()
+    localisation = request.form.get("localisation", e["localisation"] or "").strip()
+    notes        = request.form.get("notes", e["notes"] or "").strip()
+
+    if not name or len(name) > MAX_NAME_LENGTH:
+        flash("Le nom est obligatoire et doit faire moins de 200 caractères.", "error")
+        return redirect(url_for("job_tracker.entreprises.index"))
+
+    if len(secteur) > MAX_FIELD_LENGTH or len(localisation) > MAX_FIELD_LENGTH:
+        flash("Le secteur ou la localisation est trop long.", "error")
+        return redirect(url_for("job_tracker.entreprises.index"))
+
+    if len(notes) > MAX_NOTES_LENGTH:
+        flash("Les notes sont trop longues.", "error")
+        return redirect(url_for("job_tracker.entreprises.index"))
+
     ext.database_job_tracker.update_entreprise(
         id=id,
-        name=request.form.get("name", e["name"]).strip(),
-        secteur=request.form.get("secteur", e["secteur"]),
-        localisation=request.form.get("localisation", e["localisation"]),
-        notes=request.form.get("notes", e["notes"]),
+        name=name,
+        secteur=secteur,
+        localisation=localisation,
+        notes=notes,
         user_id=current_user.id,
     )
     flash("Entreprise mise à jour.", "success")
@@ -277,6 +365,7 @@ def detail(id):
     return render_template(
         "job_tracker/job_tracker_entreprise_detail.html",
         entreprise=e,
+        colors=STATUT_COLORS,
         active="entreprises",
     )
 
